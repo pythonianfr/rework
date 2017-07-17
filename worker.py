@@ -1,13 +1,14 @@
 import time
 import os
 import sys
+from threading import Thread
 from contextlib import contextmanager
 import traceback
 
 from sqlalchemy import create_engine, select
 
-from rework.helper import has_ancestor_pid
-from rework.schema import worker
+from rework.helper import has_ancestor_pid, kill
+from rework.schema import worker, task as taske
 from rework.task import grab_task
 
 
@@ -40,6 +41,35 @@ def shutdown_asked(engine, wid):
 def die_if_shutdown(engine, wid):
     if shutdown_asked(engine, wid):
         raise SystemExit('Worker {} exiting.'.format(os.getpid()))
+
+
+# Task abortion
+
+@contextmanager
+def abortion_monitor(engine, wid, task):
+
+    def die_if_task_aborted():
+        while True:
+            time.sleep(1)
+            if task.status == 'done':
+                return
+            if not task.aborted:
+                continue
+
+            task.finish()
+            with engine.connect() as cn:
+                workersql = worker.update().where(worker.c.id == wid).values(
+                    deathinfo='Task {} aborted'.format(task.tid),
+                    running=False
+                )
+                cn.execute(workersql)
+                kill(os.getpid())
+
+    monitor = Thread(name='monitor_abort', target=die_if_task_aborted)
+    monitor.daemon = True
+    monitor.start()
+    yield
+    monitor.join()
 
 
 @contextmanager
@@ -77,7 +107,8 @@ def _main_loop(engine, worker_id, ppid, polling_period):
             task = grab_task(engine, int(worker_id))
 
             while task:
-                task.run()
+                with abortion_monitor(engine, worker_id, task):
+                    task.run()
                 task = grab_task(engine, worker_id)
 
             time.sleep(polling_period)

@@ -24,11 +24,25 @@ class Task(object):
         with self.engine.connect() as cn:
             cn.execute(sql)
 
+    def _propvalue(self, prop):
+        sql = select([task.c[prop]]).where(task.c.id == self.tid)
+        return self.engine.execute(sql).scalar()
+
+    @property
+    def status(self):
+        return self._propvalue('status')
+
+    @property
+    def aborted(self):
+        return self._propvalue('abort')
+
+    @property
+    def worker(self):
+        return self._propvalue('worker')
+
     @property
     def output(self):
-        sql = select([task.c.output]).where(task.c.id == self.tid)
-        with self.engine.connect() as cn:
-            out = cn.execute(sql).scalar()
+        out = self._propvalue('output')
         if out is not None:
             return loads(out)
 
@@ -44,10 +58,23 @@ class Task(object):
             func = getattr(mod, name)
             func(self)
         finally:
-            with self.engine.connect() as cn:
-                cn.execute(task.update().where(task.c.id == self.tid).values(
-                    status='done')
+            self.finish()
+
+    def finish(self):
+        with self.engine.connect() as cn:
+            cn.execute(task.update().where(task.c.id == self.tid).values(
+                status='done')
+            )
+
+    def abort(self):
+        with self.engine.connect() as cn:
+            # will still be marked as running
+            # the worker kill must do the actual job
+            cn.execute(
+                task.update().where(task.c.id == self.tid).values(
+                    abort=True
                 )
+            )
 
 
 def grab_task(engine, wid):

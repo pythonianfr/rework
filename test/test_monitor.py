@@ -20,6 +20,12 @@ def print_sleep_and_go_away(task):
     print('And now I am done.')
 
 
+@api.task
+def infinite_loop(task):
+    while True:
+        time.sleep(1)
+
+
 def test_basic_task_operations(engine):
     api.freeze_operations(engine)
     api.schedule(engine, 'print_sleep_and_go_away')
@@ -106,3 +112,34 @@ def test_worker_shutdown(engine):
 
     guard(engine, 'select count(id) from rework.worker where running = true',
           lambda r: r.scalar() == 0)
+
+
+def test_task_abortion(engine):
+    api.freeze_operations(engine)
+
+    ensure_workers(engine, 1)
+
+    wid = guard(engine, 'select id from rework.worker where running = true',
+                lambda res: res.scalar())
+
+    t = api.schedule(engine, 'infinite_loop')
+
+    guard(engine, 'select count(id) from rework.task where worker = {}'.format(wid),
+          lambda res: res.scalar() == 1)
+
+    t.abort()
+    assert t.aborted
+
+    guard(engine, "select count(id) from rework.task "
+          "where status = 'done' and worker = {}".format(wid),
+          lambda res: res.scalar() == 1)
+
+    # one dead worker
+    guard(engine, 'select running from rework.worker where id = {}'.format(wid),
+          lambda res: not res.scalar())
+
+    diagnostic = engine.execute(
+        'select deathinfo from rework.worker where id = {}'.format(wid)
+    ).scalar()
+
+    assert 'Task <X> aborted' == scrub(diagnostic)

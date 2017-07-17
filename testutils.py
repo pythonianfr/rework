@@ -39,3 +39,11 @@ def scrub(anstr, subst='X'):
                 out.append('<{}>'.format(subst))
             out.append(char)
     return ''.join(out).strip()
+
+
+def tasks(engine):
+    return engine.execute('select * from rework.task').fetchall()
+
+
+def workers(engine):
+    return engine.execute('select * from rework.worker').fetchall()
