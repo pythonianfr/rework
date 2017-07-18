@@ -12,8 +12,11 @@ worker = Table(
     Column('host', String, nullable=False),
     Column('pid', Integer),
     Column('running', Boolean, nullable=False, default=False),
+    Column('shutdown', Boolean, nullable=False, default=False),
+    Column('traceback', String),
     schema='rework'
 )
+
 
 operation = Table(
     'operation', meta,

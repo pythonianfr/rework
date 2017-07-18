@@ -1,8 +1,9 @@
 import time
 
 from rework import api
+from rework.schema import worker
 from rework.task import grab_task
-from rework.worker import running_status
+from rework.worker import running_status, shutdown_asked
 from rework.monitor import new_worker, ensure_workers
 from rework.helper import kill, read_proc_streams
 from rework.testutils import guard, scrub
@@ -84,3 +85,24 @@ def test_basic_worker_task_execution(engine):
         ('stdout', 'And now I am done.'),
     ] == list((stream, scrub(line.decode('utf-8')))
               for stream, line in logs)
+
+
+def test_worker_shutdown(engine):
+    ensure_workers(engine, 1)
+
+    wid = guard(engine, 'select id from rework.worker where running = true',
+                lambda r: r.scalar(),
+                3)
+    assert not shutdown_asked(engine, wid)
+
+    with engine.connect() as cn:
+        cn.execute(
+            worker.update().where(worker.c.id == wid).values(
+                shutdown=True
+            )
+        )
+    guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
+          lambda r: r.scalar() == True)
+
+    guard(engine, 'select count(id) from rework.worker where running = true',
+          lambda r: r.scalar() == 0)
