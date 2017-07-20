@@ -7,7 +7,7 @@ from rework.task import grab_task
 from rework.worker import running_status, shutdown_asked
 from rework.monitor import new_worker, ensure_workers, reap_dead_workers
 from rework.helper import kill, read_proc_streams
-from rework.testutils import guard, scrub, wait_true
+from rework.testutils import guard, scrub, wait_true, test_workers
 
 
 @api.task
@@ -64,7 +64,7 @@ def test_basic_worker_task_execution(engine):
     guard(engine, 'select count(id) from rework.worker where running = true',
           lambda res: res.scalar() == 0)
 
-    proc = ensure_workers(engine, 1)[0]
+    proc = ensure_workers(engine, 1)[0][1]
 
     guard(engine, 'select count(id) from rework.worker where running = true',
           lambda res: res.scalar() == 1)
@@ -101,70 +101,60 @@ def test_basic_worker_task_execution(engine):
 
 
 def test_worker_shutdown(engine):
-    ensure_workers(engine, 1)
+    with test_workers(engine) as wids:
+        wid = wids[0]
+        assert not shutdown_asked(engine, wid)
 
-    wid = guard(engine, 'select id from rework.worker where running = true',
-                lambda r: r.scalar(),
-                3)
-    assert not shutdown_asked(engine, wid)
-
-    with engine.connect() as cn:
-        cn.execute(
-            worker.update().where(worker.c.id == wid).values(
-                shutdown=True
+        with engine.connect() as cn:
+            cn.execute(
+                worker.update().where(worker.c.id == wid).values(
+                    shutdown=True
+                )
             )
-        )
-    guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
-          lambda r: r.scalar() == True)
+        guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
+              lambda r: r.scalar() == True)
 
-    guard(engine, 'select count(id) from rework.worker where running = true',
-          lambda r: r.scalar() == 0)
+        guard(engine, 'select count(id) from rework.worker where running = true',
+              lambda r: r.scalar() == 0)
 
 
 def test_task_abortion(engine):
     api.freeze_operations(engine)
 
-    ensure_workers(engine, 1)
+    with test_workers(engine) as wids:
+        wid = wids[0]
 
-    wid = guard(engine, 'select id from rework.worker where running = true',
-                lambda res: res.scalar())
+        t = api.schedule(engine, 'infinite_loop')
+        guard(engine, 'select count(id) from rework.task where worker = {}'.format(wid),
+              lambda res: res.scalar() == 1)
 
-    t = api.schedule(engine, 'infinite_loop')
+        t.abort()
+        assert t.aborted
 
-    guard(engine, 'select count(id) from rework.task where worker = {}'.format(wid),
-          lambda res: res.scalar() == 1)
+        guard(engine, "select count(id) from rework.task "
+              "where status = 'done' and worker = {}".format(wid),
+              lambda res: res.scalar() == 1)
+        # one dead worker
+        guard(engine, 'select running from rework.worker where id = {}'.format(wid),
+              lambda res: not res.scalar())
 
-    t.abort()
-    assert t.aborted
+        diagnostic = engine.execute(
+            'select deathinfo from rework.worker where id = {}'.format(wid)
+        ).scalar()
 
-    guard(engine, "select count(id) from rework.task "
-          "where status = 'done' and worker = {}".format(wid),
-          lambda res: res.scalar() == 1)
-
-    # one dead worker
-    guard(engine, 'select running from rework.worker where id = {}'.format(wid),
-          lambda res: not res.scalar())
-
-    diagnostic = engine.execute(
-        'select deathinfo from rework.worker where id = {}'.format(wid)
-    ).scalar()
-
-    assert 'Task <X> aborted' == scrub(diagnostic)
+        assert 'Task <X> aborted' == scrub(diagnostic)
 
 
 def test_worker_unplanned_death(engine):
     api.freeze_operations(engine)
 
-    ensure_workers(engine, 1)
+    with test_workers(engine) as wids:
+        wid = wids[0]
 
-    wid = guard(engine, 'select id from rework.worker where running = true',
-                lambda r: r.scalar(),
-                3)
+        api.schedule(engine, 'unstopable_death')
 
-    api.schedule(engine, 'unstopable_death')
+        deadlist = wait_true(partial(reap_dead_workers, engine))
+        assert wid in deadlist
 
-    deadlist = wait_true(partial(reap_dead_workers, engine), 3)
-    assert wid in deadlist
-
-    guard(engine, 'select deathinfo from rework.worker where id = {}'.format(wid),
-          lambda r: r.scalar() == 'Unaccounted death (hard crash)')
+        guard(engine, 'select deathinfo from rework.worker where id = {}'.format(wid),
+              lambda r: r.scalar() == 'Unaccounted death (hard crash)')

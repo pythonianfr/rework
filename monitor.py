@@ -13,9 +13,9 @@ from rework.schema import worker
 def spawn_worker(engine):
     wid = new_worker(engine)
     cmd = ['rework', 'new_worker', str(engine.url), str(wid), str(os.getpid())]
-    return sub.Popen(cmd,
-                     bufsize=1,
-                     stdout=sub.PIPE, stderr=sub.PIPE)
+    return wid, sub.Popen(cmd,
+                          bufsize=1,
+                          stdout=sub.PIPE, stderr=sub.PIPE)
 
 
 def new_worker(engine):
@@ -71,10 +71,13 @@ def run_monitor(dburi, maxworkers):
         dead = reap_dead_workers(engine)
         if dead:
             print('reaped {} dead workers'.format(len(dead)))
+            workers = [(wid, proc)
+                       for wid, proc in workers
+                       if wid not in dead]
         new = ensure_workers(engine, maxworkers)
         if new:
             print('spawned {} active workers'.format(len(new)))
         workers += new
-        for w in workers:
-            watch(w)
+        for wid, proc in workers:
+            watch(proc)
         time.sleep(1)

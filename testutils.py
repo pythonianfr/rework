@@ -1,5 +1,8 @@
 import threading
 import time
+from contextlib import contextmanager
+
+from rework.monitor import ensure_workers, reap_dead_workers
 
 
 def wait_true(func, timeout=6):
@@ -31,6 +34,24 @@ def guard(engine, sql, expr, timeout=6):
             return expr(cn.execute(sql))
 
     return wait_true(check, timeout)
+
+
+@contextmanager
+def test_workers(engine, numworkers=1):
+    reap_dead_workers(engine)
+    with engine.connect() as cn:
+        cn.execute('delete from rework.task')
+        cn.execute('delete from rework.worker')
+    procs = ensure_workers(engine, numworkers)
+
+    # wait till' they are all running
+    guard(engine, 'select count(id) from rework.worker where running = true',
+          lambda r: r.scalar() == numworkers,
+          3)
+    yield [wid for wid, _proc in procs]
+    for _wid, proc in procs:
+        proc.kill()
+    reap_dead_workers(engine)
 
 
 def scrub(anstr, subst='X'):
