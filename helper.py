@@ -121,3 +121,24 @@ class PGLogHandler(logging.Handler):
 
     def close(self):
         pass
+
+
+class PGLogWriter(object):
+    __slots__ = ('stream', 'handler', 'level')
+
+    def __init__(self, stream, handler):
+        self.stream = stream
+        self.handler = handler
+        if 'out' in self.stream:
+            self.level = logging.INFO
+        else:
+            self.level = logging.WARNING
+
+    def write(self, message):
+        if not message.strip():
+            return
+        self.handler.emit(
+            logging.LogRecord(
+                self.stream, self.level, '', -1, message, (), ()
+            )
+        )

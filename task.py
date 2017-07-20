@@ -1,3 +1,4 @@
+import sys
 import imp
 from pickle import dumps, loads
 import traceback as tb
@@ -7,7 +8,7 @@ import logging
 from sqlalchemy import select
 
 from rework.schema import task
-from rework.helper import PGLogHandler
+from rework.helper import PGLogHandler, PGLogWriter
 
 
 __task_registry__ = {}
@@ -29,17 +30,24 @@ class Task(object):
             cn.execute(sql)
 
     @contextmanager
-    def capturelogs(self, level=logging.NOTSET):
+    def capturelogs(self, level=logging.NOTSET, std=False):
         pghdlr = PGLogHandler(self)
         root = logging.getLogger()
         assert not len(root.handlers)
         root.setLevel(level)
         root.addHandler(pghdlr)
+        if std:
+            out, err = sys.stdout, sys.stderr
+            sys.stdout = PGLogWriter('stdout', pghdlr)
+            sys.stderr = PGLogWriter('stderr', pghdlr)
         try:
             yield
         finally:
             root.handlers.remove(pghdlr)
             pghdlr.flush()
+            if std:
+                sys.stdout = out
+                sys.stderr = err
 
     def _propvalue(self, prop):
         sql = select([task.c[prop]]).where(task.c.id == self.tid)
