@@ -33,6 +33,11 @@ def unstopable_death(task):
     os._exit(0)
 
 
+@api.task
+def normal_exception(task):
+    raise Exception('oops')
+
+
 def test_basic_task_operations(engine):
     api.freeze_operations(engine)
     api.schedule(engine, 'print_sleep_and_go_away')
@@ -158,3 +163,18 @@ def test_worker_unplanned_death(engine):
 
         guard(engine, 'select deathinfo from rework.worker where id = {}'.format(wid),
               lambda r: r.scalar() == 'Unaccounted death (hard crash)')
+
+
+def test_task_error(engine):
+    api.freeze_operations(engine)
+
+    with test_workers(engine):
+
+        t = api.schedule(engine, 'normal_exception')
+
+        tb = guard(engine, 'select traceback from rework.task where id = {}'.format(t.tid),
+                   lambda r: r.scalar())
+
+        assert tb.strip().endswith('oops')
+
+        assert t.traceback == tb

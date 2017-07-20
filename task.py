@@ -1,5 +1,6 @@
 import imp
 from pickle import dumps, loads
+import traceback as tb
 
 from sqlalchemy import select
 
@@ -46,6 +47,10 @@ class Task(object):
         if out is not None:
             return loads(out)
 
+    @property
+    def traceback(self):
+        return self._propvalue('traceback')
+
     def run(self):
         try:
             name, path = self.engine.execute("""
@@ -57,6 +62,12 @@ class Task(object):
             mod = imp.load_source('module', path)
             func = getattr(mod, name)
             func(self)
+        except:
+            sql = task.update().where(task.c.id == self.tid).values(
+                traceback=tb.format_exc()
+            )
+            with self.engine.connect() as cn:
+                cn.execute(sql)
         finally:
             self.finish()
 

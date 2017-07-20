@@ -36,6 +36,7 @@ task = Table(
            nullable=False),
     Column('input', BYTEA),
     Column('output', BYTEA),
+    Column('traceback', String),
     Column('worker', Integer, ForeignKey('rework.worker.id', ondelete='cascade')),
     Column('status', ENUM('queued', 'running', 'done', name='status')),
     Column('abort', Boolean, nullable=False, default=False),
