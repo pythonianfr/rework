@@ -2,7 +2,7 @@ import threading
 import time
 
 
-def guard(engine, sql, expr, timeout=6):
+def wait_true(func, timeout=6):
     outcome = []
 
     def loop():
@@ -10,12 +10,10 @@ def guard(engine, sql, expr, timeout=6):
         while True:
             if (time.time() - start) > timeout:
                 return
-            with engine.connect() as cn:
-                res = cn.execute(sql)
-                got = expr(res)
-                if got:
-                    outcome.append(got)
-                    return
+            output = func()
+            if output:
+                outcome.append(output)
+                return
             time.sleep(.1)
 
     th = threading.Thread(target=loop)
@@ -24,6 +22,15 @@ def guard(engine, sql, expr, timeout=6):
     th.join()
     assert outcome
     return outcome[0]
+
+
+def guard(engine, sql, expr, timeout=6):
+
+    def check():
+        with engine.connect() as cn:
+            return expr(cn.execute(sql))
+
+    return wait_true(check, timeout)
 
 
 def scrub(anstr, subst='X'):

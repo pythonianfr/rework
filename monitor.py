@@ -2,6 +2,8 @@ import os
 import time
 import subprocess as sub
 
+import psutil
+
 from sqlalchemy import create_engine
 
 from rework.helper import host, watch
@@ -39,10 +41,36 @@ def ensure_workers(engine, maxworkers):
     return procs
 
 
+def reap_dead_workers(engine):
+    sql = ("select id, pid from rework.worker "
+           "where host = %(host)s and running = true")
+    deadlist = []
+    for wid, pid in engine.execute(sql, {'host': host()}).fetchall():
+        try:
+            name = psutil.Process(pid).name()
+            if not name.startswith('python'):
+                deadlist.append(wid)
+        except psutil.NoSuchProcess:
+            deadlist.append(wid)
+
+    if deadlist:
+        sql = worker.update().where(worker.c.id.in_(deadlist)).values(
+            running=False,
+            deathinfo='Unaccounted death (hard crash)'
+        )
+        with engine.connect() as cn:
+            cn.execute(sql)
+
+    return deadlist
+
+
 def run_monitor(dburi, maxworkers):
     engine = create_engine(dburi)
     workers = []
     while True:
+        dead = reap_dead_workers(engine)
+        if dead:
+            print('reaped {} dead workers'.format(len(dead)))
         new = ensure_workers(engine, maxworkers)
         if new:
             print('spawned {} active workers'.format(len(new)))
