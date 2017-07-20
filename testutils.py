@@ -66,6 +66,9 @@ def scrub(anstr, subst='X'):
                 digit = False
                 out.append('<{}>'.format(subst))
             out.append(char)
+    # trailing digits ...
+    if digit:
+        out.append('<{}>'.format(subst))
     return ''.join(out).strip()
 
 

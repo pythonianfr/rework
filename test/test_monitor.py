@@ -1,5 +1,6 @@
 import time
 from functools import partial
+import logging
 
 from rework import api
 from rework.schema import worker
@@ -36,6 +37,16 @@ def unstopable_death(task):
 @api.task
 def normal_exception(task):
     raise Exception('oops')
+
+
+@api.task
+def capture_logs(task):
+    logger = logging.getLogger('my_app_logger')
+    logger.debug('uncaptured %s', 42)
+    with task.capturelogs():
+        logger.error('will be captured %s', 42)
+        logger.debug('will be captured %s also', 1)
+    logger.debug('uncaptured %s', 42)
 
 
 def test_basic_task_operations(engine):
@@ -178,3 +189,26 @@ def test_task_error(engine):
         assert tb.strip().endswith('oops')
 
         assert t.traceback == tb
+
+
+def test_task_logging_capture(engine):
+    api.freeze_operations(engine)
+    with engine.connect() as cn:
+        cn.execute('delete from rework.task')
+
+    with test_workers(engine, 2):
+        t1 = api.schedule(engine, 'capture_logs')
+        t2 = api.schedule(engine, 'capture_logs')
+
+        finished = lambda t: t.status == 'done'
+        wait_true(partial(finished, t1))
+        wait_true(partial(finished, t2))
+
+        assert [
+            (1, t1.tid, 'my_app_logger:ERROR: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X>'),
+            (2, t1.tid, 'my_app_logger:DEBUG: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X> also'),
+            (3, t2.tid, 'my_app_logger:ERROR: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X>'),
+            (4, t2.tid, 'my_app_logger:DEBUG: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X> also')
+        ] == [(lid, tid, scrub(line)) for lid, tid, line in engine.execute(
+            'select id, task, line from rework.log order by id, task').fetchall()
+        ]

@@ -44,6 +44,15 @@ task = Table(
 )
 
 
+log = Table(
+    'log', meta,
+    Column('id', Integer, primary_key=True),
+    Column('task', Integer, ForeignKey('rework.task.id', ondelete='cascade')),
+    Column('line', String, nullable=False),
+    schema='rework'
+)
+
+
 def init(engine):
     engine.execute(CreateSchema('rework'))
     meta.create_all(engine)

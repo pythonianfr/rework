@@ -1,10 +1,13 @@
 import os
-import sys
 from threading import Thread
 import socket
 from queue import Queue
+import time
+import logging
 
 import psutil
+
+from rework.schema import log
 
 
 def host():
@@ -70,3 +73,51 @@ def read_proc_streams(proc, lines=0):
         yield stream_line
         if lines and idx > lines:
             break
+
+
+# Logging
+
+
+class PGLogHandler(logging.Handler):
+    maxqueue = 100
+
+    def __init__(self, task):
+        super(PGLogHandler, self).__init__()
+        self.task = task
+        self.lastflush = time.time()
+        self.queue = []
+        self.formatter = logging.Formatter(
+            '%(name)s:%(levelname)s: %(asctime)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+
+    def emit(self, record):
+        self.queue.append(record)
+
+        if ((time.time() - self.lastflush) > 1 or
+            len(self.queue) > self.maxqueue):
+            self.flush()
+
+    def flush(self):
+        if not self.queue:
+            return
+
+        values = [{'task': self.task.tid,
+                   'line': self.formatter.format(record)}
+                  for record in self.queue]
+        self.queue = []
+        self.lastflush = time.time()
+
+        def writeback_log(values, engine):
+            sql = log.insert().values(values)
+            with engine.connect() as cn:
+                cn.execute(sql)
+
+        th = Thread(target=writeback_log,
+                    args=(values, self.task.engine))
+        th.daemon = True
+        # fire and forget
+        th.start()
+
+    def close(self):
+        pass
