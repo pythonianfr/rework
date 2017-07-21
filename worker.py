@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, select
 
 from rework.helper import has_ancestor_pid, kill
 from rework.schema import worker, task as taske
-from rework.task import grab_task
+from rework.task import Task
 
 
 def running_sql(wid, running):
@@ -104,12 +104,12 @@ def _main_loop(engine, worker_id, ppid, polling_period):
         while True:
             die_if_ancestor_died(ppid, worker_id)
             die_if_shutdown(engine, worker_id)
-            task = grab_task(engine, int(worker_id))
+            task = Task.fromqueue(engine, int(worker_id))
 
             while task:
                 with abortion_monitor(engine, worker_id, task):
                     task.run()
-                task = grab_task(engine, worker_id)
+                task = Task.fromqueue(engine, worker_id)
 
             time.sleep(polling_period)
 

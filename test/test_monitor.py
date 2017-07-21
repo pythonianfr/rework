@@ -4,7 +4,7 @@ import logging
 
 from rework import api
 from rework.schema import worker
-from rework.task import grab_task
+from rework.task import Task
 from rework.worker import running_status, shutdown_asked
 from rework.monitor import new_worker, ensure_workers, reap_dead_workers
 from rework.helper import kill, read_proc_streams
@@ -63,7 +63,7 @@ def test_basic_task_operations(engine):
     api.freeze_operations(engine)
     api.schedule(engine, 'print_sleep_and_go_away', 21)
     wid = new_worker(engine)
-    t = grab_task(engine, wid)
+    t = Task.fromqueue(engine, wid)
     t.run()
     assert t.output == 42
 

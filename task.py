@@ -22,6 +22,27 @@ class Task(object):
         self.tid = tid
         self.operation = operation
 
+
+    @classmethod
+    def fromqueue(cls, engine, wid):
+        with engine.connect() as cn:
+            sql = ("select id, operation from rework.task "
+                   "where status = 'queued' "
+                   "order by id "
+                   "for update skip locked "
+                   "limit 1")
+            tid_operation = cn.execute(sql).fetchone()
+            if tid_operation is None:
+                return
+
+            tid, operation = tid_operation
+            sql = task.update().where(task.c.id == tid).values(
+                status='running',
+                worker=wid)
+            cn.execute(sql)
+
+            return cls(engine, tid, operation)
+
     def save_output(self, data):
         sql = task.update().where(task.c.id == self.tid).values(
             output=dumps(data)
@@ -116,23 +137,3 @@ class Task(object):
                     abort=True
                 )
             )
-
-
-def grab_task(engine, wid):
-    with engine.connect() as cn:
-        sql = ("select id, operation from rework.task "
-               "where status = 'queued' "
-               "order by id "
-               "for update skip locked "
-               "limit 1")
-        tid_operation = cn.execute(sql).fetchone()
-        if tid_operation is None:
-            return
-
-        tid, operation = tid_operation
-        sql = task.update().where(task.c.id == tid).values(
-            status='running',
-            worker=wid)
-        cn.execute(sql)
-
-        return Task(engine, tid, operation)
