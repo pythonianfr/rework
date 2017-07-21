@@ -292,3 +292,6 @@ def test_logging_stress_test(engine):
         offsets = [lid - int(line.rsplit(',')[-1].strip())
                    for lid, line in records]
         assert all(offsets[0] == offset for offset in offsets)
+
+        assert len(list(t.logs())) == 249
+        assert len(list(t.logs(fromid=245))) == 13

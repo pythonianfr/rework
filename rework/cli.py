@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+from time import sleep
 import click
 
 from colorama import init, Fore, Style
@@ -108,3 +109,33 @@ def list_tasks(dburi, tracebacks=False, logcount=False):
         if tracebacks and task.traceback:
             print(Fore.YELLOW + task.traceback, end='')
         print()
+
+
+@rework.command('log-task')
+@click.argument('dburi')
+@click.argument('taskid', type=int)
+@click.option('--watch', is_flag=True, default=False)
+@click.option('--fromid', type=int)
+def log_task(dburi, taskid, tail=False, fromid=None, watch=False):
+    engine = create_engine(dburi)
+    task = Task.byid(engine, taskid)
+
+    def watchlogs(fromid):
+        lid = fromid
+        for lid, line in task.logs(fromid=fromid):
+            print(Fore.GREEN + line.strip())
+        return lid
+
+    if not watch:
+        watchlogs(fromid)
+        if task.traceback:
+            print(task.traceback)
+        return
+
+    while True:
+        fromid = watchlogs(fromid)
+        sleep(1)
+        if task.status == 'done':
+            break
+
+    print(Style.RESET_ALL)
