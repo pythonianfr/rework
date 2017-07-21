@@ -48,6 +48,7 @@ log = Table(
     'log', meta,
     Column('id', Integer, primary_key=True),
     Column('task', Integer, ForeignKey('rework.task.id', ondelete='cascade')),
+    Column('tstamp', Integer, nullable=False),
     Column('line', String, nullable=False),
     schema='rework'
 )

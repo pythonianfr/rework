@@ -51,6 +51,14 @@ def capture_logs(task):
     print('This will be lost')
 
 
+@api.task
+def log_swarm(task):
+    logger = logging.getLogger('APP')
+    with task.capturelogs():
+        for i in range(1, 250):
+            logger.info('I will fill your database, %s', i)
+
+
 def test_basic_task_operations(engine):
     api.freeze_operations(engine)
     api.schedule(engine, 'print_sleep_and_go_away')
@@ -189,7 +197,6 @@ def test_task_error(engine):
                    lambda r: r.scalar())
 
         assert tb.strip().endswith('oops')
-
         assert t.traceback == tb
 
 
@@ -216,3 +223,24 @@ def test_task_logging_capture(engine):
         ] == [(lid, tid, scrub(line)) for lid, tid, line in engine.execute(
             'select id, task, line from rework.log order by id, task').fetchall()
         ]
+
+
+def test_logging_stress_test(engine):
+    api.freeze_operations(engine)
+    with engine.connect() as cn:
+        cn.execute('delete from rework.log')
+
+    with test_workers(engine):
+        t = api.schedule(engine, 'log_swarm')
+
+        wait_true(partial(lambda t: t.status == 'done', t))
+        records = engine.execute(
+            'select id, line from rework.log where task = {}'.format(t.tid)
+        ).fetchall()
+
+        # we check that there is a constant offset between the
+        # log id and the idx that is emitted by the task code
+        # => ordering has been preserved
+        offsets = [lid - int(line.rsplit(',')[-1].strip())
+                   for lid, line in records]
+        assert all(offsets[0] == offset for offset in offsets)

@@ -81,9 +81,10 @@ def read_proc_streams(proc, lines=0):
 class PGLogHandler(logging.Handler):
     maxqueue = 100
 
-    def __init__(self, task):
+    def __init__(self, task, sync=True):
         super(PGLogHandler, self).__init__()
         self.task = task
+        self.sync = sync
         self.lastflush = time.time()
         self.queue = []
         self.formatter = logging.Formatter(
@@ -103,6 +104,7 @@ class PGLogHandler(logging.Handler):
             return
 
         values = [{'task': self.task.tid,
+                   'tstamp': record.created,
                    'line': self.formatter.format(record)}
                   for record in self.queue]
         self.queue = []
@@ -118,6 +120,8 @@ class PGLogHandler(logging.Handler):
         th.daemon = True
         # fire and forget
         th.start()
+        if self.sync:
+            th.join()
 
     def close(self):
         pass

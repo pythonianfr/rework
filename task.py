@@ -30,8 +30,8 @@ class Task(object):
             cn.execute(sql)
 
     @contextmanager
-    def capturelogs(self, level=logging.NOTSET, std=False):
-        pghdlr = PGLogHandler(self)
+    def capturelogs(self, sync=True, level=logging.NOTSET, std=False):
+        pghdlr = PGLogHandler(self, sync)
         root = logging.getLogger()
         assert not len(root.handlers)
         root.setLevel(level)

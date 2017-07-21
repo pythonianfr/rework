@@ -46,12 +46,15 @@ def test_workers(engine, numworkers=1):
 
     # wait till' they are all running
     guard(engine, 'select count(id) from rework.worker where running = true',
-          lambda r: r.scalar() == numworkers,
-          3)
-    yield [wid for wid, _proc in procs]
-    for _wid, proc in procs:
-        proc.kill()
-    reap_dead_workers(engine)
+          lambda r: r.scalar() == numworkers)
+    try:
+        yield [wid for wid, _proc in procs]
+    finally:
+        for _wid, proc in procs:
+            proc.kill()
+        reap_dead_workers(engine)
+        guard(engine, 'select count(id) from rework.worker where running = true',
+              lambda r: r.scalar() == 0)
 
 
 def scrub(anstr, subst='X'):
