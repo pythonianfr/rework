@@ -18,7 +18,7 @@ def print_sleep_and_go_away(task):
     print('I am running within task', task.tid)
     time.sleep(.2)
     print('Saving computation to task.output')
-    task.save_output(42)
+    task.save_output(2 * task.input)
     print('And now I am done.')
 
 
@@ -61,7 +61,7 @@ def log_swarm(task):
 
 def test_basic_task_operations(engine):
     api.freeze_operations(engine)
-    api.schedule(engine, 'print_sleep_and_go_away')
+    api.schedule(engine, 'print_sleep_and_go_away', 21)
     wid = new_worker(engine)
     t = grab_task(engine, wid)
     t.run()
@@ -83,7 +83,7 @@ def test_basic_worker_operations(engine):
 
 def test_basic_worker_task_execution(engine):
     api.freeze_operations(engine)
-    t = api.schedule(engine, 'print_sleep_and_go_away')
+    t = api.schedule(engine, 'print_sleep_and_go_away', 21)
 
     guard(engine, "select count(id) from rework.task where status = 'queued'",
           lambda res: res.scalar() == 1)

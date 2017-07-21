@@ -66,6 +66,12 @@ class Task(object):
         return self._propvalue('worker')
 
     @property
+    def input(self):
+        val = self._propvalue('input')
+        if val is not None:
+            return loads(val)
+
+    @property
     def output(self):
         out = self._propvalue('output')
         if out is not None:
