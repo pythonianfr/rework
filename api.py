@@ -1,6 +1,10 @@
 import sys
 from pickle import dumps
 
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+
+from rework.helper import host
 from rework.schema import task as taskentity, operation
 from rework.task import __task_registry__, Task
 
@@ -10,11 +14,20 @@ def task(func):
     return func
 
 
-def schedule(engine, operation, inputdata=None):
-    assert operation in __task_registry__
+def schedule(engine, opname, inputdata=None, hostid=None, module=None):
+    assert opname in __task_registry__
+    sql = select([operation.c.id]).where(
+        operation.c.name == opname)
+    if module is not None:
+        sql = sql.where(operation.c.modname == module)
+    if hostid is None:
+        hostid = host()
+    sql = sql.where(operation.c.host == hostid)
     with engine.connect() as cn:
-        opid = cn.execute('select id from rework.operation where name = %(name)s',
-                          name=operation).scalar()
+        opids = cn.execute(sql).fetchall()
+        if len(opids) > 1:
+            raise ValueError('Ambiguous operation selection')
+        opid = opids[0][0]
         sql = taskentity.insert()
         value = {
             'operation': opid,
@@ -29,13 +42,18 @@ def schedule(engine, operation, inputdata=None):
 def freeze_operations(engine):
     sql = operation.insert()
     values = []
+    hostid = host()
     for name, func in __task_registry__.items():
         funcmod = func.__module__
         module = sys.modules[funcmod]
         modpath = module.__file__
         values.append({
+            'host': hostid,
             'name': name,
             'path': modpath
         })
     with engine.connect() as cn:
-        cn.execute(sql, values)
+        try:
+            cn.execute(sql, values)
+        except IntegrityError:
+            pass

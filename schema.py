@@ -1,4 +1,7 @@
-from sqlalchemy import MetaData, Table, Column, ForeignKey, String, Integer, Boolean
+from sqlalchemy import (
+    MetaData, Table, Column, ForeignKey, String, Integer, Boolean,
+    UniqueConstraint
+)
 from sqlalchemy.dialects.postgresql import ENUM, BYTEA
 from sqlalchemy.schema import CreateSchema
 
@@ -22,8 +25,10 @@ worker = Table(
 operation = Table(
     'operation', meta,
     Column('id', Integer, primary_key=True),
+    Column('host', String, nullable=False),
     Column('name', String, nullable=False),
     Column('path', String, nullable=False),
+    UniqueConstraint('host', 'name', 'path', name='unique_operation'),
     schema='rework'
 )
 
