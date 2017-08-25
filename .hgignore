@@ -1,0 +1,4 @@
+data/pgdb
+\.pyc$
+\.orig$
+.tox

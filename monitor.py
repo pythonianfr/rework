@@ -1,0 +1,52 @@
+import os
+import time
+import subprocess as sub
+
+from sqlalchemy import create_engine
+
+from rework.helper import host, watch
+from rework.schema import worker
+
+
+def spawn_worker(engine):
+    wid = new_worker(engine)
+    cmd = ['rework', 'new_worker', str(engine.url), str(wid), str(os.getpid())]
+    return sub.Popen(cmd,
+                     bufsize=1,
+                     stdout=sub.PIPE, stderr=sub.PIPE)
+
+
+def new_worker(engine):
+    with engine.connect() as cn:
+        return cn.execute(
+            worker.insert().values(
+                host=host()
+            )
+        ).inserted_primary_key[0]
+
+
+def ensure_workers(engine, maxworkers):
+    sql = ("select count(id) from rework.worker "
+           "where host = %(host)s and running = true")
+    with engine.connect() as cn:
+        numworkers = cn.execute(sql, {'host': host()}).scalar()
+        print('{} active workers'.format(numworkers))
+
+    procs = []
+    for _ in range(maxworkers - numworkers):
+        procs.append(spawn_worker(engine))
+
+    return procs
+
+
+def run_monitor(dburi, maxworkers):
+    engine = create_engine(dburi)
+    workers = []
+    while True:
+        new = ensure_workers(engine, maxworkers)
+        if new:
+            print('spawned {} active workers'.format(len(new)))
+        workers += new
+        for w in workers:
+            watch(w)
+        time.sleep(1)
