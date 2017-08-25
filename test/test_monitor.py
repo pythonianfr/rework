@@ -1,6 +1,5 @@
-import time
 from functools import partial
-import logging
+from pathlib import Path
 
 from rework import api
 from rework.schema import worker
@@ -10,59 +9,28 @@ from rework.monitor import new_worker, ensure_workers, reap_dead_workers
 from rework.helper import kill, read_proc_streams
 from rework.testutils import guard, scrub, wait_true, workers
 
-
-@api.task
-def print_sleep_and_go_away(task):
-    print('Hello, world')
-    time.sleep(.2)
-    print('I am running within task', task.tid)
-    time.sleep(.2)
-    print('Saving computation to task.output')
-    task.save_output(2 * task.input)
-    print('And now I am done.')
-
-
-@api.task
-def infinite_loop(task):
-    while True:
-        time.sleep(1)
-
-
-@api.task
-def unstopable_death(task):
-    import os
-    os._exit(0)
-
-
-@api.task
-def normal_exception(task):
-    raise Exception('oops')
-
-
-@api.task
-def capture_logs(task):
-    logger = logging.getLogger('my_app_logger')
-    logger.debug('uncaptured %s', 42)
-    with task.capturelogs(std=True):
-        logger.error('will be captured %s', 42)
-        print('I want to be captured')
-        logger.debug('will be captured %s also', 1)
-    logger.debug('uncaptured %s', 42)
-    print('This will be lost')
-
-
-@api.task
-def log_swarm(task):
-    logger = logging.getLogger('APP')
-    with task.capturelogs():
-        for i in range(1, 250):
-            logger.info('I will fill your database, %s', i)
+# our test tasks
+from rework.test import tasks
 
 
 def test_basic_task_operations(engine):
     api.freeze_operations(engine)
 
     api.schedule(engine, 'print_sleep_and_go_away', 21)
+
+    assert [
+        ('capture_logs', 'tasks.py'),
+        ('infinite_loop', 'tasks.py'),
+        ('log_swarm', 'tasks.py'),
+        ('normal_exception', 'tasks.py'),
+        ('print_sleep_and_go_away', 'tasks.py'),
+        ('unstopable_death', 'tasks.py')
+    ] == [(name, Path(path).name)
+          for name, path in engine.execute(
+                  'select name, path from rework.operation order by name'
+          ).fetchall()
+    ]
+
     wid = new_worker(engine)
     t = Task.fromqueue(engine, wid)
     t.run()
