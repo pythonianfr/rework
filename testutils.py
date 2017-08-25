@@ -37,7 +37,7 @@ def guard(engine, sql, expr, timeout=6):
 
 
 @contextmanager
-def test_workers(engine, numworkers=1):
+def workers(engine, numworkers=1):
     reap_dead_workers(engine)
     with engine.connect() as cn:
         cn.execute('delete from rework.task')
@@ -77,7 +77,3 @@ def scrub(anstr, subst='X'):
 
 def tasks(engine):
     return engine.execute('select * from rework.task').fetchall()
-
-
-def workers(engine):
-    return engine.execute('select * from rework.worker').fetchall()

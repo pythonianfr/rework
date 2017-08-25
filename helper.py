@@ -1,9 +1,10 @@
 import os
 from threading import Thread
 import socket
-from queue import Queue
 import time
 import logging
+
+from six.moves.queue import Queue
 
 import psutil
 

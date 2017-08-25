@@ -8,7 +8,7 @@ from rework.task import Task
 from rework.worker import running_status, shutdown_asked
 from rework.monitor import new_worker, ensure_workers, reap_dead_workers
 from rework.helper import kill, read_proc_streams
-from rework.testutils import guard, scrub, wait_true, test_workers
+from rework.testutils import guard, scrub, wait_true, workers
 
 
 @api.task
@@ -61,6 +61,7 @@ def log_swarm(task):
 
 def test_basic_task_operations(engine):
     api.freeze_operations(engine)
+
     api.schedule(engine, 'print_sleep_and_go_away', 21)
     wid = new_worker(engine)
     t = Task.fromqueue(engine, wid)
@@ -127,7 +128,7 @@ def test_basic_worker_task_execution(engine):
 
 
 def test_worker_shutdown(engine):
-    with test_workers(engine) as wids:
+    with workers(engine) as wids:
         wid = wids[0]
         assert not shutdown_asked(engine, wid)
 
@@ -147,7 +148,7 @@ def test_worker_shutdown(engine):
 def test_task_abortion(engine):
     api.freeze_operations(engine)
 
-    with test_workers(engine) as wids:
+    with workers(engine) as wids:
         wid = wids[0]
 
         t = api.schedule(engine, 'infinite_loop')
@@ -174,7 +175,7 @@ def test_task_abortion(engine):
 def test_worker_unplanned_death(engine):
     api.freeze_operations(engine)
 
-    with test_workers(engine) as wids:
+    with workers(engine) as wids:
         wid = wids[0]
 
         api.schedule(engine, 'unstopable_death')
@@ -189,7 +190,7 @@ def test_worker_unplanned_death(engine):
 def test_task_error(engine):
     api.freeze_operations(engine)
 
-    with test_workers(engine):
+    with workers(engine):
 
         t = api.schedule(engine, 'normal_exception')
 
@@ -205,7 +206,7 @@ def test_task_logging_capture(engine):
     with engine.connect() as cn:
         cn.execute('delete from rework.task')
 
-    with test_workers(engine, 2):
+    with workers(engine, 2):
         t1 = api.schedule(engine, 'capture_logs')
         t2 = api.schedule(engine, 'capture_logs')
 
@@ -230,7 +231,7 @@ def test_logging_stress_test(engine):
     with engine.connect() as cn:
         cn.execute('delete from rework.log')
 
-    with test_workers(engine):
+    with workers(engine):
         t = api.schedule(engine, 'log_swarm')
 
         wait_true(partial(lambda t: t.status == 'done', t))
