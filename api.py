@@ -1,6 +1,8 @@
 import sys
 from pickle import dumps
 
+from pathlib import Path
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
@@ -47,6 +49,9 @@ def freeze_operations(engine):
         funcmod = func.__module__
         module = sys.modules[funcmod]
         modpath = module.__file__
+        # python2
+        if modpath.endswith('pyc'):
+            modpath = modpath[:-1]
         values.append({
             'host': hostid,
             'name': name,

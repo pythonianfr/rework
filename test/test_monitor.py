@@ -18,6 +18,11 @@ def test_basic_task_operations(engine):
 
     api.schedule(engine, 'print_sleep_and_go_away', 21)
 
+    expected = [(name, Path(path).name)
+                for name, path in engine.execute(
+                        'select name, path from rework.operation order by name'
+                ).fetchall()
+    ]
     assert [
         ('capture_logs', 'tasks.py'),
         ('infinite_loop', 'tasks.py'),
@@ -25,11 +30,7 @@ def test_basic_task_operations(engine):
         ('normal_exception', 'tasks.py'),
         ('print_sleep_and_go_away', 'tasks.py'),
         ('unstopable_death', 'tasks.py')
-    ] == [(name, Path(path).name)
-          for name, path in engine.execute(
-                  'select name, path from rework.operation order by name'
-          ).fetchall()
-    ]
+    ] == expected
 
     wid = new_worker(engine)
     t = Task.fromqueue(engine, wid)
