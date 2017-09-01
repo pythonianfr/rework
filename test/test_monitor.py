@@ -182,6 +182,10 @@ def test_task_logging_capture(engine):
         wait_true(partial(finished, t1))
         wait_true(partial(finished, t2))
 
+        out = [(lid, tid, scrub(line))
+               for lid, tid, line in engine.execute(
+                'select id, task, line from rework.log order by id, task').fetchall()
+        ]
         assert [
             (1, t1.tid, 'my_app_logger:ERROR: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X>'),
             (2, t1.tid, 'stdout:INFO: <X>-<X>-<X> <X>:<X>:<X>: I want to be captured'),
@@ -189,9 +193,7 @@ def test_task_logging_capture(engine):
             (4, t2.tid, 'my_app_logger:ERROR: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X>'),
             (5, t2.tid, 'stdout:INFO: <X>-<X>-<X> <X>:<X>:<X>: I want to be captured'),
             (6, t2.tid, 'my_app_logger:DEBUG: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X> also')
-        ] == [(lid, tid, scrub(line)) for lid, tid, line in engine.execute(
-            'select id, task, line from rework.log order by id, task').fetchall()
-        ]
+        ] == out
 
 
 def test_logging_stress_test(engine):
