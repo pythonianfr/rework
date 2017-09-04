@@ -38,11 +38,13 @@ task = Table(
     Column('id', Integer, primary_key=True),
     Column('operation', Integer,
            ForeignKey('rework.operation.id', ondelete='cascade'),
-           nullable=False),
+           index=True, nullable=False),
     Column('input', BYTEA),
     Column('output', BYTEA),
     Column('traceback', String),
-    Column('worker', Integer, ForeignKey('rework.worker.id', ondelete='cascade')),
+    Column('worker', Integer,
+           ForeignKey('rework.worker.id', ondelete='cascade'),
+           index=True),
     Column('status', ENUM('queued', 'running', 'done', name='status')),
     Column('abort', Boolean, nullable=False, default=False),
     schema='rework'
@@ -52,7 +54,9 @@ task = Table(
 log = Table(
     'log', meta,
     Column('id', Integer, primary_key=True),
-    Column('task', Integer, ForeignKey('rework.task.id', ondelete='cascade')),
+    Column('task', Integer,
+           ForeignKey('rework.task.id', ondelete='cascade'),
+           index=True),
     Column('tstamp', Integer, nullable=False),
     Column('line', String, nullable=False),
     schema='rework'
