@@ -22,7 +22,6 @@ class Task(object):
         self.tid = tid
         self.operation = operation
 
-
     @classmethod
     def fromqueue(cls, engine, wid):
         with engine.connect() as cn:
@@ -40,6 +39,16 @@ class Task(object):
                 status='running',
                 worker=wid)
             cn.execute(sql)
+
+            return cls(engine, tid, operation)
+
+    @classmethod
+    def byid(cls, engine, tid):
+        with engine.connect() as cn:
+            sql = "select operation from rework.task where id = %(tid)s"
+            operation = cn.execute(sql, tid=tid).scalar()
+            if operation is None:
+                return
 
             return cls(engine, tid, operation)
 

@@ -37,6 +37,12 @@ def test_basic_task_operations(engine):
     t.run()
     assert t.output == 42
 
+    t2 = Task.byid(engine, t.tid)
+    assert (t2.tid, t2.operation) == (t.tid, t.operation)
+
+    t3 = Task.byid(engine, 42000)
+    assert t3 is None
+
 
 def test_basic_worker_operations(engine):
     wid = new_worker(engine)
