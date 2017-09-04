@@ -7,7 +7,7 @@ import logging
 
 from sqlalchemy import select
 
-from rework.schema import task
+from rework.schema import task, log
 from rework.helper import PGLogHandler, PGLogWriter
 
 
@@ -78,6 +78,15 @@ class Task(object):
             if std:
                 sys.stdout = out
                 sys.stderr = err
+
+    def logs(self, fromid=None):
+        sql = select([log.c.id, log.c.line]).order_by(log.c.id
+        ).where(log.c.task == self.tid)
+        if fromid:
+            sql = sql.where(log.c.id > fromid)
+
+        with self.engine.connect() as cn:
+            return cn.execute(sql).fetchall()
 
     def _propvalue(self, prop):
         sql = select([task.c[prop]]).where(task.c.id == self.tid)
