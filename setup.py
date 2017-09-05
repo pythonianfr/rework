@@ -12,6 +12,7 @@ setup(name='rework',
           'pytest_sa_pg',
           'pathlib',
           'psutil',
+          'colorama',
           'sqlalchemy',
           'psycopg2'
       ],
