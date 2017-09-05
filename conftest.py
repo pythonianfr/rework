@@ -9,7 +9,7 @@ from rework import schema
 
 
 DATADIR = Path(__file__).parent / 'test/data'
-PORT = 5433
+PORT = 2346
 
 
 @pytest.fixture(scope='session')
