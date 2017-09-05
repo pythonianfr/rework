@@ -33,7 +33,7 @@ def schedule(engine, opname, inputdata=None, hostid=None, module=None):
         sql = taskentity.insert()
         value = {
             'operation': opid,
-            'input': dumps(inputdata) if inputdata is not None else None,
+            'input': dumps(inputdata, protocol=2) if inputdata is not None else None,
             'status': 'queued'
         }
         tid = cn.execute(sql, **value).inserted_primary_key[0]

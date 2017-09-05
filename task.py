@@ -54,7 +54,7 @@ class Task(object):
 
     def save_output(self, data):
         sql = task.update().where(task.c.id == self.tid).values(
-            output=dumps(data)
+            output=dumps(data, protocol=2)
         )
         with self.engine.connect() as cn:
             cn.execute(sql)
