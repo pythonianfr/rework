@@ -7,9 +7,23 @@ import traceback
 
 from sqlalchemy import create_engine, select
 
+import psutil
+
 from rework.helper import has_ancestor_pid, kill
 from rework.schema import worker
 from rework.task import Task
+
+
+def memory_usage():
+    process = psutil.Process(os.getpid())
+    return int(process.memory_info().rss / float(2 ** 20))
+
+
+def track_memory_consumption(engine, wid):
+    mem = memory_usage()
+    sql = worker.update().where(worker.c.id == wid).values(mem=mem)
+    with engine.connect() as cn:
+        cn.execute(sql)
 
 
 def running_sql(wid, running):
@@ -21,7 +35,7 @@ def running_sql(wid, running):
     return worker.update().where(
         worker.c.id == wid).values(
             **value
-        )
+    )
 
 
 def death_sql(wid, cause):
@@ -60,12 +74,13 @@ def die_if_shutdown(engine, wid):
 @contextmanager
 def abortion_monitor(engine, wid, task):
 
-    def die_if_task_aborted():
+    def track_mem_and_die_if_task_aborted():
         while True:
             time.sleep(1)
             if task.status == 'done':
                 return
             if not task.aborted:
+                track_memory_consumption(engine, wid)
                 continue
 
             task.finish()
@@ -74,7 +89,8 @@ def abortion_monitor(engine, wid, task):
                 cn.execute(diesql)
                 kill(os.getpid())
 
-    monitor = Thread(name='monitor_abort', target=die_if_task_aborted)
+    monitor = Thread(name='monitor_abort',
+                     target=track_mem_and_die_if_task_aborted)
     monitor.daemon = True
     monitor.start()
     yield
@@ -113,6 +129,7 @@ def _main_loop(engine, worker_id, ppid, polling_period):
         while True:
             die_if_ancestor_died(engine, ppid, worker_id)
             die_if_shutdown(engine, worker_id)
+            track_memory_consumption(engine, worker_id)
             task = Task.fromqueue(engine, int(worker_id))
 
             while task:

@@ -46,9 +46,9 @@ def deploy(**config):
 def list_workers(dburi):
     init()
     engine = create_engine(dburi)
-    sql = ('select id, host, pid, running, shutdown, traceback, deathinfo '
+    sql = ('select id, host, pid, mem, running, shutdown, traceback, deathinfo '
            'from rework.worker order by id, running')
-    for wid, host, pid, running, shutdown, traceback, deathinfo in engine.execute(sql):
+    for wid, host, pid, mem, running, shutdown, traceback, deathinfo in engine.execute(sql):
         color = Fore.GREEN
         dead = not running and (shutdown or traceback or deathinfo)
         if dead:
@@ -57,6 +57,7 @@ def list_workers(dburi):
             color = Fore.MAGENTA
         print(wid,
               Fore.GREEN + '{}@{}'.format(pid, host),
+              '{} Mb'.format(mem),
               color + ('[running]' if running else '[dead]' if dead else '[unstarted]'),
               end=' ')
         if dead:
