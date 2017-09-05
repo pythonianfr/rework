@@ -25,8 +25,8 @@ worker = Table(
 operation = Table(
     'operation', meta,
     Column('id', Integer, primary_key=True),
-    Column('host', String, nullable=False),
-    Column('name', String, nullable=False),
+    Column('host', String, nullable=False, index=True),
+    Column('name', String, nullable=False, index=True),
     Column('path', String, nullable=False),
     UniqueConstraint('host', 'name', 'path', name='unique_operation'),
     schema='rework'
@@ -45,7 +45,8 @@ task = Table(
     Column('worker', Integer,
            ForeignKey('rework.worker.id', ondelete='cascade'),
            index=True),
-    Column('status', ENUM('queued', 'running', 'done', name='status')),
+    Column('status', ENUM('queued', 'running', 'done', name='status'),
+           index=True),
     Column('abort', Boolean, nullable=False, default=False),
     schema='rework'
 )
