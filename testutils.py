@@ -1,39 +1,7 @@
-import threading
-import time
 from contextlib import contextmanager
 
+from rework.helper import guard
 from rework.monitor import ensure_workers, reap_dead_workers
-
-
-def wait_true(func, timeout=6):
-    outcome = []
-
-    def loop():
-        start = time.time()
-        while True:
-            if (time.time() - start) > timeout:
-                return
-            output = func()
-            if output:
-                outcome.append(output)
-                return
-            time.sleep(.1)
-
-    th = threading.Thread(target=loop)
-    th.daemon = True
-    th.start()
-    th.join()
-    assert outcome
-    return outcome[0]
-
-
-def guard(engine, sql, expr, timeout=6):
-
-    def check():
-        with engine.connect() as cn:
-            return expr(cn.execute(sql))
-
-    return wait_true(check, timeout)
 
 
 @contextmanager

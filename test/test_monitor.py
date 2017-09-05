@@ -6,8 +6,8 @@ from rework.schema import worker
 from rework.task import Task
 from rework.worker import running_status, shutdown_asked
 from rework.monitor import new_worker, ensure_workers, reap_dead_workers
-from rework.helper import kill, read_proc_streams
-from rework.testutils import guard, scrub, wait_true, workers
+from rework.helper import kill, read_proc_streams, guard, wait_true
+from rework.testutils import scrub, workers
 
 # our test tasks
 from rework.test import tasks

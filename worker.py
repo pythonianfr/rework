@@ -8,7 +8,7 @@ import traceback
 from sqlalchemy import create_engine, select
 
 from rework.helper import has_ancestor_pid, kill
-from rework.schema import worker, task as taske
+from rework.schema import worker
 from rework.task import Task
 
 
@@ -24,12 +24,22 @@ def running_sql(wid, running):
         )
 
 
-def die_if_ancestor_died(ppid, wid):
+def death_sql(wid, cause):
+    return worker.update().where(worker.c.id == wid).values(
+        deathinfo=cause,
+        running=False
+    )
+
+
+def die_if_ancestor_died(engine, ppid, wid):
     if not has_ancestor_pid(ppid):
         # Our ancestor does not exist any more
         # this is an ambiguous signal that we also must
         # go to bed.
+        with engine.connect() as cn:
+            cn.execute(death_sql(wid, 'ancestor died'))
         raise SystemExit('Worker {} exiting.'.format(os.getpid()))
+
 
 # Worker shutdown
 
@@ -58,11 +68,8 @@ def abortion_monitor(engine, wid, task):
 
             task.finish()
             with engine.connect() as cn:
-                workersql = worker.update().where(worker.c.id == wid).values(
-                    deathinfo='Task {} aborted'.format(task.tid),
-                    running=False
-                )
-                cn.execute(workersql)
+                diesql = death_sql(wid, 'Task {} aborted'.format(task.tid))
+                cn.execute(diesql)
                 kill(os.getpid())
 
     monitor = Thread(name='monitor_abort', target=die_if_task_aborted)
@@ -102,7 +109,7 @@ def run_worker(dburi, worker_id, ppid, polling_period):
 def _main_loop(engine, worker_id, ppid, polling_period):
     with running_status(engine, worker_id):
         while True:
-            die_if_ancestor_died(ppid, worker_id)
+            die_if_ancestor_died(engine, ppid, worker_id)
             die_if_shutdown(engine, worker_id)
             task = Task.fromqueue(engine, int(worker_id))
 

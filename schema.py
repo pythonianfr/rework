@@ -14,7 +14,7 @@ worker = Table(
     Column('id', Integer, primary_key=True),
     Column('host', String, nullable=False),
     Column('pid', Integer),
-    Column('running', Boolean, nullable=False, default=False),
+    Column('running', Boolean, nullable=False, default=False, index=True),
     Column('shutdown', Boolean, nullable=False, default=False),
     Column('traceback', String),
     Column('deathinfo', String),

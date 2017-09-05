@@ -6,7 +6,7 @@ import psutil
 
 from sqlalchemy import create_engine
 
-from rework.helper import host, watch
+from rework.helper import host, guard
 from rework.schema import worker
 
 
@@ -27,16 +27,24 @@ def new_worker(engine):
         ).inserted_primary_key[0]
 
 
-def ensure_workers(engine, maxworkers):
+def num_workers(engine):
     sql = ("select count(id) from rework.worker "
            "where host = %(host)s and running = true")
     with engine.connect() as cn:
-        numworkers = cn.execute(sql, {'host': host()}).scalar()
-        print('{} active workers'.format(numworkers))
+        return cn.execute(sql, {'host': host()}).scalar()
+
+
+def ensure_workers(engine, maxworkers):
+    numworkers = num_workers(engine)
 
     procs = []
     for _ in range(maxworkers - numworkers):
         procs.append(spawn_worker(engine))
+
+    # wait til they are up and running
+    guard(engine, 'select count(id) from rework.worker where running = true',
+          lambda c: c.scalar() == maxworkers,
+          timeout=10 + maxworkers * 2)
 
     return procs
 
@@ -64,11 +72,22 @@ def reap_dead_workers(engine):
     return deadlist
 
 
+def cleanup_unstarted(engine):
+    sql = ('delete from rework.worker '
+           'where not running '
+           'and traceback is null '
+           'and not shutdown '
+           'and deathinfo is null')
+    with engine.connect() as cn:
+        cn.execute(sql)
+
+
 def run_monitor(dburi, maxworkers):
     engine = create_engine(dburi)
     workers = []
     while True:
         dead = reap_dead_workers(engine)
+        cleanup_unstarted(engine)
         if dead:
             print('reaped {} dead workers'.format(len(dead)))
             workers = [(wid, proc)
@@ -78,6 +97,4 @@ def run_monitor(dburi, maxworkers):
         if new:
             print('spawned {} active workers'.format(len(new)))
         workers += new
-        for wid, proc in workers:
-            watch(proc)
         time.sleep(1)

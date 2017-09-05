@@ -11,6 +11,37 @@ import psutil
 from rework.schema import log
 
 
+def wait_true(func, timeout=6):
+    outcome = []
+
+    def loop():
+        start = time.time()
+        while True:
+            if (time.time() - start) > timeout:
+                return
+            output = func()
+            if output:
+                outcome.append(output)
+                return
+            time.sleep(.1)
+
+    th = Thread(target=loop)
+    th.daemon = True
+    th.start()
+    th.join()
+    assert outcome
+    return outcome[0]
+
+
+def guard(engine, sql, expr, timeout=6):
+
+    def check():
+        with engine.connect() as cn:
+            return expr(cn.execute(sql))
+
+    return wait_true(check, timeout)
+
+
 def host():
     try:
         return socket.gethostbyname(socket.gethostname())
