@@ -50,6 +50,8 @@ def shutdown_asked(engine, wid):
 
 def die_if_shutdown(engine, wid):
     if shutdown_asked(engine, wid):
+        with engine.connect() as cn:
+            cn.execute(death_sql(wid, 'explicit shutdown'))
         raise SystemExit('Worker {} exiting.'.format(os.getpid()))
 
 

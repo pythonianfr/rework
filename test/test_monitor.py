@@ -113,11 +113,16 @@ def test_worker_shutdown(engine):
                     shutdown=True
                 )
             )
+        assert shutdown_asked(engine, wid)
         guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
               lambda r: r.scalar() == True)
 
         guard(engine, 'select count(id) from rework.worker where running = true',
               lambda r: r.scalar() == 0)
+
+        assert u'explicit shutdown' == engine.execute(
+            'select deathinfo from rework.worker where id = %(wid)s', wid=wid
+        ).scalar()
 
 
 def test_task_abortion(engine):
