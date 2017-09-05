@@ -8,6 +8,7 @@ from sqlalchemy import create_engine
 
 from rework import schema
 from rework.worker import run_worker
+from rework.task import Task
 from rework.monitor import run_monitor
 
 
@@ -64,3 +65,41 @@ def list_workers(dburi):
             if traceback:
                 print(Fore.YELLOW + traceback, end=' ')
         print(Style.RESET_ALL)
+
+
+status_color = {
+    'done': Fore.GREEN,
+    'aborted': Fore.RED,
+    'failed': Fore.RED,
+    'running': Fore.YELLOW,
+    'queued': Fore.MAGENTA
+}
+
+
+@rework.command('list-tasks')
+@click.argument('dburi')
+@click.option('--tracebacks/--no-tracebacks', default=False)
+@click.option('--logcount/--no-logcount', default=False)
+def list_tasks(dburi, tracebacks=False, logcount=False):
+    init()
+    engine = create_engine(dburi)
+    opmap = dict(engine.execute('select id, name from rework.operation').fetchall())
+    sql = ('select id from rework.task order by id')
+    for tid, in engine.execute(sql):
+        task = Task.byid(engine, tid)
+        stat = task.status
+        if stat == 'done':
+            if task.traceback:
+                stat = 'failed'
+            elif task.aborted:
+                stat = 'aborted'
+        print(Style.RESET_ALL + str(tid),
+              Fore.GREEN + opmap[task.operation],
+              status_color[stat] + stat, end=' ')
+        if logcount:
+            sql = 'select count(*) from rework.log where task = %(tid)s'
+            count = engine.execute(sql, {'tid': task.tid}).scalar()
+            print(Style.RESET_ALL + '{} log lines'.format(count), end=' ')
+        if tracebacks and task.traceback:
+            print(Fore.YELLOW + task.traceback, end='')
+        print()
