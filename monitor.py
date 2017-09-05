@@ -55,8 +55,9 @@ def reap_dead_workers(engine):
     deadlist = []
     for wid, pid in engine.execute(sql, {'host': host()}).fetchall():
         try:
-            name = psutil.Process(pid).name()
-            if not name.startswith('python'):
+            cmd = ' '.join(psutil.Process(pid).cmdline())
+            if 'new_worker' not in cmd and str(engine.url) not in cmd:
+                print('pid {} was probably recycled'.format(pid))
                 deadlist.append(wid)
         except psutil.NoSuchProcess:
             deadlist.append(wid)
