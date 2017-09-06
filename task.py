@@ -120,6 +120,21 @@ class Task(object):
     def traceback(self):
         return self._propvalue('traceback')
 
+    @property
+    def state(self):
+        " provide a comprehensive synthetic task state "
+        status = self.status
+        aborted = self.aborted
+        if status != 'done':
+            if aborted:
+                return 'aborting'
+            return status
+        if aborted:
+            return 'aborted'
+        if self.traceback:
+            return 'failed'
+        return 'done'
+
     def run(self):
         try:
             name, path = self.engine.execute("""

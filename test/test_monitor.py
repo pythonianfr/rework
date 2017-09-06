@@ -60,6 +60,7 @@ def test_basic_worker_operations(engine):
 def test_basic_worker_task_execution(engine):
     api.freeze_operations(engine)
     t = api.schedule(engine, 'print_sleep_and_go_away', 21)
+    assert t.state == 'queued'
 
     guard(engine, "select count(id) from rework.task where status = 'queued'",
           lambda res: res.scalar() == 1)
@@ -78,6 +79,7 @@ def test_basic_worker_task_execution(engine):
           lambda res: res.scalar())
 
     assert t.output == 42
+    assert t.state == 'done'
 
     logs = []
     for log in read_proc_streams(proc):
@@ -135,12 +137,19 @@ def test_task_abortion(engine):
         guard(engine, 'select count(id) from rework.task where worker = {}'.format(wid),
               lambda res: res.scalar() == 1)
 
+        assert t.state == 'running'
+
         t.abort()
         assert t.aborted
+        # this is potentially racy but might work most of the time
+        assert t.state == 'aborting'
 
         guard(engine, "select count(id) from rework.task "
               "where status = 'done' and worker = {}".format(wid),
               lambda res: res.scalar() == 1)
+
+        assert t.state == 'aborted'
+
         # one dead worker
         guard(engine, 'select running from rework.worker where id = {}'.format(wid),
               lambda res: not res.scalar())
@@ -179,6 +188,7 @@ def test_task_error(engine):
 
         assert tb.strip().endswith('oops')
         assert t.traceback == tb
+        assert t.state == 'failed'
 
 
 def test_task_logging_capture(engine):

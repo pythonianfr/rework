@@ -71,6 +71,7 @@ def list_workers(dburi):
 status_color = {
     'done': Fore.GREEN,
     'aborted': Fore.RED,
+    'aborting': Fore.RED,
     'failed': Fore.RED,
     'running': Fore.YELLOW,
     'queued': Fore.MAGENTA
@@ -88,12 +89,7 @@ def list_tasks(dburi, tracebacks=False, logcount=False):
     sql = ('select id from rework.task order by id')
     for tid, in engine.execute(sql):
         task = Task.byid(engine, tid)
-        stat = task.status
-        if stat == 'done':
-            if task.traceback:
-                stat = 'failed'
-            elif task.aborted:
-                stat = 'aborted'
+        stat = task.state
         print(Style.RESET_ALL + str(tid),
               Fore.GREEN + opmap[task.operation],
               status_color[stat] + stat, end=' ')
