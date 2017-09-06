@@ -57,8 +57,9 @@ def freeze_operations(engine):
             'name': name,
             'path': modpath
         })
-    with engine.connect() as cn:
-        try:
-            cn.execute(sql, values)
-        except IntegrityError:
-            pass
+    for value in values:
+        with engine.connect() as cn:
+            try:
+                cn.execute(sql, value)
+            except IntegrityError:
+                pass
