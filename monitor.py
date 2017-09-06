@@ -12,7 +12,7 @@ from rework.schema import worker
 
 def spawn_worker(engine):
     wid = new_worker(engine)
-    cmd = ['rework', 'new_worker', str(engine.url), str(wid), str(os.getpid())]
+    cmd = ['rework', 'new-worker', str(engine.url), str(wid), str(os.getpid())]
     return wid, sub.Popen(cmd,
                           bufsize=1,
                           stdout=sub.PIPE, stderr=sub.PIPE)

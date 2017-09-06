@@ -17,7 +17,7 @@ def rework():
     pass
 
 
-@rework.command()
+@rework.command(name='init-db')
 @click.argument('dburi')
 def init_db(dburi):
     engine = create_engine(dburi)
@@ -25,7 +25,7 @@ def init_db(dburi):
     schema.init(engine)
 
 
-@rework.command()
+@rework.command(name='new-worker')
 @click.argument('dburi')
 @click.argument('worker_id', type=int)
 @click.argument('ppid', type=int)
