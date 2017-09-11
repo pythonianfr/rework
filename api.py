@@ -52,6 +52,7 @@ def freeze_operations(engine):
         # python2
         if modpath.endswith('pyc'):
             modpath = modpath[:-1]
+        modpath = str(Path(modpath).resolve())
         values.append({
             'host': hostid,
             'name': name,
