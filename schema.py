@@ -1,6 +1,6 @@
 from sqlalchemy import (
     MetaData, Table, Column, ForeignKey, String, Integer, Boolean,
-    UniqueConstraint
+    DateTime, UniqueConstraint, func
 )
 from sqlalchemy.dialects.postgresql import ENUM, BYTEA
 from sqlalchemy.schema import CreateSchema
@@ -40,6 +40,7 @@ task = Table(
     Column('operation', Integer,
            ForeignKey('rework.operation.id', ondelete='cascade'),
            index=True, nullable=False),
+    Column('created', DateTime(timezone=True), server_default=func.now()),
     Column('input', BYTEA),
     Column('output', BYTEA),
     Column('traceback', String),

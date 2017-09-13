@@ -1,4 +1,5 @@
 from functools import partial
+from datetime import datetime
 from pathlib import Path
 
 from rework import api
@@ -36,6 +37,11 @@ def test_basic_task_operations(engine):
     t = Task.fromqueue(engine, wid)
     t.run()
     assert t.output == 42
+
+    cdate = t._propvalue('created')
+    now = datetime.now()
+    assert now.year == cdate.year
+    assert now.month == cdate.month
 
     t2 = Task.byid(engine, t.tid)
     assert (t2.tid, t2.operation) == (t.tid, t.operation)
