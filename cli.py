@@ -29,7 +29,6 @@ def init_db(dburi):
 @click.argument('dburi')
 @click.argument('worker_id', type=int)
 @click.argument('ppid', type=int)
-@click.option('--polling-period', type=int, default=1)
 @click.option('--maxruns', type=int, default=0)
 @click.option('--maxmem', type=int, default=0,
               help='shutdown on Mb consummed')

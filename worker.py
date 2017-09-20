@@ -113,11 +113,11 @@ def running_status(engine, wid):
             cn.execute(running_sql(wid, False))
 
 
-def run_worker(dburi, worker_id, ppid, polling_period=1, maxruns=0, maxmem=0):
+def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0):
     engine = create_engine(dburi)
 
     try:
-        _main_loop(engine, worker_id, ppid, polling_period, maxruns, maxmem)
+        _main_loop(engine, worker_id, ppid, maxruns, maxmem)
     except Exception:
         with engine.connect() as cn:
             sql = worker.update().where(worker.c.id == worker_id).values(
@@ -129,7 +129,7 @@ def run_worker(dburi, worker_id, ppid, polling_period=1, maxruns=0, maxmem=0):
         raise
 
 
-def _main_loop(engine, worker_id, ppid, polling_period, maxruns, maxmem):
+def _main_loop(engine, worker_id, ppid, maxruns, maxmem):
     with running_status(engine, worker_id):
         runs = 0
         while True:
@@ -148,7 +148,7 @@ def _main_loop(engine, worker_id, ppid, polling_period, maxruns, maxmem):
                     runs += 1
                 task = Task.fromqueue(engine, worker_id)
 
-            time.sleep(polling_period)
+            time.sleep(1)
 
             # let's diligently emit what we're saying to watchers
             sys.stdout.flush()
