@@ -31,6 +31,8 @@ def init_db(dburi):
 @click.argument('ppid', type=int)
 @click.option('--polling-period', type=int, default=1)
 @click.option('--maxruns', type=int, default=0)
+@click.option('--maxmem', type=int, default=0,
+              help='shutdown on Mb consummed')
 def new_worker(**config):
     run_worker(**config)
 
@@ -39,6 +41,8 @@ def new_worker(**config):
 @click.argument('dburi')
 @click.option('--maxworkers', type=int, default=2)
 @click.option('--maxruns', type=int, default=0)
+@click.option('--maxmem', type=int, default=0,
+              help='shutdown on Mb consummed')
 def deploy(**config):
     run_monitor(**config)
 

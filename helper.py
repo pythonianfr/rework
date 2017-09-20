@@ -11,6 +11,11 @@ import psutil
 from rework.schema import log
 
 
+def memory_usage():
+    process = psutil.Process(os.getpid())
+    return int(process.memory_info().rss / float(2 ** 20))
+
+
 def wait_true(func, timeout=6):
     outcome = []
 

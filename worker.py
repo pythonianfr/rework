@@ -7,16 +7,9 @@ import traceback
 
 from sqlalchemy import create_engine, select
 
-import psutil
-
-from rework.helper import has_ancestor_pid, kill
+from rework.helper import has_ancestor_pid, kill, memory_usage
 from rework.schema import worker
 from rework.task import Task
-
-
-def memory_usage():
-    process = psutil.Process(os.getpid())
-    return int(process.memory_info().rss / float(2 ** 20))
 
 
 def track_memory_consumption(engine, wid):
@@ -24,6 +17,7 @@ def track_memory_consumption(engine, wid):
     sql = worker.update().where(worker.c.id == wid).values(mem=mem)
     with engine.connect() as cn:
         cn.execute(sql)
+    return mem
 
 
 def running_sql(wid, running):
@@ -119,11 +113,11 @@ def running_status(engine, wid):
             cn.execute(running_sql(wid, False))
 
 
-def run_worker(dburi, worker_id, ppid, polling_period=1, maxruns=0):
+def run_worker(dburi, worker_id, ppid, polling_period=1, maxruns=0, maxmem=0):
     engine = create_engine(dburi)
 
     try:
-        _main_loop(engine, worker_id, ppid, polling_period, maxruns)
+        _main_loop(engine, worker_id, ppid, polling_period, maxruns, maxmem)
     except Exception:
         with engine.connect() as cn:
             sql = worker.update().where(worker.c.id == worker_id).values(
@@ -135,17 +129,19 @@ def run_worker(dburi, worker_id, ppid, polling_period=1, maxruns=0):
         raise
 
 
-def _main_loop(engine, worker_id, ppid, polling_period, maxruns):
+def _main_loop(engine, worker_id, ppid, polling_period, maxruns, maxmem):
     with running_status(engine, worker_id):
         runs = 0
         while True:
             die_if_ancestor_died(engine, ppid, worker_id)
             if maxruns and runs >= maxruns:
                 ask_shutdown(engine, worker_id)
+            mem = track_memory_consumption(engine, worker_id)
+            if maxmem and mem > maxmem:
+                ask_shutdown(engine, worker_id)
             die_if_shutdown(engine, worker_id)
-            track_memory_consumption(engine, worker_id)
-            task = Task.fromqueue(engine, int(worker_id))
 
+            task = Task.fromqueue(engine, int(worker_id))
             while task:
                 with abortion_monitor(engine, worker_id, task):
                     task.run()

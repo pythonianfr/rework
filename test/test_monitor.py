@@ -7,7 +7,7 @@ from rework.schema import worker
 from rework.task import Task
 from rework.worker import running_status, shutdown_asked
 from rework.monitor import new_worker, ensure_workers, reap_dead_workers
-from rework.helper import kill, read_proc_streams, guard, wait_true
+from rework.helper import kill, read_proc_streams, guard, wait_true, memory_usage
 from rework.testutils import scrub, workers
 
 # our test tasks
@@ -25,6 +25,7 @@ def test_basic_task_operations(engine):
                 ).fetchall()
     ]
     assert [
+        ('allocate_and_leak_mbytes', 'tasks.py'),
         ('capture_logs', 'tasks.py'),
         ('infinite_loop', 'tasks.py'),
         ('log_swarm', 'tasks.py'),
@@ -73,7 +74,7 @@ def test_basic_worker_task_execution(engine):
     guard(engine, 'select count(id) from rework.worker where running = true',
           lambda res: res.scalar() == 0)
 
-    proc = ensure_workers(engine, 1)[0][1]
+    proc = ensure_workers(engine, 1, 0, 0)[0][1]
 
     guard(engine, 'select count(id) from rework.worker where running = true',
           lambda res: res.scalar() == 1)
@@ -147,6 +148,23 @@ def test_worker_max_runs(engine):
         assert not shutdown_asked(engine, wid)
 
         t = api.schedule(engine, 'print_sleep_and_go_away', 'a')
+        wait_true(partial(finished, t))
+
+        guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
+              lambda r: r.scalar() == True)
+        assert shutdown_asked(engine, wid)
+
+
+def test_worker_max_mem(engine):
+    mem = memory_usage()
+    api.freeze_operations(engine)
+
+    with workers(engine, maxmem=100) as wids:
+        wid = wids[0]
+
+        t = api.schedule(engine, 'allocate_and_leak_mbytes', 100)
+
+        finished = lambda t: t.status == 'done'
         wait_true(partial(finished, t))
 
         guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),

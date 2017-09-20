@@ -5,12 +5,12 @@ from rework.monitor import ensure_workers, reap_dead_workers
 
 
 @contextmanager
-def workers(engine, numworkers=1, maxruns=0):
+def workers(engine, numworkers=1, maxruns=0, maxmem=0):
     reap_dead_workers(engine)
     with engine.connect() as cn:
         cn.execute('delete from rework.task')
         cn.execute('delete from rework.worker')
-    procs = ensure_workers(engine, numworkers, maxruns)
+    procs = ensure_workers(engine, numworkers, maxruns, maxmem)
 
     # wait till' they are all running
     guard(engine, 'select count(id) from rework.worker where running = true',
