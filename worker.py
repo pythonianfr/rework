@@ -57,6 +57,17 @@ def die_if_ancestor_died(engine, ppid, wid):
 
 # Worker shutdown
 
+
+def ask_shutdown(engine, wid):
+    sql = worker.update().where(
+        worker.c.id == wid
+    ).values(
+        shutdown=True
+    )
+    with engine.connect() as cn:
+        cn.execute(sql)
+
+
 def shutdown_asked(engine, wid):
     sql = select([worker.c.shutdown]).where(worker.c.id == wid)
     return engine.execute(sql).scalar()
@@ -108,11 +119,11 @@ def running_status(engine, wid):
             cn.execute(running_sql(wid, False))
 
 
-def run_worker(dburi, worker_id, ppid, polling_period):
+def run_worker(dburi, worker_id, ppid, polling_period=1, maxruns=0):
     engine = create_engine(dburi)
 
     try:
-        _main_loop(engine, worker_id, ppid, polling_period)
+        _main_loop(engine, worker_id, ppid, polling_period, maxruns)
     except Exception:
         with engine.connect() as cn:
             sql = worker.update().where(worker.c.id == worker_id).values(
@@ -124,10 +135,13 @@ def run_worker(dburi, worker_id, ppid, polling_period):
         raise
 
 
-def _main_loop(engine, worker_id, ppid, polling_period):
+def _main_loop(engine, worker_id, ppid, polling_period, maxruns):
     with running_status(engine, worker_id):
+        runs = 0
         while True:
             die_if_ancestor_died(engine, ppid, worker_id)
+            if maxruns and runs >= maxruns:
+                ask_shutdown(engine, worker_id)
             die_if_shutdown(engine, worker_id)
             track_memory_consumption(engine, worker_id)
             task = Task.fromqueue(engine, int(worker_id))
@@ -135,6 +149,7 @@ def _main_loop(engine, worker_id, ppid, polling_period):
             while task:
                 with abortion_monitor(engine, worker_id, task):
                     task.run()
+                    runs += 1
                 task = Task.fromqueue(engine, worker_id)
 
             time.sleep(polling_period)

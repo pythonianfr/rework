@@ -10,9 +10,10 @@ from rework.helper import host, guard
 from rework.schema import worker
 
 
-def spawn_worker(engine):
+def spawn_worker(engine, maxruns):
     wid = new_worker(engine)
-    cmd = ['rework', 'new-worker', str(engine.url), str(wid), str(os.getpid())]
+    cmd = ['rework', 'new-worker', str(engine.url), str(wid), str(os.getpid()),
+           '--maxruns', str(maxruns)]
     return wid, sub.Popen(cmd,
                           bufsize=1,
                           stdout=sub.PIPE, stderr=sub.PIPE)
@@ -34,12 +35,12 @@ def num_workers(engine):
         return cn.execute(sql, {'host': host()}).scalar()
 
 
-def ensure_workers(engine, maxworkers):
+def ensure_workers(engine, maxworkers, maxruns=0):
     numworkers = num_workers(engine)
 
     procs = []
     for _ in range(maxworkers - numworkers):
-        procs.append(spawn_worker(engine))
+        procs.append(spawn_worker(engine, maxruns))
 
     # wait til they are up and running
     guard(engine, 'select count(id) from rework.worker where running = true',
@@ -83,7 +84,7 @@ def cleanup_unstarted(engine):
         cn.execute(sql)
 
 
-def run_monitor(dburi, maxworkers):
+def run_monitor(dburi, maxworkers=2, maxruns=0):
     engine = create_engine(dburi)
     workers = []
     while True:
@@ -94,7 +95,7 @@ def run_monitor(dburi, maxworkers):
             workers = [(wid, proc)
                        for wid, proc in workers
                        if wid not in dead]
-        new = ensure_workers(engine, maxworkers)
+        new = ensure_workers(engine, maxworkers, maxruns)
         if new:
             print('spawned {} active workers'.format(len(new)))
         workers += new

@@ -133,6 +133,27 @@ def test_worker_shutdown(engine):
         ).scalar()
 
 
+def test_worker_max_runs(engine):
+    api.freeze_operations(engine)
+    with workers(engine, maxruns=2) as wids:
+        wid = wids[0]
+
+        t = api.schedule(engine, 'print_sleep_and_go_away', 'a')
+
+        finished = lambda t: t.status == 'done'
+        wait_true(partial(finished, t))
+
+        assert t.output == 'aa'
+        assert not shutdown_asked(engine, wid)
+
+        t = api.schedule(engine, 'print_sleep_and_go_away', 'a')
+        wait_true(partial(finished, t))
+
+        guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
+              lambda r: r.scalar() == True)
+        assert shutdown_asked(engine, wid)
+
+
 def test_task_abortion(engine):
     api.freeze_operations(engine)
 

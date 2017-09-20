@@ -30,6 +30,7 @@ def init_db(dburi):
 @click.argument('worker_id', type=int)
 @click.argument('ppid', type=int)
 @click.option('--polling-period', type=int, default=1)
+@click.option('--maxruns', type=int, default=0)
 def new_worker(**config):
     run_worker(**config)
 
@@ -37,6 +38,7 @@ def new_worker(**config):
 @rework.command()
 @click.argument('dburi')
 @click.option('--maxworkers', type=int, default=2)
+@click.option('--maxruns', type=int, default=0)
 def deploy(**config):
     run_monitor(**config)
 
