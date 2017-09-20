@@ -11,7 +11,7 @@ from rework.helper import kill, read_proc_streams, guard, wait_true, memory_usag
 from rework.testutils import scrub, workers
 
 # our test tasks
-from rework.test import tasks
+from . import tasks
 
 
 def test_basic_task_operations(engine):
