@@ -8,7 +8,7 @@ from pytest_sa_pg import db
 from rework import schema
 
 
-DATADIR = Path(__file__).parent / 'test/data'
+DATADIR = Path(__file__).parent / 'data'
 PORT = 2346
 
 
