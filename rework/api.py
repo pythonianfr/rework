@@ -18,13 +18,16 @@ def task(func):
 
 def schedule(engine, opname, inputdata=None, hostid=None, module=None):
     assert opname in __task_registry__
-    sql = select([operation.c.id]).where(
-        operation.c.name == opname)
-    if module is not None:
-        sql = sql.where(operation.c.modname == module)
     if hostid is None:
         hostid = host()
-    sql = sql.where(operation.c.host == hostid)
+
+    sql = select([operation.c.id]
+    ).where(operation.c.name == opname
+    ).where(operation.c.host == hostid)
+
+    if module is not None:
+        sql = sql.where(operation.c.modname == module)
+
     with engine.connect() as cn:
         opids = cn.execute(sql).fetchall()
         if len(opids) > 1:
