@@ -3,7 +3,6 @@ import time
 import logging
 
 from rework import api
-from rework.helper import memory_usage
 
 
 @api.task
@@ -35,6 +34,7 @@ def normal_exception(task):
 
 
 LEAK = None
+
 
 @api.task
 def allocate_and_leak_mbytes(task):
