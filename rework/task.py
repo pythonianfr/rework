@@ -93,6 +93,13 @@ class Task(object):
         return self.engine.execute(sql).scalar()
 
     @property
+    def metadata(self):
+        meta = self._propvalue('metadata')
+        if meta is None:
+            return {}
+        return meta
+
+    @property
     def status(self):
         return self._propvalue('status')
 

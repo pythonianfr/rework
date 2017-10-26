@@ -17,7 +17,8 @@ from . import tasks
 def test_basic_task_operations(engine):
     api.freeze_operations(engine)
 
-    api.schedule(engine, 'print_sleep_and_go_away', 21)
+    api.schedule(engine, 'print_sleep_and_go_away', 21,
+                 metadata={'user': 'Joe'})
 
     expected = [(name, Path(path).name)
                 for name, path in engine.execute(
@@ -38,6 +39,7 @@ def test_basic_task_operations(engine):
     t = Task.fromqueue(engine, wid)
     t.run()
     assert t.output == 42
+    assert t.metadata == {'user': 'Joe'}
 
     cdate = t._propvalue('created')
     now = datetime.now()

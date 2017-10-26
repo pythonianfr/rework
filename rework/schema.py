@@ -2,7 +2,7 @@ from sqlalchemy import (
     MetaData, Table, Column, ForeignKey, String, Integer, Boolean,
     DateTime, UniqueConstraint, func
 )
-from sqlalchemy.dialects.postgresql import ENUM, BYTEA
+from sqlalchemy.dialects.postgresql import ENUM, BYTEA, JSONB
 from sqlalchemy.schema import CreateSchema
 
 
@@ -50,6 +50,7 @@ task = Table(
     Column('status', ENUM('queued', 'running', 'done', name='status'),
            index=True),
     Column('abort', Boolean, nullable=False, default=False),
+    Column('metadata', JSONB(none_as_null=True)),
     schema='rework'
 )
 

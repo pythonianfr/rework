@@ -16,8 +16,13 @@ def task(func):
     return func
 
 
-def schedule(engine, opname, inputdata=None, hostid=None, module=None):
+def schedule(engine, opname, inputdata=None,
+             hostid=None, module=None,
+             metadata=None):
     assert opname in __task_registry__
+    if metadata:
+        assert isinstance(metadata, dict)
+
     if hostid is None:
         hostid = host()
 
@@ -37,7 +42,8 @@ def schedule(engine, opname, inputdata=None, hostid=None, module=None):
         value = {
             'operation': opid,
             'input': dumps(inputdata, protocol=2) if inputdata is not None else None,
-            'status': 'queued'
+            'status': 'queued',
+            'metadata': metadata
         }
         tid = cn.execute(sql, **value).inserted_primary_key[0]
 
