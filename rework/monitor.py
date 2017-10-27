@@ -15,6 +15,11 @@ def spawn_worker(engine, maxruns, maxmem):
     cmd = ['rework', 'new-worker', str(engine.url), str(wid), str(os.getpid()),
            '--maxruns', str(maxruns),
            '--maxmem', str(maxmem)]
+    # NOTE for windows users:
+    # the subprocess pid herein might not be that of the actual worker
+    # process because of the way python scripts are handled:
+    # +- thescript.exe <params>
+    #   +- python.exe thescript.py <params>
     return wid, sub.Popen(cmd,
                           bufsize=1,
                           stdout=sub.PIPE, stderr=sub.PIPE)

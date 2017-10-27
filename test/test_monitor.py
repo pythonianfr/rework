@@ -96,9 +96,8 @@ def test_basic_worker_task_execution(engine):
         if len(logs) > 3:
             break
     kill(proc.pid)
-    # What's going on there ?
+    # What's going on there on windows ?
     # We actually killed the parent process of the real worker process
-    # (because of obscure details, there is a middle-man),
     # hence the real worker detects his parent just died
     # and can write himself off the list.
     guard(engine, "select count(id) from rework.task where status = 'running'",

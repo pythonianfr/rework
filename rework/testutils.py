@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 
-from rework.helper import guard
+from rework.helper import guard, kill
 from rework.monitor import ensure_workers, reap_dead_workers
 
 
@@ -18,8 +18,10 @@ def workers(engine, numworkers=1, maxruns=0, maxmem=0):
     try:
         yield [wid for wid, _proc in procs]
     finally:
-        for _wid, proc in procs:
-            proc.kill()
+        for pid, in engine.execute(
+                'select pid from rework.worker where running = true'
+        ).fetchall():
+            kill(pid)
         reap_dead_workers(engine)
         guard(engine, 'select count(id) from rework.worker where running = true',
               lambda r: r.scalar() == 0)
