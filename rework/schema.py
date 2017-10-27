@@ -47,7 +47,7 @@ task = Table(
     Column('worker', Integer,
            ForeignKey('rework.worker.id', ondelete='cascade'),
            index=True),
-    Column('status', ENUM('queued', 'running', 'done', name='status'),
+    Column('status', ENUM('queued', 'running', 'done', name='rework.status'),
            index=True),
     Column('abort', Boolean, nullable=False, default=False),
     Column('metadata', JSONB(none_as_null=True)),
