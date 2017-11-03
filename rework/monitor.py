@@ -7,7 +7,7 @@ import psutil
 from sqlalchemy import create_engine
 
 from rework.helper import host, guard
-from rework.schema import worker
+from rework.schema import worker, task
 
 
 def spawn_worker(engine, maxruns, maxmem):
@@ -70,12 +70,23 @@ def reap_dead_workers(engine):
             deadlist.append(wid)
 
     if deadlist:
-        sql = worker.update().where(worker.c.id.in_(deadlist)).values(
+        wsql = worker.update().where(worker.c.id.in_(deadlist)).values(
             running=False,
             deathinfo='Unaccounted death (hard crash)'
         )
+        # also mark the tasks as failed
+        tsql = task.update().where(
+            worker.c.id.in_(deadlist)
+        ).where(
+            task.c.worker == worker.c.id
+        ).where(
+            task.c.status == 'running'
+        ).values(
+            status='done'
+        )
         with engine.connect() as cn:
-            cn.execute(sql)
+            cn.execute(wsql)
+            cn.execute(tsql)
 
     return deadlist
 
