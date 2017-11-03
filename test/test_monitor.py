@@ -213,13 +213,15 @@ def test_worker_unplanned_death(engine):
     with workers(engine) as wids:
         wid = wids[0]
 
-        api.schedule(engine, 'unstopable_death')
+        t = api.schedule(engine, 'unstopable_death')
 
         deadlist = wait_true(partial(reap_dead_workers, engine))
         assert wid in deadlist
 
         guard(engine, 'select deathinfo from rework.worker where id = {}'.format(wid),
               lambda r: r.scalar() == 'Unaccounted death (hard crash)')
+
+        assert t.state == 'running'
 
 
 def test_task_error(engine):
