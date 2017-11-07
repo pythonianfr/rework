@@ -102,6 +102,9 @@ def list_tasks(dburi, tracebacks=False, logcount=False):
             sql = 'select count(*) from rework.log where task = %(tid)s'
             count = engine.execute(sql, {'tid': task.tid}).scalar()
             print(Style.RESET_ALL + '{} log lines'.format(count), end=' ')
+        print(Fore.WHITE + '[{}]'.format(
+            task._propvalue('created').strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
+              end=' ')
         if tracebacks and task.traceback:
             print(Fore.YELLOW + task.traceback, end='')
         print()
