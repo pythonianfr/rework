@@ -120,6 +120,7 @@ Options:
   --help  Show this message and exit.
 
 Commands:
+  abort-task
   deploy
   init-db
   list-tasks

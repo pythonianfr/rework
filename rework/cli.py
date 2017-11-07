@@ -139,3 +139,12 @@ def log_task(dburi, taskid, tail=False, fromid=None, watch=False):
             break
 
     print(Style.RESET_ALL)
+
+
+@rework.command('abort-task')
+@click.argument('dburi')
+@click.argument('taskid', type=int)
+def abort_task(dburi, taskid):
+    engine = create_engine(dburi)
+    task = Task.byid(engine, taskid)
+    task.abort()
