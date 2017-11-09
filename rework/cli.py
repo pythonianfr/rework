@@ -57,14 +57,19 @@ def list_workers(dburi):
     for wid, host, pid, mem, running, shutdown, traceback, deathinfo in engine.execute(sql):
         color = Fore.GREEN
         dead = not running and (shutdown or traceback or deathinfo)
+        activity = '(idle)'
         if dead:
             color = Fore.RED
         else:
             color = Fore.MAGENTA
+            sql = "select id from rework.task where status = 'running' and worker = %(worker)s"
+            tid = engine.execute(sql, worker=wid).scalar()
+            if tid:
+                activity = '#{}'.format(tid)
         print(wid,
               Fore.GREEN + '{}@{}'.format(pid, host),
               '{} Mb'.format(mem),
-              color + ('[running]' if running else '[dead]' if dead else '[unstarted]'),
+              color + ('[running {}]'.format(activity) if running else '[dead]' if dead else '[unstarted]'),
               end=' ')
         if dead:
             if deathinfo:
