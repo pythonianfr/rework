@@ -1,6 +1,7 @@
 from functools import partial
 from datetime import datetime
 from pathlib import Path
+import pytest
 
 from rework import api
 from rework.schema import worker
@@ -51,6 +52,10 @@ def test_basic_task_operations(engine):
 
     t3 = Task.byid(engine, 42000)
     assert t3 is None
+
+    with pytest.raises(Exception) as err:
+        api.schedule(engine, 'no_such_task')
+    assert err.value.args[0] == 'No operation was found for these parameters'
 
 
 def test_basic_worker_operations(engine):

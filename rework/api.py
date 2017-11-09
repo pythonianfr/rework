@@ -19,7 +19,6 @@ def task(func):
 def schedule(engine, opname, inputdata=None,
              hostid=None, module=None,
              metadata=None):
-    assert opname in __task_registry__
     if metadata:
         assert isinstance(metadata, dict)
 
@@ -37,6 +36,8 @@ def schedule(engine, opname, inputdata=None,
         opids = cn.execute(sql).fetchall()
         if len(opids) > 1:
             raise ValueError('Ambiguous operation selection')
+        if not len(opids):
+            raise Exception('No operation was found for these parameters')
         opid = opids[0][0]
         sql = taskentity.insert()
         value = {
