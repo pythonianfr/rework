@@ -166,3 +166,25 @@ $ rework list-workers postgres://babar:password@localhost:5432/jobstore
 ```
 
 [1]: https://bitbucket.org/pythonian/rework/src/default/test/test_monitor.py?fileviewer=file-view-default
+
+
+# Extensions
+
+It is possible to augment the `rework` command with new subcommands (or
+augment, modify existing commands).
+
+Any program doing so must define a new command and declare a setup
+tools entry point named `rework:subcommand` as in e.g.:
+
+```python
+
+    entry_points={'rework.subcommands': [
+        'view=rework_ui.cli:view'
+    ]}
+```
+
+For instance, the [rework_ui][reworkui] python package provides such a
+`view` subcommand to launch a monitoring webapp for a given rework job
+store.
+
+[reworkui]: https://bitbucket.org/pythonian/rework_ui
