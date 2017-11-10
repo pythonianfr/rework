@@ -125,8 +125,8 @@ Commands:
   init-db
   list-tasks
   list-workers
+  log-task
   new-worker
-  tasklog
 ```
 
 Of those commands, `new-worker` is for purely internal purposes, and
@@ -143,7 +143,7 @@ rework list-tasks postgres://babar:password@localhost:5432/jobstore
 It is possible to monitor the output of a given task:
 
 ```shell
-$ rework tasklog postgres://babar:password@localhost:5432/jobstore 1
+$ rework log-task postgres://babar:password@localhost:5432/jobstore 1
 stdout:INFO: 2017-09-13 17:08:49: I am running
 stdout:INFO: 2017-09-13 17:08:49: I am done
 ```
