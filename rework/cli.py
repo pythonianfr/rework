@@ -1,7 +1,9 @@
 from __future__ import print_function
 
 from time import sleep
+from pkg_resources import iter_entry_points
 import click
+from click_plugins import with_plugins
 
 from colorama import init, Fore, Style
 
@@ -13,6 +15,7 @@ from rework.task import Task
 from rework.monitor import run_monitor
 
 
+@with_plugins(iter_entry_points('rework.subcommands'))
 @click.group()
 def rework():
     pass
