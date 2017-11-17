@@ -50,6 +50,18 @@ def deploy(**config):
     run_monitor(**config)
 
 
+@rework.command(name='list-operations')
+@click.argument('dburi')
+def list_operations(dburi):
+    init()
+    engine = create_engine(dburi)
+    sql = 'select id, host, name, path from rework.operation'
+    for oid, hostid, opname, modpath in engine.execute(sql):
+        print(Fore.WHITE + '{}'.format(oid), end=' ')
+        print(Fore.GREEN + 'host({}) `{}` path({})'.format(oid, hostid, opname, modpath))
+    print(Style.RESET_ALL)
+
+
 @rework.command(name='list-workers')
 @click.argument('dburi')
 def list_workers(dburi):

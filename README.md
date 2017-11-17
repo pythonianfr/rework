@@ -123,6 +123,7 @@ Commands:
   abort-task
   deploy
   init-db
+  list-operations
   list-tasks
   list-workers
   log-task
