@@ -227,14 +227,9 @@ def test_task_error(engine):
     api.freeze_operations(engine)
 
     with workers(engine):
-
         t = api.schedule(engine, 'normal_exception')
         t.join()
-        tb = guard(engine, 'select traceback from rework.task where id = {}'.format(t.tid),
-                   lambda r: r.scalar())
-
-        assert tb.strip().endswith('oops')
-        assert t.traceback == tb
+        assert t.traceback.strip().endswith('oops')
         assert t.state == 'failed'
 
 
