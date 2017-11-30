@@ -8,7 +8,7 @@ from rework.schema import worker
 from rework.task import Task, TimeOut
 from rework.worker import running_status, shutdown_asked
 from rework.monitor import new_worker, ensure_workers, reap_dead_workers
-from rework.helper import kill, read_proc_streams, guard, wait_true, memory_usage
+from rework.helper import kill, read_proc_streams, guard, wait_true
 from rework.testutils import scrub, workers
 
 # our test tasks
@@ -158,7 +158,6 @@ def test_worker_max_runs(engine):
 
 
 def test_worker_max_mem(engine):
-    mem = memory_usage()
     api.freeze_operations(engine)
 
     with workers(engine, maxmem=100) as wids:
