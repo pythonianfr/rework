@@ -5,7 +5,7 @@ import pytest
 
 from rework import api
 from rework.schema import worker
-from rework.task import Task
+from rework.task import Task, TimeOut
 from rework.worker import running_status, shutdown_asked
 from rework.monitor import new_worker, ensure_workers, reap_dead_workers
 from rework.helper import kill, read_proc_streams, guard, wait_true, memory_usage
@@ -89,9 +89,7 @@ def test_basic_worker_task_execution(engine):
     guard(engine, "select count(id) from rework.task where status = 'running'",
           lambda res: res.scalar() == 1)
 
-    guard(engine, 'select output from rework.task where id = {}'.format(t.tid),
-          lambda res: res.scalar())
-
+    t.join()
     assert t.output == 42
     assert t.state == 'done'
 
@@ -146,15 +144,13 @@ def test_worker_max_runs(engine):
         wid = wids[0]
 
         t = api.schedule(engine, 'print_sleep_and_go_away', 'a')
-
-        finished = lambda t: t.status == 'done'
-        wait_true(partial(finished, t))
+        t.join()
 
         assert t.output == 'aa'
         assert not shutdown_asked(engine, wid)
 
         t = api.schedule(engine, 'print_sleep_and_go_away', 'a')
-        wait_true(partial(finished, t))
+        t.join()
 
         guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
               lambda r: r.scalar() == True)
@@ -169,9 +165,7 @@ def test_worker_max_mem(engine):
         wid = wids[0]
 
         t = api.schedule(engine, 'allocate_and_leak_mbytes', 100)
-
-        finished = lambda t: t.status == 'done'
-        wait_true(partial(finished, t))
+        t.join()
 
         guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
               lambda r: r.scalar() == True)
@@ -190,15 +184,16 @@ def test_task_abortion(engine):
 
         assert t.state == 'running'
 
+        with pytest.raises(TimeOut) as err:
+            t.join(timeout=.1)
+        assert err.value.args[0] == t
+
         t.abort()
         assert t.aborted
         # this is potentially racy but might work most of the time
         assert t.state == 'aborting'
 
-        guard(engine, "select count(id) from rework.task "
-              "where status = 'done' and worker = {}".format(wid),
-              lambda res: res.scalar() == 1)
-
+        t.join()
         assert t.state == 'aborted'
 
         # one dead worker
@@ -235,7 +230,7 @@ def test_task_error(engine):
     with workers(engine):
 
         t = api.schedule(engine, 'normal_exception')
-
+        t.join()
         tb = guard(engine, 'select traceback from rework.task where id = {}'.format(t.tid),
                    lambda r: r.scalar())
 
@@ -253,9 +248,8 @@ def test_task_logging_capture(engine):
         t1 = api.schedule(engine, 'capture_logs')
         t2 = api.schedule(engine, 'capture_logs')
 
-        finished = lambda t: t.status == 'done'
-        wait_true(partial(finished, t1))
-        wait_true(partial(finished, t2))
+        t1.join()
+        t2.join()
 
         t1logs = [scrub(logline) for id_, logline in t1.logs()]
         assert [
@@ -272,7 +266,7 @@ def test_task_logging_capture(engine):
         ] == t2logs
 
         t3 = api.schedule(engine, 'capture_logs')
-        wait_true(partial(finished, t3))
+        t3.join()
 
         logids = [lid for lid, logline_ in t3.logs()]
         assert 2 == len(t3.logs(fromid=logids[0]))
@@ -286,7 +280,7 @@ def test_logging_stress_test(engine):
     with workers(engine):
         t = api.schedule(engine, 'log_swarm')
 
-        wait_true(partial(lambda t: t.status == 'done', t))
+        t.join()
         records = engine.execute(
             'select id, line from rework.log where task = {}'.format(t.tid)
         ).fetchall()

@@ -1,5 +1,6 @@
 import sys
 import imp
+import time
 from pickle import dumps, loads
 import traceback as tb
 from contextlib import contextmanager
@@ -12,6 +13,10 @@ from rework.helper import PGLogHandler, PGLogWriter
 
 
 __task_registry__ = {}
+
+
+class TimeOut(Exception):
+    pass
 
 
 class Task(object):
@@ -161,6 +166,17 @@ class Task(object):
                 cn.execute(sql)
         finally:
             self.finish()
+
+    def join(self, timeout=0):
+        " synchronous wait on the task"
+        assert timeout >= 0
+        t0 = time.time()
+        while True:
+            if self.status == 'done':
+                break
+            if timeout and (time.time() - t0) > timeout:
+                raise TimeOut(self)
+            time.sleep(1)
 
     def finish(self):
         with self.engine.connect() as cn:
