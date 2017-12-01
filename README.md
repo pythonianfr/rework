@@ -78,10 +78,8 @@ def main(dburi):
     t2 = api.schedule(engine, 'my_first_task', 100)
 
     # wait til they are completed
-    while True:
-        if t1.state == 'done' and t2.state == 'done':
-            break
-        time.sleep(1)
+    t1.join()
+    t2.join()
 
     assert t1.output == 42
     assert t2.output == 200
