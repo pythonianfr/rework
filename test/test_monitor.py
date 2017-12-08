@@ -161,14 +161,15 @@ def test_worker_max_runs(engine):
 
         t1 = api.schedule(engine, 'print_sleep_and_go_away', 'a')
         t2 = api.schedule(engine, 'print_sleep_and_go_away', 'a')
-        t1.join()
-        t2.join()
 
-        assert t1.worker == t2.worker
+        t1.join()
 
         guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
               lambda r: r.scalar() == True)
         assert shutdown_asked(engine, wid)
+
+        assert t2.state == 'queued'
+        assert t2.worker is None
 
 
 def test_worker_max_mem(engine):

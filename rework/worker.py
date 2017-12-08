@@ -129,23 +129,27 @@ def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0):
         raise
 
 
+def heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs):
+    die_if_ancestor_died(engine, ppid, worker_id)
+    if maxruns and runs >= maxruns:
+        ask_shutdown(engine, worker_id)
+    mem = track_memory_consumption(engine, worker_id)
+    if maxmem and mem > maxmem:
+        ask_shutdown(engine, worker_id)
+    die_if_shutdown(engine, worker_id)
+
+
 def _main_loop(engine, worker_id, ppid, maxruns, maxmem):
     with running_status(engine, worker_id):
         runs = 0
         while True:
-            die_if_ancestor_died(engine, ppid, worker_id)
-            if maxruns and runs >= maxruns:
-                ask_shutdown(engine, worker_id)
-            mem = track_memory_consumption(engine, worker_id)
-            if maxmem and mem > maxmem:
-                ask_shutdown(engine, worker_id)
-            die_if_shutdown(engine, worker_id)
-
+            heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs)
             task = Task.fromqueue(engine, int(worker_id))
             while task:
                 with abortion_monitor(engine, worker_id, task):
                     task.run()
                     runs += 1
+                heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs)
                 task = Task.fromqueue(engine, worker_id)
 
             time.sleep(1)
