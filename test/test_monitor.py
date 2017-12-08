@@ -156,6 +156,20 @@ def test_worker_max_runs(engine):
               lambda r: r.scalar() == True)
         assert shutdown_asked(engine, wid)
 
+    with workers(engine, maxruns=1) as wids:
+        wid = wids[0]
+
+        t1 = api.schedule(engine, 'print_sleep_and_go_away', 'a')
+        t2 = api.schedule(engine, 'print_sleep_and_go_away', 'a')
+        t1.join()
+        t2.join()
+
+        assert t1.worker == t2.worker
+
+        guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
+              lambda r: r.scalar() == True)
+        assert shutdown_asked(engine, wid)
+
 
 def test_worker_max_mem(engine):
     api.freeze_operations(engine)
