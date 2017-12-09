@@ -17,6 +17,7 @@ worker = Table(
     Column('mem', Integer, default=0),
     Column('running', Boolean, nullable=False, default=False, index=True),
     Column('shutdown', Boolean, nullable=False, default=False),
+    Column('kill', Boolean, nullable=False, default=False),
     Column('traceback', String),
     Column('deathinfo', String),
     schema='rework'

@@ -7,7 +7,12 @@ from rework import api
 from rework.schema import worker
 from rework.task import Task, TimeOut
 from rework.worker import running_status, shutdown_asked
-from rework.monitor import new_worker, ensure_workers, reap_dead_workers
+from rework.monitor import (
+    ensure_workers,
+    new_worker,
+    preemptive_kill,
+    reap_dead_workers
+)
 from rework.helper import kill, read_proc_streams, guard, wait_true
 from rework.testutils import scrub, workers
 
@@ -136,6 +141,29 @@ def test_worker_shutdown(engine):
         assert u'explicit shutdown' == engine.execute(
             'select deathinfo from rework.worker where id = %(wid)s', wid=wid
         ).scalar()
+
+
+def test_worker_kill(engine):
+    with workers(engine) as wids:
+        wid = wids[0]
+
+        with engine.connect() as cn:
+            cn.execute(
+                worker.update().where(worker.c.id == wid).values(
+                    kill=True
+                )
+            )
+        guard(engine, 'select kill from rework.worker where id = {}'.format(wid),
+              lambda r: r.scalar() == True)
+
+        preemptive_kill(engine)
+
+        guard(engine, 'select count(id) from rework.worker where running = true',
+              lambda r: r.scalar() == 0)
+
+        assert engine.execute(
+            'select deathinfo from rework.worker where id = %(wid)s', wid=wid
+        ).scalar().startswith('preemptive kill')
 
 
 def test_worker_max_runs(engine):

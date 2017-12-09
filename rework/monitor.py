@@ -1,10 +1,11 @@
 import os
 import time
 import subprocess as sub
+from datetime import datetime
 
 import psutil
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 
 from rework.helper import host, guard
 from rework.schema import worker, task
@@ -56,6 +57,32 @@ def ensure_workers(engine, maxworkers, maxruns, maxmem):
     return procs
 
 
+def preemptive_kill(engine):
+    hostid = host()
+    sql = select([worker.c.id, worker.c.pid]).where(
+        worker.c.host == hostid
+    ).where(
+        worker.c.kill == True
+    ).where(
+        worker.c.running == True
+    )
+    killed = []
+    with engine.connect() as cn:
+        for wid, pid in cn.execute(sql).fetchall():
+            try:
+                psutil.Process(pid).kill()
+            except:
+                print('could not kill {}'.format(pid))
+                continue
+            sql = worker.update().values(
+                running=False,
+                deathinfo='preemptive kill at {}'.format(datetime.utcnow())
+            )
+            cn.execute(sql)
+            killed.append((wid, pid))
+    return killed
+
+
 def reap_dead_workers(engine):
     sql = ("select id, pid from rework.worker "
            "where host = %(host)s and running = true")
@@ -105,6 +132,7 @@ def run_monitor(dburi, maxworkers=2, maxruns=0, maxmem=0):
     engine = create_engine(dburi)
     workers = []
     while True:
+        preemptive_kill(engine)
         dead = reap_dead_workers(engine)
         cleanup_unstarted(engine)
         if dead:
