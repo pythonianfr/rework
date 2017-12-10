@@ -103,7 +103,101 @@ Then, the script will quickly terminate, as both tasks have been
 executed.
 
 
+# API
+
+The `api` module exposes most if what is needed. The `task` module
+and task objects provide the rest.
+
+
+## `api` module
+
+Three functions are provided: the `task` decorator, the
+`freeze_operations` and `schedule` functions.
+
+Defining tasks is done using the `task` decorator:
+
+```python
+from rework.api import task
+
+@task
+def my_task(task):
+    pass
+```
+
+To make the tasks available for use, they must be recorded within
+the database referential. We use `freeze_operations` for this:
+
+```python
+from sqlalchemy import create_engine
+from rework.api import freeze_operations
+
+engine = create_engine('postgres://babar:password@localhost:5432/jobstore')
+api.freeze_operations(engine)
+```
+
+Finally, one can schedule tasks as such:
+
+```python
+from sqlalchemy import create_engine
+from rework.api import schedule
+
+engine = create_engine('postgres://babar:password@localhost:5432/jobstore')
+
+task = api.schedule(engine, 'my_task', 42)
+```
+
+The `schedule` function wants these mandatory parameters:
+
+* engine: sqlalchemy engine
+
+* task name: string
+
+* task input: any python picklable object
+
+
+It also accepts two more options:
+
+* hostid: an host identifier (e.g. '192.168.1.1')
+
+* metadata: a json-serializable dictionary (e.g. {'user': 'Babar'})
+
+
+## Task objects
+
+Task objects can be obtained from the `schedule` api call (as seen in the
+previous example) or through the `task` module.
+
+```python
+from task import Task
+
+task = task.by_id(42)
+```
+
+The task object provides:
+
+* `.state` attribute to describe the task state (amongst: `queued`,
+  `running`, `aborting`, `aborted`, `failed`, `done`)
+
+* `.join()` method to wait synchronously for the task completion
+
+* `.capturelogs(sync=True, level=logging.NOTSET, std=False)` method to
+  record matching logs into the db (`sync` controls whether the logs
+  are written synchronously, `level` specifies the capture level,
+  `std` permits to also record prints as logs)
+
+* `.input` attribute to get the task input (yields any object)
+
+* `.save_output(<obj>)` method to store any object
+
+* `.abort()` method to preemptively stop the task
+
+* `.log(fromid=None)` method to retrieve the task logs (all or from a
+  given log id)
+
+
 # Command line
+
+## Operations
 
 If you read the previous chapter, you already know the `init-db` and
 `deploy` commands.
@@ -167,7 +261,7 @@ $ rework list-workers postgres://babar:password@localhost:5432/jobstore
 [1]: https://bitbucket.org/pythonian/rework/src/default/test/test_monitor.py?fileviewer=file-view-default
 
 
-# Extensions
+## Extensions
 
 It is possible to augment the `rework` command with new subcommands (or
 augment, modify existing commands).
