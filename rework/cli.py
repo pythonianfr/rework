@@ -94,6 +94,30 @@ def list_workers(dburi):
         print(Style.RESET_ALL)
 
 
+@rework.command(name='shutdown-worker')
+@click.argument('dburi')
+@click.argument('worker-id')
+def shutdown_worker(dburi, worker_id):
+    engine = create_engine(dburi)
+    with engine.connect() as cn:
+        worker = schema.worker
+        cn.execute(worker.update().where(
+            worker.c.id == worker_id
+        ).values(shutdown=True))
+
+
+@rework.command(name='kill-worker')
+@click.argument('dburi')
+@click.argument('worker-id')
+def shutdown_worker(dburi, worker_id):
+    engine = create_engine(dburi)
+    with engine.connect() as cn:
+        worker = schema.worker
+        cn.execute(worker.update().where(
+            worker.c.id == worker_id
+        ).values(kill=True))
+
+
 status_color = {
     'done': Fore.GREEN,
     'aborted': Fore.RED,
