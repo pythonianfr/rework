@@ -1,11 +1,12 @@
 from pathlib import Path
-import pytest
 
+import pytest
+from click.testing import CliRunner
 from sqlalchemy import create_engine
 
 from pytest_sa_pg import db
 
-from rework import api, schema
+from rework import api, cli as rcli, schema
 
 # our test tasks
 from . import tasks
@@ -24,3 +25,10 @@ def engine(request):
     schema.init(e)
     api.freeze_operations(e)
     return e
+
+
+@pytest.fixture
+def cli():
+    def runner(*args):
+        return CliRunner().invoke(rcli.rework, [str(a) for a in args])
+    return runner

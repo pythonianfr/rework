@@ -77,6 +77,14 @@ def preemptive_kill(engine):
             sql = worker.update().values(
                 running=False,
                 deathinfo='preemptive kill at {}'.format(datetime.utcnow())
+            ).where(
+                worker.c.id == wid
+            )
+            cn.execute(sql)
+            sql = task.update().values(
+                status='done'
+            ).where(
+                worker.c.id == task.c.worker
             )
             cn.execute(sql)
             killed.append((wid, pid))
