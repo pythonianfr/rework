@@ -15,7 +15,8 @@ setup(name='rework',
           'colorama',
           'sqlalchemy',
           'psycopg2',
-          'click'
+          'click',
+          'click-plugins'
       ],
       entry_points={
           'console_scripts': [
