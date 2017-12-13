@@ -5,7 +5,10 @@ from sqlalchemy import create_engine
 
 from pytest_sa_pg import db
 
-from rework import schema
+from rework import api, schema
+
+# our test tasks
+from . import tasks
 
 
 DATADIR = Path(__file__).parent / 'data'
@@ -19,5 +22,5 @@ def engine(request):
     e = create_engine(uri)
     schema.reset(e)
     schema.init(e)
+    api.freeze_operations(e)
     return e
-

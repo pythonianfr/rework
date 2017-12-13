@@ -16,13 +16,8 @@ from rework.monitor import (
 from rework.helper import kill, read_proc_streams, guard, wait_true
 from rework.testutils import scrub, workers
 
-# our test tasks
-from . import tasks
-
 
 def test_basic_task_operations(engine):
-    api.freeze_operations(engine)
-
     api.schedule(engine, 'print_sleep_and_go_away', 21,
                  metadata={'user': 'Joe'})
 
@@ -77,7 +72,6 @@ def test_basic_worker_operations(engine):
 
 
 def test_basic_worker_task_execution(engine):
-    api.freeze_operations(engine)
     t = api.schedule(engine, 'print_sleep_and_go_away', 21)
     assert t.state == 'queued'
 
@@ -167,7 +161,6 @@ def test_worker_kill(engine):
 
 
 def test_worker_max_runs(engine):
-    api.freeze_operations(engine)
     with workers(engine, maxruns=2) as wids:
         wid = wids[0]
 
@@ -215,8 +208,6 @@ def test_worker_max_mem(engine):
 
 
 def test_task_abortion(engine):
-    api.freeze_operations(engine)
-
     with workers(engine) as wids:
         wid = wids[0]
 
@@ -250,8 +241,6 @@ def test_task_abortion(engine):
 
 
 def test_worker_unplanned_death(engine):
-    api.freeze_operations(engine)
-
     with workers(engine) as wids:
         wid = wids[0]
 
@@ -267,8 +256,6 @@ def test_worker_unplanned_death(engine):
 
 
 def test_task_error(engine):
-    api.freeze_operations(engine)
-
     with workers(engine):
         t = api.schedule(engine, 'normal_exception')
         t.join()
@@ -277,7 +264,6 @@ def test_task_error(engine):
 
 
 def test_task_logging_capture(engine):
-    api.freeze_operations(engine)
     with engine.connect() as cn:
         cn.execute('delete from rework.task')
 
@@ -310,7 +296,6 @@ def test_task_logging_capture(engine):
 
 
 def test_logging_stress_test(engine):
-    api.freeze_operations(engine)
     with engine.connect() as cn:
         cn.execute('delete from rework.log')
 
