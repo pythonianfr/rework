@@ -315,4 +315,4 @@ def test_logging_stress_test(engine):
         assert all(offsets[0] == offset for offset in offsets)
 
         assert len(list(t.logs())) == 249
-        assert len(list(t.logs(fromid=245))) == 13
+        assert len(list(t.logs(fromid=245))) == 4 + offsets[0]
