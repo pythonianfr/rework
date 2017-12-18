@@ -82,3 +82,37 @@ def test_task_logs(engine, cli):
 
         r = cli('log-task', engine.url, t.tid)
         assert '\x1b[<X>mmy_app_logger:ERROR: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X>\n\x1b[<X>mstdout:INFO: <X>-<X>-<X> <X>:<X>:<X>: I want to be captured\n\x1b[<X>mmy_app_logger:DEBUG: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X> also' == scrub(r.output)
+
+
+def test_vacuum(engine, cli):
+    r = cli('vacuum', engine.url, '--workers', '--tasks')
+    assert r.output == 'vacuum deletes workers or tasks, not both at the same time\n'
+
+    r = cli('vacuum', engine.url)
+    assert r.output == 'to cleanup old workers or tasks please use --workers or --tasks\n'
+
+    with engine.connect() as cn:
+        cn.execute('delete from rework.worker')
+
+    def run_stuff():
+        with workers(engine, numworkers=2):
+            r = cli('list-workers', engine.url)
+            assert r.output.count('running') == 2
+
+            t1 = api.schedule(engine, 'print_sleep_and_go_away', 1)
+            t2 = api.schedule(engine, 'print_sleep_and_go_away', 2)
+            t3 = api.schedule(engine, 'print_sleep_and_go_away', 3)
+
+            t1.join() or t2.join() or t3.join()
+            r = cli('list-tasks', engine.url)
+            assert r.output.count('done') == 3
+
+    run_stuff()
+
+    r = cli('vacuum', engine.url, '--tasks')
+    assert r.output == 'deleted 3 tasks\n'
+
+    run_stuff()
+
+    r = cli('vacuum', engine.url, '--workers')
+    assert r.output == 'deleted 2 workers\n'

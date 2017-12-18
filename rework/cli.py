@@ -192,3 +192,35 @@ def abort_task(dburi, taskid):
     engine = create_engine(dburi)
     task = Task.byid(engine, taskid)
     task.abort()
+
+
+@rework.command('vacuum')
+@click.argument('dburi')
+@click.option('--workers', is_flag=True, default=False)
+@click.option('--tasks', is_flag=True, default=False)
+def vacuum(dburi, workers=False, tasks=False):
+    if not (workers or tasks):
+        print('to cleanup old workers or tasks '
+              'please use --workers or --tasks')
+        return
+    if workers and tasks:
+        print('vacuum deletes workers or tasks, not both '
+              'at the same time')
+        return
+
+    engine = create_engine(dburi)
+    if workers:
+        with engine.connect() as cn:
+            count = cn.execute('with deleted as '
+                               '(delete from rework.worker where running = false returning 1) '
+                               'select count(*) from deleted'
+            ).scalar()
+            print('deleted {} workers'.format(count))
+
+    if tasks:
+        with engine.connect() as cn:
+            count = cn.execute("with deleted as "
+                               "(delete from rework.task where status = 'done' returning 1) "
+                               "select count(*) from deleted"
+            ).scalar()
+            print('deleted {} tasks'.format(count))
