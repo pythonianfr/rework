@@ -215,11 +215,14 @@ Commands:
   abort-task
   deploy
   init-db
+  kill-worker
   list-operations
   list-tasks
   list-workers
   log-task
   new-worker
+  shutdown-worker
+  vacuum
 ```
 
 Of those commands, `new-worker` is for purely internal purposes, and
