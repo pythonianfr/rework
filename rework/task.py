@@ -167,12 +167,13 @@ class Task(object):
         finally:
             self.finish()
 
-    def join(self, timeout=0):
+    def join(self, target='done', timeout=0):
         " synchronous wait on the task"
+        assert target in ('running', 'done')
         assert timeout >= 0
         t0 = time.time()
         while True:
-            if self.status == 'done':
+            if self.status == target:
                 break
             if timeout and (time.time() - t0) > timeout:
                 raise TimeOut(self)

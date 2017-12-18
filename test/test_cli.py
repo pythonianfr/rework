@@ -26,7 +26,7 @@ def test_abort_task(engine, cli):
         assert '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running (idle)]' == scrub(r.output)
 
         t = api.schedule(engine, 'infinite_loop')
-        time.sleep(1)  # let the worker pick up the task
+        t.join('running')  # let the worker pick up the task
 
         r = cli('list-workers', url)
         assert '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running #<X>]' == scrub(r.output)
@@ -50,8 +50,8 @@ def test_kill_worker(engine, cli):
         cn.execute('delete from rework.worker')
 
     with workers(engine) as wids:
-        api.schedule(engine, 'infinite_loop')
-        time.sleep(1)  # let the worker pick up the task
+        t = api.schedule(engine, 'infinite_loop')
+        t.join('running')  # let the worker pick up the task
 
         r = cli('kill-worker', url, wids[0])
         monitor.preemptive_kill(engine)
@@ -78,7 +78,7 @@ def test_shutdown_worker(engine, cli):
 def test_task_logs(engine, cli):
     with workers(engine):
         t = api.schedule(engine, 'capture_logs')
-        time.sleep(1)  # let the worker pick up the task
+        t.join()
 
         r = cli('log-task', engine.url, t.tid)
         assert '\x1b[<X>mmy_app_logger:ERROR: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X>\n\x1b[<X>mstdout:INFO: <X>-<X>-<X> <X>:<X>:<X>: I want to be captured\n\x1b[<X>mmy_app_logger:DEBUG: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X> also' == scrub(r.output)
