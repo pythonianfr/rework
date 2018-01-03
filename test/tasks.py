@@ -61,3 +61,11 @@ def log_swarm(task):
     with task.capturelogs():
         for i in range(1, 250):
             logger.info('I will fill your database, %s', i)
+
+
+@api.task
+def stderr_swarm(task):
+    import sys
+    sys.stderr.write('X' * 8192)
+    sys.stderr.flush()
+    task.save_output(42)

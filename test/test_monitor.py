@@ -1,6 +1,8 @@
 from functools import partial
 from datetime import datetime
 from pathlib import Path
+import threading
+
 import pytest
 
 from rework import api
@@ -33,7 +35,8 @@ def test_basic_task_operations(engine):
         ('log_swarm', 'tasks.py'),
         ('normal_exception', 'tasks.py'),
         ('print_sleep_and_go_away', 'tasks.py'),
-        ('unstopable_death', 'tasks.py')
+        ('stderr_swarm', 'tasks.py'),
+        ('unstopable_death', 'tasks.py'),
     ] == expected
 
     wid = new_worker(engine)
@@ -316,3 +319,18 @@ def test_logging_stress_test(engine):
 
         assert len(list(t.logs())) == 249
         assert len(list(t.logs(fromid=245))) == 4 + offsets[0]
+
+
+def test_process_lock(engine):
+    with workers(engine):
+        t = api.schedule(engine, 'stderr_swarm')
+        t.join('running')
+
+        def join():
+            with t.engine.connect() as cn:
+                Task.byid(cn, t.tid).join(timeout=2)
+
+        thr = threading.Thread(target=join)
+        thr.start()
+        thr.join()
+        assert t.state == 'running'

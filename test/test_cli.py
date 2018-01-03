@@ -16,6 +16,7 @@ def test_list_operations(engine, cli):
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(allocate_and_leak_mbytes)
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(capture_logs)
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(log_swarm)
+<X> host(<X>) `<X>.<X>.<X>.<X>` path(stderr_swarm)
 """.strip() == scrub(r.output).strip()
 
 

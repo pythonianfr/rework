@@ -22,7 +22,6 @@ def spawn_worker(engine, maxruns, maxmem):
     # +- thescript.exe <params>
     #   +- python.exe thescript.py <params>
     return wid, sub.Popen(cmd,
-                          bufsize=1,
                           stdout=sub.PIPE, stderr=sub.PIPE)
 
 
