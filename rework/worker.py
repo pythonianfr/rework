@@ -113,7 +113,11 @@ def running_status(engine, wid):
             cn.execute(running_sql(wid, False))
 
 
-def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0):
+def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0, debug_port=0):
+    if debug_port:
+        import pystuck
+        pystuck.run_server(port=debug_port)
+
     engine = create_engine(dburi)
 
     try:

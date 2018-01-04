@@ -15,6 +15,7 @@ setup(name='rework',
           'colorama',
           'sqlalchemy',
           'psycopg2',
+          'pystuck',
           'click',
           'click-plugins'
       ],
