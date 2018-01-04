@@ -15,7 +15,7 @@ from rework.monitor import (
     preemptive_kill,
     reap_dead_workers
 )
-from rework.helper import kill, read_proc_streams, guard, wait_true
+from rework.helper import kill, guard, wait_true
 from rework.testutils import scrub, workers
 
 
@@ -83,7 +83,7 @@ def test_basic_worker_task_execution(engine):
     guard(engine, 'select count(id) from rework.worker where running = true',
           lambda res: res.scalar() == 0)
 
-    proc = ensure_workers(engine, 1, 0, 0)[0][1]
+    ensure_workers(engine, 1, 0, 0)
 
     guard(engine, 'select count(id) from rework.worker where running = true',
           lambda res: res.scalar() == 1)
@@ -95,26 +95,8 @@ def test_basic_worker_task_execution(engine):
     assert t.output == 42
     assert t.state == 'done'
 
-    logs = []
-    for log in read_proc_streams(proc):
-        logs.append(log)
-        if len(logs) > 3:
-            break
-    kill(proc.pid)
-    # What's going on there on windows ?
-    # We actually killed the parent process of the real worker process
-    # hence the real worker detects his parent just died
-    # and can write himself off the list.
     guard(engine, "select count(id) from rework.task where status = 'running'",
           lambda res: res.scalar() == 0)
-
-    assert [
-        ('stdout', 'Hello, world'),
-        ('stdout', 'I am running within task <X>'),
-        ('stdout', 'Saving computation to task.output'),
-        ('stdout', 'And now I am done.'),
-    ] == list((stream, scrub(line.decode('utf-8')))
-              for stream, line in logs)
 
 
 def test_worker_shutdown(engine):
@@ -324,7 +306,6 @@ def test_logging_stress_test(engine):
 def test_process_lock(engine):
     with workers(engine):
         t = api.schedule(engine, 'stderr_swarm')
-        t.join('running')
 
         def join():
             with t.engine.connect() as cn:
@@ -333,4 +314,4 @@ def test_process_lock(engine):
         thr = threading.Thread(target=join)
         thr.start()
         thr.join()
-        assert t.state == 'running'
+        assert t.state == 'done'

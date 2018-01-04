@@ -11,6 +11,12 @@ from rework.helper import host, guard
 from rework.schema import worker, task
 
 
+try:
+    DEVNULL = sub.DEVNULL
+except AttributeError:
+    DEVNULL = open(os.devnull, 'wb')
+
+
 def spawn_worker(engine, maxruns, maxmem):
     wid = new_worker(engine)
     cmd = ['rework', 'new-worker', str(engine.url), str(wid), str(os.getpid()),
@@ -22,7 +28,7 @@ def spawn_worker(engine, maxruns, maxmem):
     # +- thescript.exe <params>
     #   +- python.exe thescript.py <params>
     return wid, sub.Popen(cmd,
-                          stdout=sub.PIPE, stderr=sub.PIPE)
+                          stdout=DEVNULL, stderr=DEVNULL)
 
 
 def new_worker(engine):
