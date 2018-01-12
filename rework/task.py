@@ -125,10 +125,18 @@ class Task(object):
             return loads(val)
 
     @property
+    def raw_input(self):
+        return self._propvalue('input')
+
+    @property
     def output(self):
         out = self._propvalue('output')
         if out is not None:
             return loads(out)
+
+    @property
+    def raw_output(self):
+        return self._propvalue('output')
 
     @property
     def traceback(self):

@@ -18,7 +18,7 @@ def print_sleep_and_go_away(task):
 
 @api.task
 def raw_input(task):
-    task.save_output(task._propvalue('input') + b' and Celeste',
+    task.save_output(task.raw_input + b' and Celeste',
                      raw=True)
 
 

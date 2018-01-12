@@ -104,7 +104,7 @@ def test_task_rawinput(engine):
     with workers(engine):
         t = api.schedule(engine, 'raw_input', rawinputdata=b'Babar')
         t.join()
-        assert t._propvalue('output') == b'Babar and Celeste'
+        assert t.raw_output == b'Babar and Celeste'
 
 
 def test_worker_shutdown(engine):
