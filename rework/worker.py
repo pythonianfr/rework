@@ -88,11 +88,12 @@ def abortion_monitor(engine, wid, task):
                 track_memory_consumption(engine, wid)
                 continue
 
+            # abortion
             task.finish()
             with engine.connect() as cn:
                 diesql = death_sql(wid, 'Task {} aborted'.format(task.tid))
                 cn.execute(diesql)
-                kill(os.getpid())
+            kill(os.getpid())
 
     monitor = Thread(name='monitor_abort',
                      target=track_mem_and_die_if_task_aborted)
