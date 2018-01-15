@@ -28,24 +28,27 @@ class Task(object):
         self.operation = operation
 
     @classmethod
-    def fromqueue(cls, engine, wid):
+    def fromqueue(cls, engine, wid, domain='default'):
         with engine.connect() as cn:
-            sql = ("select id, operation from rework.task "
-                   "where status = 'queued' "
-                   "order by id "
-                   "for update skip locked "
+            sql = ("select task.id, task.operation "
+                   "from rework.task as task, rework.operation as op "
+                   "where task.status = 'queued' "
+                   "  and op.domain = %(domain)s"
+                   "  and task.operation = op.id "
+                   "order by task.id "
+                   "for update of task skip locked "
                    "limit 1")
-            tid_operation = cn.execute(sql).fetchone()
+            tid_operation = cn.execute(sql, domain=domain).fetchone()
             if tid_operation is None:
                 return
 
-            tid, operation = tid_operation
+            tid, opid = tid_operation
             sql = task.update().where(task.c.id == tid).values(
                 status='running',
                 worker=wid)
             cn.execute(sql)
 
-            return cls(engine, tid, operation)
+            return cls(engine, tid, opid)
 
     @classmethod
     def byid(cls, engine, tid):

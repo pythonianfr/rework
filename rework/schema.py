@@ -30,6 +30,7 @@ operation = Table(
     Column('host', String, nullable=False, index=True),
     Column('name', String, nullable=False, index=True),
     Column('path', String, nullable=False),
+    Column('domain', String, nullable=False, default='default'),
     UniqueConstraint('host', 'name', 'path', name='unique_operation'),
     schema='rework'
 )
