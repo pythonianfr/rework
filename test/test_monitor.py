@@ -35,6 +35,7 @@ def test_basic_task_operations(engine):
         ('log_swarm', 'tasks.py'),
         ('normal_exception', 'tasks.py'),
         ('print_sleep_and_go_away', 'tasks.py'),
+        ('raw_input', 'tasks.py'),
         ('stderr_swarm', 'tasks.py'),
         ('unstopable_death', 'tasks.py'),
     ] == expected
@@ -97,6 +98,13 @@ def test_basic_worker_task_execution(engine):
 
     guard(engine, "select count(id) from rework.task where status = 'running'",
           lambda res: res.scalar() == 0)
+
+
+def test_task_rawinput(engine):
+    with workers(engine):
+        t = api.schedule(engine, 'raw_input', rawinputdata=b'Babar')
+        t.join()
+        assert t._propvalue('output') == b'Babar and Celeste'
 
 
 def test_worker_shutdown(engine):

@@ -17,10 +17,14 @@ def task(func):
 
 
 def schedule(engine, opname, inputdata=None,
+             rawinputdata=None,
              hostid=None, module=None,
              metadata=None):
     if metadata:
         assert isinstance(metadata, dict)
+
+    if inputdata is not None:
+        rawinputdata = dumps(inputdata, protocol=2)
 
     if hostid is None:
         hostid = host()
@@ -42,7 +46,7 @@ def schedule(engine, opname, inputdata=None,
         sql = taskentity.insert()
         value = {
             'operation': opid,
-            'input': dumps(inputdata, protocol=2) if inputdata is not None else None,
+            'input': rawinputdata,
             'status': 'queued',
             'metadata': metadata
         }
