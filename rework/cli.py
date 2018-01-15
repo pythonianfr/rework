@@ -1,11 +1,11 @@
 from __future__ import print_function
 
 from time import sleep
-from pkg_resources import iter_entry_points
-import click
-from click_plugins import with_plugins
 
+import click
 from colorama import init, Fore, Style
+from pkg_resources import iter_entry_points
+from click_plugins import with_plugins
 
 from sqlalchemy import create_engine
 
