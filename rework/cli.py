@@ -111,7 +111,7 @@ def shutdown_worker(dburi, worker_id):
 @rework.command(name='kill-worker')
 @click.argument('dburi')
 @click.argument('worker-id')
-def shutdown_worker(dburi, worker_id):
+def kill_worker(dburi, worker_id):
     engine = create_engine(dburi)
     with engine.connect() as cn:
         worker = schema.worker
