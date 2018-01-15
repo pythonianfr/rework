@@ -162,7 +162,7 @@ def list_tasks(dburi, tracebacks=False, logcount=False):
 @click.argument('taskid', type=int)
 @click.option('--watch', is_flag=True, default=False)
 @click.option('--fromid', type=int)
-def log_task(dburi, taskid, tail=False, fromid=None, watch=False):
+def log_task(dburi, taskid, fromid=None, watch=False):
     engine = create_engine(dburi)
     task = Task.byid(engine, taskid)
 
