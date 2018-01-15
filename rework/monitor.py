@@ -17,11 +17,12 @@ except AttributeError:
     DEVNULL = open(os.devnull, 'wb')
 
 
-def spawn_worker(engine, maxruns, maxmem, debug_port=0):
+def spawn_worker(engine, maxruns, maxmem, domain='default', debug_port=0):
     wid = new_worker(engine)
     cmd = ['rework', 'new-worker', str(engine.url), str(wid), str(os.getpid()),
            '--maxruns', str(maxruns),
            '--maxmem', str(maxmem),
+           '--domain', domain,
            '--debug-port', str(debug_port)]
     # NOTE for windows users:
     # the subprocess pid herein might not be that of the actual worker
@@ -48,7 +49,8 @@ def num_workers(engine):
         return cn.execute(sql, {'host': host()}).scalar()
 
 
-def ensure_workers(engine, maxworkers, maxruns, maxmem, base_debug_port=0):
+def ensure_workers(engine, maxworkers, maxruns, maxmem,
+                   domain='default', base_debug_port=0):
     numworkers = num_workers(engine)
 
     procs = []
@@ -56,7 +58,8 @@ def ensure_workers(engine, maxworkers, maxruns, maxmem, base_debug_port=0):
     for offset in range(maxworkers - numworkers):
         if base_debug_port:
             debug_port = base_debug_port + offset
-        procs.append(spawn_worker(engine, maxruns, maxmem, debug_port=debug_port))
+        procs.append(spawn_worker(engine, maxruns, maxmem,
+                                  domain=domain, debug_port=debug_port))
 
     # wait til they are up and running
     guard(engine, 'select count(id) from rework.worker where running = true',
@@ -145,7 +148,8 @@ def cleanup_unstarted(engine):
         cn.execute(sql)
 
 
-def run_monitor(dburi, maxworkers=2, maxruns=0, maxmem=0, debug=False):
+def run_monitor(dburi, maxworkers=2, maxruns=0, maxmem=0,
+                domain='default', debug=False):
     engine = create_engine(dburi)
     workers = []
     base_debug_port = 6666 if debug else 0
@@ -158,7 +162,8 @@ def run_monitor(dburi, maxworkers=2, maxruns=0, maxmem=0, debug=False):
             workers = [(wid, proc)
                        for wid, proc in workers
                        if wid not in dead]
-        new = ensure_workers(engine, maxworkers, maxruns, maxmem, 
+        new = ensure_workers(engine, maxworkers, maxruns, maxmem,
+                             domain=domain,
                              base_debug_port=base_debug_port)
         if new:
             print('spawned {} active workers'.format(len(new)))

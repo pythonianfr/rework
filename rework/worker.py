@@ -114,7 +114,8 @@ def running_status(engine, wid):
             cn.execute(running_sql(wid, False))
 
 
-def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0, debug_port=0):
+def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0,
+               domain='default', debug_port=0):
     if debug_port:
         import pystuck
         pystuck.run_server(port=debug_port)
@@ -122,7 +123,7 @@ def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0, debug_port=0):
     engine = create_engine(dburi)
 
     try:
-        _main_loop(engine, worker_id, ppid, maxruns, maxmem)
+        _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain)
     except Exception:
         with engine.connect() as cn:
             sql = worker.update().where(worker.c.id == worker_id).values(
@@ -144,12 +145,12 @@ def heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs):
     die_if_shutdown(engine, worker_id)
 
 
-def _main_loop(engine, worker_id, ppid, maxruns, maxmem):
+def _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain):
     with running_status(engine, worker_id):
         runs = 0
         while True:
             heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs)
-            task = Task.fromqueue(engine, int(worker_id))
+            task = Task.fromqueue(engine, int(worker_id), domain)
             while task:
                 with abortion_monitor(engine, worker_id, task):
                     task.run()
