@@ -11,9 +11,19 @@ from rework.schema import task as taskentity, operation
 from rework.task import __task_registry__, Task
 
 
-def task(func):
-    __task_registry__[func.__name__] = func
-    return func
+def task(*args, **kw):
+    assert args and callable(args[0]) or 'domain' in kw, "Use either @task or @task(domain='domain')"
+    domain = 'default'
+
+    def register_task(func):
+        __task_registry__[(domain, func.__name__)] = func
+        return func
+
+    if args and callable(args[0]):
+        return register_task(args[0])
+
+    domain = kw.pop('domain')
+    return register_task
 
 
 def schedule(engine, opname, inputdata=None,
@@ -59,7 +69,7 @@ def freeze_operations(engine):
     sql = operation.insert()
     values = []
     hostid = host()
-    for name, func in __task_registry__.items():
+    for (domain, name), func in __task_registry__.items():
         funcmod = func.__module__
         module = sys.modules[funcmod]
         modpath = module.__file__
@@ -70,7 +80,8 @@ def freeze_operations(engine):
         values.append({
             'host': hostid,
             'name': name,
-            'path': modpath
+            'path': modpath,
+            'domain': domain
         })
     for value in values:
         with engine.connect() as cn:

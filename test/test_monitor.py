@@ -23,10 +23,11 @@ def test_basic_task_operations(engine):
     api.schedule(engine, 'print_sleep_and_go_away', 21,
                  metadata={'user': 'Joe'})
 
-    expected = [(name, Path(path).name)
-                for name, path in engine.execute(
-                        'select name, path from rework.operation order by name'
-                ).fetchall()
+    known = [
+        (name, Path(path).name)
+        for name, path in engine.execute(
+                'select name, path from rework.operation order by name'
+        ).fetchall()
     ]
     assert [
         ('allocate_and_leak_mbytes', 'tasks.py'),
@@ -36,9 +37,10 @@ def test_basic_task_operations(engine):
         ('normal_exception', 'tasks.py'),
         ('print_sleep_and_go_away', 'tasks.py'),
         ('raw_input', 'tasks.py'),
+        ('run_in_non_default_domain', 'tasks.py'),
         ('stderr_swarm', 'tasks.py'),
         ('unstopable_death', 'tasks.py'),
-    ] == expected
+    ] == known
 
     wid = new_worker(engine)
     t = Task.fromqueue(engine, wid)
@@ -98,6 +100,30 @@ def test_basic_worker_task_execution(engine):
 
     guard(engine, "select count(id) from rework.task where status = 'running'",
           lambda res: res.scalar() == 0)
+
+
+def test_domain(engine):
+    with workers(engine, maxruns=1) as wids:
+        wid = wids[0]
+        t1 = api.schedule(engine, 'run_in_non_default_domain')
+        t2 = api.schedule(engine, 'print_sleep_and_go_away', 1)
+
+        guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
+              lambda r: r.scalar() == True)
+
+        assert t1.status == 'queued'
+        assert t2.status == 'done'
+
+    with workers(engine, maxruns=1, domain='nondefault') as wids:
+        wid = wids[0]
+        t1 = api.schedule(engine, 'run_in_non_default_domain')
+        t2 = api.schedule(engine, 'print_sleep_and_go_away', 1)
+
+        guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
+              lambda r: r.scalar() == True)
+
+        assert t1.status == 'done'
+        assert t2.status == 'queued'
 
 
 def test_task_rawinput(engine):

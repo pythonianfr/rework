@@ -32,3 +32,13 @@ def cli():
     def runner(*args):
         return CliRunner().invoke(rcli.rework, [str(a) for a in args])
     return runner
+
+
+@pytest.fixture
+def cleanup():
+    tasks = set(api.__task_registry__)
+    yield
+    for k in api.__task_registry__.copy():
+        if k in tasks:
+            continue
+        api.__task_registry__.pop(k)

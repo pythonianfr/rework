@@ -10,6 +10,7 @@ def test_list_operations(engine, cli):
 
         assert """
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(print_sleep_and_go_away)
+<X> host(<X>) `<X>.<X>.<X>.<X>` path(run_in_non_default_domain)
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(raw_input)
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(infinite_loop)
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(unstopable_death)

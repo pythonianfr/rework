@@ -16,6 +16,11 @@ def print_sleep_and_go_away(task):
     print('And now I am done.')
 
 
+@api.task(domain='nondefault')
+def run_in_non_default_domain(task):
+    task.save_output('done')
+
+
 @api.task
 def raw_input(task):
     task.save_output(task.raw_input + b' and Celeste',
