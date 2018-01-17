@@ -14,16 +14,21 @@ from . import tasks
 
 DATADIR = Path(__file__).parent / 'data'
 PORT = 2346
+ENGINE = None
 
 
 @pytest.fixture(scope='session')
 def engine(request):
     db.setup_local_pg_cluster(request, DATADIR, PORT)
-    uri = 'postgresql://localhost:{}/postgres'.format(PORT)
-    e = create_engine(uri)
+    e = create_engine('postgresql://localhost:{}/postgres'.format(PORT))
     schema.reset(e)
     schema.init(e)
     api.freeze_operations(e)
+
+    # help the `cleanup` fixture
+    # (for some reason, working with a fresh engine therein won't work)
+    global ENGINE
+    ENGINE = e
     return e
 
 
@@ -36,9 +41,11 @@ def cli():
 
 @pytest.fixture
 def cleanup():
-    tasks = set(api.__task_registry__)
+    tasks = api.__task_registry__.copy()
     yield
-    for k in api.__task_registry__.copy():
-        if k in tasks:
-            continue
-        api.__task_registry__.pop(k)
+    api.__task_registry__.clear()
+    api.__task_registry__.update(tasks)
+    if ENGINE:
+        with ENGINE.connect() as cn:
+            cn.execute('delete from rework.operation')
+        api.freeze_operations(ENGINE)

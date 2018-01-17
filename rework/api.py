@@ -65,11 +65,13 @@ def schedule(engine, opname, inputdata=None,
     return Task(engine, tid, opid)
 
 
-def freeze_operations(engine):
+def freeze_operations(engine, domain=None):
     sql = operation.insert()
     values = []
     hostid = host()
-    for (domain, name), func in __task_registry__.items():
+    for (fdomain, fname), func in __task_registry__.items():
+        if domain is not None and domain != fdomain:
+            continue
         funcmod = func.__module__
         module = sys.modules[funcmod]
         modpath = module.__file__
@@ -79,9 +81,9 @@ def freeze_operations(engine):
         modpath = str(Path(modpath).resolve())
         values.append({
             'host': hostid,
-            'name': name,
+            'name': fname,
             'path': modpath,
-            'domain': domain
+            'domain': fdomain
         })
     for value in values:
         with engine.connect() as cn:
