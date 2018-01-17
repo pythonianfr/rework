@@ -18,7 +18,7 @@ except AttributeError:
 
 
 def spawn_worker(engine, maxruns, maxmem, domain='default', debug_port=0):
-    wid = new_worker(engine)
+    wid = new_worker(engine, domain)
     cmd = ['rework', 'new-worker', str(engine.url), str(wid), str(os.getpid()),
            '--maxruns', str(maxruns),
            '--maxmem', str(maxmem),
@@ -33,25 +33,30 @@ def spawn_worker(engine, maxruns, maxmem, domain='default', debug_port=0):
                           stdout=DEVNULL, stderr=DEVNULL)
 
 
-def new_worker(engine):
+def new_worker(engine, domain='default'):
     with engine.connect() as cn:
         return cn.execute(
             worker.insert().values(
-                host=host()
+                host=host(),
+                domain=domain
             )
         ).inserted_primary_key[0]
 
 
-def num_workers(engine):
+def num_workers(engine, domain='default'):
     sql = ("select count(id) from rework.worker "
-           "where host = %(host)s and running = true")
+           "where host = %(host)s and running = true "
+           "and domain = %(domain)s")
     with engine.connect() as cn:
-        return cn.execute(sql, {'host': host()}).scalar()
+        return cn.execute(sql, {
+            'host': host(),
+            'domain': domain
+        }).scalar()
 
 
 def ensure_workers(engine, maxworkers, maxruns, maxmem,
                    domain='default', base_debug_port=0):
-    numworkers = num_workers(engine)
+    numworkers = num_workers(engine, domain)
 
     procs = []
     debug_port = 0
@@ -62,7 +67,9 @@ def ensure_workers(engine, maxworkers, maxruns, maxmem,
                                   domain=domain, debug_port=debug_port))
 
     # wait til they are up and running
-    guard(engine, 'select count(id) from rework.worker where running = true',
+    guard(engine,
+          "select count(id) from rework.worker where running = true "
+          "and domain = '{}'".format(domain),
           lambda c: c.scalar() == maxworkers,
           timeout=10 + maxworkers * 2)
 
@@ -103,11 +110,15 @@ def preemptive_kill(engine):
     return killed
 
 
-def reap_dead_workers(engine):
+def reap_dead_workers(engine, domain='default'):
     sql = ("select id, pid from rework.worker "
-           "where host = %(host)s and running = true")
+           "where host = %(host)s and running = true "
+           "and domain = %(domain)s")
     deadlist = []
-    for wid, pid in engine.execute(sql, {'host': host()}).fetchall():
+    for wid, pid in engine.execute(sql, {
+            'host': host(),
+            'domain': domain
+    }).fetchall():
         try:
             cmd = ' '.join(psutil.Process(pid).cmdline())
             if 'new-worker' not in cmd and str(engine.url) not in cmd:
@@ -138,14 +149,15 @@ def reap_dead_workers(engine):
     return deadlist
 
 
-def cleanup_unstarted(engine):
+def cleanup_unstarted(engine, domain='default'):
     sql = ('delete from rework.worker '
            'where not running '
            'and traceback is null '
            'and not shutdown '
-           'and deathinfo is null')
+           'and deathinfo is null '
+           'and domain = %(domain)s')
     with engine.connect() as cn:
-        cn.execute(sql)
+        cn.execute(sql, domain=domain)
 
 
 def run_monitor(dburi, maxworkers=2, maxruns=0, maxmem=0,
@@ -155,8 +167,8 @@ def run_monitor(dburi, maxworkers=2, maxruns=0, maxmem=0,
     base_debug_port = 6666 if debug else 0
     while True:
         preemptive_kill(engine)
-        dead = reap_dead_workers(engine)
-        cleanup_unstarted(engine)
+        dead = reap_dead_workers(engine, domain)
+        cleanup_unstarted(engine, domain)
         if dead:
             print('reaped {} dead workers'.format(len(dead)))
             workers = [(wid, proc)

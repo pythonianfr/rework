@@ -22,7 +22,7 @@ def workers(engine, numworkers=1, maxruns=0, maxmem=0, domain='default'):
                 'select pid from rework.worker where running = true'
         ).fetchall():
             kill(pid)
-        reap_dead_workers(engine)
+        reap_dead_workers(engine, domain)
         guard(engine, 'select count(id) from rework.worker where running = true',
               lambda r: r.scalar() == 0)
 

@@ -13,6 +13,7 @@ worker = Table(
     'worker', meta,
     Column('id', Integer, primary_key=True),
     Column('host', String, nullable=False),
+    Column('domain', String, nullable=False, default='default'),
     Column('pid', Integer),
     Column('mem', Integer, default=0),
     Column('running', Boolean, nullable=False, default=False, index=True),
