@@ -71,7 +71,7 @@ def ensure_workers(engine, maxworkers, maxruns, maxmem,
           "select count(id) from rework.worker where running = true "
           "and domain = '{}'".format(domain),
           lambda c: c.scalar() == maxworkers,
-          timeout=10 + maxworkers * 2)
+          timeout=20 + maxworkers * 2)
 
     return procs
 
