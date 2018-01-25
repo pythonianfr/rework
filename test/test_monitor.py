@@ -213,8 +213,6 @@ def test_worker_max_runs(engine):
 
 
 def test_worker_max_mem(engine):
-    api.freeze_operations(engine)
-
     with workers(engine, maxmem=100) as wids:
         wid = wids[0]
 
