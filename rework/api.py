@@ -29,6 +29,7 @@ def task(*args, **kw):
 def schedule(engine, opname, inputdata=None,
              rawinputdata=None,
              hostid=None, module=None,
+             domain=None,
              metadata=None):
     if metadata:
         assert isinstance(metadata, dict)
@@ -45,6 +46,9 @@ def schedule(engine, opname, inputdata=None,
 
     if module is not None:
         sql = sql.where(operation.c.modname == module)
+
+    if domain is not None:
+        sql = sql.where(operation.c.domain == domain)
 
     with engine.connect() as cn:
         opids = cn.execute(sql).fetchall()
