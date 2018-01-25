@@ -65,11 +65,15 @@ def schedule(engine, opname, inputdata=None,
     return Task(engine, tid, opid)
 
 
-def freeze_operations(engine, domain=None):
+def freeze_operations(engine, domain=None, domain_map=None):
     sql = operation.insert()
     values = []
     hostid = host()
+    if domain_map:
+        domain = domain_map.get(domain, domain)
     for (fdomain, fname), func in __task_registry__.items():
+        if domain_map:
+            fdomain = domain_map.get(fdomain, fdomain)
         if domain is not None and domain != fdomain:
             continue
         funcmod = func.__module__

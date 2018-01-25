@@ -126,6 +126,20 @@ def test_domain(engine):
         assert t2.status == 'queued'
 
 
+def test_domain_map(engine, cleanup):
+    with engine.connect() as cn:
+        cn.execute('delete from rework.operation')
+
+    api.freeze_operations(engine, domain='nondefault',
+                          domain_map={'nondefault': 'fancy'}
+    )
+
+    with workers(engine, maxruns=1, domain='fancy'):
+        t1 = api.schedule(engine, 'run_in_non_default_domain')
+        t1.join()
+        assert t1.status == 'done'
+
+
 def test_task_rawinput(engine):
     with workers(engine):
         t = api.schedule(engine, 'raw_input', rawinputdata=b'Babar')
