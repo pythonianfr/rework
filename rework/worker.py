@@ -1,6 +1,5 @@
 import time
 import os
-import sys
 from threading import Thread
 from contextlib import contextmanager
 import traceback
@@ -160,7 +159,3 @@ def _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain):
             task = Task.fromqueue(engine, worker_id)
 
         time.sleep(1)
-
-        # let's diligently emit what we're saying to watchers
-        sys.stdout.flush()
-        sys.stderr.flush()
