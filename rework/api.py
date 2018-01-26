@@ -66,11 +66,12 @@ def schedule(engine, opname, inputdata=None,
 
 
 def freeze_operations(engine, domain=None, domain_map=None):
-    sql = operation.insert()
     values = []
     hostid = host()
+
     if domain_map:
         domain = domain_map.get(domain, domain)
+
     for (fdomain, fname), func in __task_registry__.items():
         if domain_map:
             fdomain = domain_map.get(fdomain, fdomain)
@@ -89,6 +90,8 @@ def freeze_operations(engine, domain=None, domain_map=None):
             'path': modpath,
             'domain': fdomain
         })
+
+    sql = operation.insert()
     for value in values:
         with engine.connect() as cn:
             try:
