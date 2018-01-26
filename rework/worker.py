@@ -138,11 +138,11 @@ def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0,
 
 def heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs):
     die_if_ancestor_died(engine, ppid, worker_id)
-    if maxruns and runs >= maxruns:
-        ask_shutdown(engine, worker_id)
     mem = track_memory_consumption(engine, worker_id)
-    if maxmem and mem > maxmem:
+
+    if (maxmem and mem > maxmem) or (maxruns and runs >= maxruns):
         ask_shutdown(engine, worker_id)
+
     die_if_shutdown(engine, worker_id)
 
 
