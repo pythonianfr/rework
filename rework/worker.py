@@ -123,7 +123,8 @@ def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0,
     engine = create_engine(dburi)
 
     try:
-        _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain)
+        with running_status(engine, worker_id):
+            _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain)
     except Exception:
         with engine.connect() as cn:
             sql = worker.update().where(worker.c.id == worker_id).values(
@@ -146,20 +147,19 @@ def heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs):
 
 
 def _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain):
-    with running_status(engine, worker_id):
-        runs = 0
-        while True:
+    runs = 0
+    while True:
+        heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs)
+        task = Task.fromqueue(engine, int(worker_id), domain)
+        while task:
+            with abortion_monitor(engine, worker_id, task):
+                task.run()
+                runs += 1
             heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs)
-            task = Task.fromqueue(engine, int(worker_id), domain)
-            while task:
-                with abortion_monitor(engine, worker_id, task):
-                    task.run()
-                    runs += 1
-                heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs)
-                task = Task.fromqueue(engine, worker_id)
+            task = Task.fromqueue(engine, worker_id)
 
-            time.sleep(1)
+        time.sleep(1)
 
-            # let's diligently emit what we're saying to watchers
-            sys.stdout.flush()
-            sys.stderr.flush()
+        # let's diligently emit what we're saying to watchers
+        sys.stdout.flush()
+        sys.stderr.flush()
