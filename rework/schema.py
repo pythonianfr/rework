@@ -16,6 +16,7 @@ worker = Table(
     Column('domain', String, nullable=False, default='default'),
     Column('pid', Integer),
     Column('mem', Integer, default=0),
+    Column('debugport', Integer),
     Column('running', Boolean, nullable=False, default=False, index=True),
     Column('shutdown', Boolean, nullable=False, default=False),
     Column('kill', Boolean, nullable=False, default=False),

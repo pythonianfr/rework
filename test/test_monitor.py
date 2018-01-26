@@ -67,7 +67,7 @@ def test_basic_task_operations(engine):
 def test_basic_worker_operations(engine):
     wid = new_worker(engine)
 
-    with running_status(engine, wid):
+    with running_status(engine, wid, None):
         assert engine.execute(
             'select count(id) from rework.worker where running = true'
         ).scalar() == 1

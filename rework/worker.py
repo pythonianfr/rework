@@ -20,9 +20,10 @@ def track_memory_consumption(engine, wid):
     return mem
 
 
-def running_sql(wid, running):
+def running_sql(wid, running, debugport):
     value = {
-        'running': running
+        'running': running,
+        'debugport': debugport
     }
     if running:
         value['pid'] = os.getpid()
@@ -104,14 +105,14 @@ def abortion_monitor(engine, wid, task):
 
 
 @contextmanager
-def running_status(engine, wid):
+def running_status(engine, wid, debug_port):
     with engine.connect() as cn:
-        cn.execute(running_sql(wid, True))
+        cn.execute(running_sql(wid, True, debug_port or None))
     try:
         yield
     finally:
         with engine.connect() as cn:
-            cn.execute(running_sql(wid, False))
+            cn.execute(running_sql(wid, False, None))
 
 
 def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0,
@@ -123,7 +124,7 @@ def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0,
     engine = create_engine(dburi)
 
     try:
-        with running_status(engine, worker_id):
+        with running_status(engine, worker_id, debug_port):
             _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain)
     except Exception:
         with engine.connect() as cn:

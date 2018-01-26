@@ -68,6 +68,16 @@ def test_kill_worker(engine, cli):
         assert '<X> infinite_loop done [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]' == scrub(r.output)
 
 
+def test_debug_worker(engine, cli):
+    url = engine.url
+    with engine.connect() as cn:
+        cn.execute('delete from rework.worker')
+
+    with workers(engine, debug=True) as wids:
+        r = cli('list-workers', url)
+        assert '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running (idle)] debugport = <X>' == scrub(r.output)
+
+
 def test_shutdown_worker(engine, cli):
     url = engine.url
     with workers(engine) as wids:
