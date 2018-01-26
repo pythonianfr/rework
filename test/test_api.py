@@ -62,3 +62,17 @@ def test_freeze_ops(engine, cleanup):
         'select name, domain from rework.operation order by domain, name'
     ).fetchall()
     assert res == [('foo', 'default'), ('hammy', 'ham')]
+
+
+def test_schedule_domain(engine, cleanup):
+    reset_ops(engine)
+    from . import task_testenv
+    from . import task_prodenv
+
+    api.freeze_operations(engine, domain='test')
+    api.freeze_operations(engine, domain='production')
+
+    with pytest.raises(ValueError) as err:
+        api.schedule(engine, 'foo')
+    assert err.value.args[0] == 'Ambiguous operation selection'
+
