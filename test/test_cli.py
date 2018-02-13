@@ -1,7 +1,9 @@
 import time
 
+import pytest
+
 from rework import api, monitor
-from rework.testutils import scrub, workers
+from rework.testutils import scrub, workers, guard
 
 
 def test_list_operations(engine, cli):
@@ -20,6 +22,47 @@ def test_list_operations(engine, cli):
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(log_swarm)
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(stderr_swarm)
 """.strip() == scrub(r.output).strip()
+
+
+def test_debug_port(engine, cli):
+    with workers(engine, numworkers=3, debug=True) as wids:
+        r = cli('list-workers', engine.url)
+        assert '6666' in r.output
+        assert '6667' in r.output
+        assert '6668' in r.output
+
+        with pytest.raises(AssertionError):
+            monitor.grab_debug_port(engine, 3, 6666, 0)
+
+        port = monitor.grab_debug_port(engine, 4, 6666, 0)
+        assert port == 6669
+
+        cli('kill-worker', engine.url, wids[0])
+        monitor.preemptive_kill(engine)
+        guard(engine, 'select running from rework.worker where id = {}'.format(wids[0]),
+              lambda r: not r.scalar())
+
+        r = cli('list-workers', engine.url)
+        assert '[dead] debugport = 6666' in r.output
+
+        port = monitor.grab_debug_port(engine, 3, 6666, 0)
+        assert port == 6666 # recycled
+
+        procs = monitor.ensure_workers(engine, 3, 1, 0, base_debug_port=6666)
+        assert procs
+        guard(engine, 'select running from rework.worker where id = {}'.format(procs[0][0]),
+              lambda r: r.scalar())
+
+        r = cli('list-workers', engine.url)
+        assert '[dead] debugport = 6666' in r.output
+        assert '(idle)] debugport = 6666' in r.output
+        # proper recycling did happen
+
+    with workers(engine, numworkers=3, debug=True):
+        r = cli('list-workers', engine.url)
+        assert '6666' in r.output
+        assert '6667' in r.output
+        assert '6668' in r.output
 
 
 def test_abort_task(engine, cli):

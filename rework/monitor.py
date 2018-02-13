@@ -54,15 +54,32 @@ def num_workers(engine, domain='default'):
         }).scalar()
 
 
+def grab_debug_port(engine, maxworkers, base_debug_port, offset):
+    if not base_debug_port:
+        return 0
+    allnumbers = set(range(base_debug_port, base_debug_port + maxworkers))
+    usednumbers = set(num for num, in engine.execute(
+        'select debugport from rework.worker where running = true').fetchall())
+    for num in range(base_debug_port, base_debug_port + offset):
+        usednumbers.add(num)
+    numbers = allnumbers - usednumbers
+    assert numbers
+    return min(numbers)
+
+
 def ensure_workers(engine, maxworkers, maxruns, maxmem,
                    domain='default', base_debug_port=0):
     numworkers = num_workers(engine, domain)
 
     procs = []
-    debug_port = 0
+    debug_ports = []
     for offset in range(maxworkers - numworkers):
         if base_debug_port:
-            debug_port = base_debug_port + offset
+            debug_ports.append(grab_debug_port(engine, maxworkers, base_debug_port, offset))
+        else:
+            debug_ports.append(0)
+
+    for debug_port in debug_ports:
         procs.append(spawn_worker(engine, maxruns, maxmem,
                                   domain=domain, debug_port=debug_port))
 
