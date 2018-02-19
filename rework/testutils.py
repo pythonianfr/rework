@@ -17,7 +17,7 @@ def workers(engine, numworkers=1, maxruns=0, maxmem=0, domain='default', debug=F
     guard(engine, 'select count(id) from rework.worker where running = true',
           lambda r: r.scalar() == numworkers)
     try:
-        yield [wid for wid, _proc in procs]
+        yield procs
     finally:
         for pid, in engine.execute(
                 'select pid from rework.worker where running = true'

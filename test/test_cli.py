@@ -50,7 +50,7 @@ def test_debug_port(engine, cli):
 
         procs = monitor.ensure_workers(engine, 3, 1, 0, base_debug_port=6666)
         assert procs
-        guard(engine, 'select running from rework.worker where id = {}'.format(procs[0][0]),
+        guard(engine, 'select running from rework.worker where id = {}'.format(procs[0]),
               lambda r: r.scalar())
 
         r = cli('list-workers', engine.url)

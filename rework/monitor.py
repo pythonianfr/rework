@@ -29,8 +29,13 @@ def spawn_worker(engine, maxruns, maxmem, domain='default', debug_port=0):
     # process because of the way python scripts are handled:
     # +- thescript.exe <params>
     #   +- python.exe thescript.py <params>
-    return wid, sub.Popen(cmd,
-                          stdout=DEVNULL, stderr=DEVNULL)
+    # NOTE for posix users (zombie management):
+    # we don't store the popen object, hence it will be gc-ed,
+    # being then put in the sub._active list, and then
+    # the next time a Popen call is made, all zombies in _active
+    # will be reaped.
+    sub.Popen(cmd, stdout=DEVNULL, stderr=DEVNULL)
+    return wid
 
 
 def new_worker(engine, domain='default'):
