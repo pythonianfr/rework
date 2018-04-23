@@ -2,7 +2,7 @@ from setuptools import setup
 
 
 setup(name='rework',
-      version='0.2.0',
+      version='0.3.0',
       author='Aurelien Campeas',
       author_email='aurelien.campeas@pythonian.fr',
       description='A database-oriented distributed task dispatcher',
@@ -10,7 +10,6 @@ setup(name='rework',
       packages=['rework'],
       install_requires=[
           'pytest_sa_pg',
-          'pathlib',
           'psutil',
           'colorama',
           'sqlalchemy',
