@@ -112,6 +112,8 @@ class Monitor(object):
             worker.c.kill == True
         ).where(
             worker.c.running == True
+        ).where(
+            worker.c.domain == self.domain
         )
         killed = []
         with self.engine.connect() as cn:
