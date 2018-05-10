@@ -1,4 +1,3 @@
-from functools import partial
 from datetime import datetime
 from pathlib import Path
 import threading
@@ -7,15 +6,10 @@ import pytest
 
 from rework import api
 from rework.schema import worker
+from rework.monitor import Monitor
 from rework.task import Task, TimeOut
 from rework.worker import running_status, shutdown_asked
-from rework.monitor import (
-    ensure_workers,
-    new_worker,
-    preemptive_kill,
-    reap_dead_workers
-)
-from rework.helper import kill, guard, wait_true
+from rework.helper import guard, wait_true
 from rework.testutils import scrub, workers
 
 
@@ -42,7 +36,8 @@ def test_basic_task_operations(engine):
         ('unstopable_death', 'tasks.py'),
     ] == known
 
-    wid = new_worker(engine)
+    mon = Monitor(engine)
+    wid = mon.new_worker()
     t = Task.fromqueue(engine, wid)
     t.run()
     assert t.output == 42
@@ -65,7 +60,8 @@ def test_basic_task_operations(engine):
 
 
 def test_basic_worker_operations(engine):
-    wid = new_worker(engine)
+    mon = Monitor(engine)
+    wid = mon.new_worker()
 
     with running_status(engine, wid, None):
         assert engine.execute(
@@ -86,7 +82,8 @@ def test_basic_worker_task_execution(engine):
     guard(engine, 'select count(id) from rework.worker where running = true',
           lambda res: res.scalar() == 0)
 
-    ensure_workers(engine, 1, 0, 0)
+    mon = Monitor(engine, 'default', 1, 0, 0)
+    mon.ensure_workers()
 
     guard(engine, 'select count(id) from rework.worker where running = true',
           lambda res: res.scalar() == 1)
@@ -103,7 +100,7 @@ def test_basic_worker_task_execution(engine):
 
 
 def test_domain(engine):
-    with workers(engine, maxruns=1) as wids:
+    with workers(engine, maxruns=1) as (_, wids):
         wid = wids[0]
         t1 = api.schedule(engine, 'run_in_non_default_domain')
         t2 = api.schedule(engine, 'print_sleep_and_go_away', 1)
@@ -114,7 +111,7 @@ def test_domain(engine):
         assert t1.status == 'queued'
         assert t2.status == 'done'
 
-    with workers(engine, maxruns=1, domain='nondefault') as wids:
+    with workers(engine, maxruns=1, domain='nondefault') as (_, wids):
         wid = wids[0]
         t1 = api.schedule(engine, 'run_in_non_default_domain')
         t2 = api.schedule(engine, 'print_sleep_and_go_away', 1)
@@ -148,7 +145,7 @@ def test_task_rawinput(engine):
 
 
 def test_worker_shutdown(engine):
-    with workers(engine) as wids:
+    with workers(engine) as (_, wids):
         wid = wids[0]
         assert not shutdown_asked(engine, wid)
 
@@ -171,7 +168,7 @@ def test_worker_shutdown(engine):
 
 
 def test_worker_kill(engine):
-    with workers(engine) as wids:
+    with workers(engine) as (mon, wids):
         wid = wids[0]
 
         with engine.connect() as cn:
@@ -183,7 +180,7 @@ def test_worker_kill(engine):
         guard(engine, 'select kill from rework.worker where id = {}'.format(wid),
               lambda r: r.scalar() == True)
 
-        preemptive_kill(engine)
+        mon.preemptive_kill()
 
         guard(engine, 'select count(id) from rework.worker where running = true',
               lambda r: r.scalar() == 0)
@@ -194,7 +191,7 @@ def test_worker_kill(engine):
 
 
 def test_worker_max_runs(engine):
-    with workers(engine, maxruns=2) as wids:
+    with workers(engine, maxruns=2) as (_, wids):
         wid = wids[0]
 
         t = api.schedule(engine, 'print_sleep_and_go_away', 'a')
@@ -210,7 +207,7 @@ def test_worker_max_runs(engine):
               lambda r: r.scalar() == True)
         assert shutdown_asked(engine, wid)
 
-    with workers(engine, maxruns=1) as wids:
+    with workers(engine, maxruns=1) as (_, wids):
         wid = wids[0]
 
         t1 = api.schedule(engine, 'print_sleep_and_go_away', 'a')
@@ -227,7 +224,7 @@ def test_worker_max_runs(engine):
 
 
 def test_worker_max_mem(engine):
-    with workers(engine, maxmem=100) as wids:
+    with workers(engine, maxmem=100) as (_, wids):
         wid = wids[0]
 
         t = api.schedule(engine, 'allocate_and_leak_mbytes', 100)
@@ -239,7 +236,7 @@ def test_worker_max_mem(engine):
 
 
 def test_task_abortion(engine):
-    with workers(engine) as wids:
+    with workers(engine) as (_, wids):
         wid = wids[0]
 
         t = api.schedule(engine, 'infinite_loop')
@@ -272,12 +269,12 @@ def test_task_abortion(engine):
 
 
 def test_worker_unplanned_death(engine):
-    with workers(engine) as wids:
+    with workers(engine) as (mon, wids):
         wid = wids[0]
 
         t = api.schedule(engine, 'unstopable_death')
 
-        deadlist = wait_true(partial(reap_dead_workers, engine))
+        deadlist = wait_true(mon.reap_dead_workers)
         assert wid in deadlist
 
         guard(engine, 'select deathinfo from rework.worker where id = {}'.format(wid),

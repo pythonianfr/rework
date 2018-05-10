@@ -1,29 +1,29 @@
 from contextlib import contextmanager
 
 from rework.helper import guard, kill
-from rework.monitor import ensure_workers, reap_dead_workers
+from rework.monitor import Monitor
 
 
 @contextmanager
 def workers(engine, numworkers=1, maxruns=0, maxmem=0, domain='default', debug=False):
-    reap_dead_workers(engine)
+    monitor = Monitor(engine, domain, numworkers, maxruns, maxmem, debug)
+    monitor.reap_dead_workers()
     with engine.connect() as cn:
         cn.execute('delete from rework.task')
         cn.execute('delete from rework.worker')
-    procs = ensure_workers(engine, numworkers, maxruns, maxmem, domain=domain,
-                           base_debug_port=debug * 6666)
+    procs = monitor.ensure_workers()
 
     # wait till' they are all running
     guard(engine, 'select count(id) from rework.worker where running = true',
           lambda r: r.scalar() == numworkers)
     try:
-        yield procs
+        yield (monitor, procs)
     finally:
         for pid, in engine.execute(
                 'select pid from rework.worker where running = true'
         ).fetchall():
             kill(pid)
-        reap_dead_workers(engine, domain)
+        monitor.reap_dead_workers()
         guard(engine, 'select count(id) from rework.worker where running = true',
               lambda r: r.scalar() == 0)
 

@@ -12,7 +12,7 @@ from sqlalchemy import create_engine
 from rework import schema
 from rework.worker import run_worker
 from rework.task import Task
-from rework.monitor import run_monitor
+from rework.monitor import Monitor
 
 
 @with_plugins(iter_entry_points('rework.subcommands'))
@@ -50,8 +50,10 @@ def new_worker(**config):
               help='shutdown on Mb consummed')
 @click.option('--domain', default='default')
 @click.option('--debug', is_flag=True, default=False)
-def deploy(**config):
-    run_monitor(**config)
+def deploy(dburi, **config):
+    engine = create_engine(dburi)
+    monitor = Monitor(engine, **config)
+    monitor.run()
 
 
 @rework.command(name='list-operations')
