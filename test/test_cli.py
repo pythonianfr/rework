@@ -1,5 +1,3 @@
-import time
-
 import pytest
 
 from rework import api
@@ -124,7 +122,7 @@ def test_debug_worker(engine, cli):
     with engine.connect() as cn:
         cn.execute('delete from rework.worker')
 
-    with workers(engine, debug=True) as wids:
+    with workers(engine, debug=True):
         r = cli('list-workers', url)
         assert '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running (idle)] debugport = <X>' == scrub(r.output)
 
@@ -133,7 +131,9 @@ def test_shutdown_worker(engine, cli):
     url = engine.url
     with workers(engine) as mon:
         cli('shutdown-worker', url, mon.wids[0])
-        time.sleep(1)
+
+        guard(engine, 'select running from rework.worker where id = {}'.format(mon.wids[0]),
+              lambda res: res.scalar() == 0)
 
         r = cli('list-workers', url)
         assert '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] explicit shutdown' == scrub(r.output)
@@ -145,7 +145,11 @@ def test_task_logs(engine, cli):
         t.join()
 
         r = cli('log-task', engine.url, t.tid)
-        assert '\x1b[<X>mmy_app_logger:ERROR: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X>\n\x1b[<X>mstdout:INFO: <X>-<X>-<X> <X>:<X>:<X>: I want to be captured\n\x1b[<X>mmy_app_logger:DEBUG: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X> also' == scrub(r.output)
+        assert (
+            '\x1b[<X>mmy_app_logger:ERROR: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X>\n'
+            '\x1b[<X>mstdout:INFO: <X>-<X>-<X> <X>:<X>:<X>: I want to be captured\n'
+            '\x1b[<X>mmy_app_logger:DEBUG: <X>-<X>-<X> <X>:<X>:<X>: will be captured <X> also'
+        ) == scrub(r.output)
 
 
 def test_vacuum(engine, cli):
