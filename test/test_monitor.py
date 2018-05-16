@@ -100,8 +100,8 @@ def test_basic_worker_task_execution(engine):
 
 
 def test_domain(engine):
-    with workers(engine, maxruns=1) as (_, wids):
-        wid = wids[0]
+    with workers(engine, maxruns=1) as mon:
+        wid = mon.wids[0]
         t1 = api.schedule(engine, 'run_in_non_default_domain')
         t2 = api.schedule(engine, 'print_sleep_and_go_away', 1)
 
@@ -111,8 +111,8 @@ def test_domain(engine):
         assert t1.status == 'queued'
         assert t2.status == 'done'
 
-    with workers(engine, maxruns=1, domain='nondefault') as (_, wids):
-        wid = wids[0]
+    with workers(engine, maxruns=1, domain='nondefault') as mon:
+        wid = mon.wids[0]
         t1 = api.schedule(engine, 'run_in_non_default_domain')
         t2 = api.schedule(engine, 'print_sleep_and_go_away', 1)
 
@@ -145,8 +145,8 @@ def test_task_rawinput(engine):
 
 
 def test_worker_shutdown(engine):
-    with workers(engine) as (_, wids):
-        wid = wids[0]
+    with workers(engine) as mon:
+        wid = mon.wids[0]
         assert not shutdown_asked(engine, wid)
 
         with engine.connect() as cn:
@@ -168,8 +168,8 @@ def test_worker_shutdown(engine):
 
 
 def test_worker_kill(engine):
-    with workers(engine) as (mon, wids):
-        wid = wids[0]
+    with workers(engine) as mon:
+        wid = mon.wids[0]
 
         with engine.connect() as cn:
             cn.execute(
@@ -191,8 +191,8 @@ def test_worker_kill(engine):
 
 
 def test_worker_max_runs(engine):
-    with workers(engine, maxruns=2) as (_, wids):
-        wid = wids[0]
+    with workers(engine, maxruns=2) as mon:
+        wid = mon.wids[0]
 
         t = api.schedule(engine, 'print_sleep_and_go_away', 'a')
         t.join()
@@ -207,8 +207,8 @@ def test_worker_max_runs(engine):
               lambda r: r.scalar() == True)
         assert shutdown_asked(engine, wid)
 
-    with workers(engine, maxruns=1) as (_, wids):
-        wid = wids[0]
+    with workers(engine, maxruns=1) as mon:
+        wid = mon.wids[0]
 
         t1 = api.schedule(engine, 'print_sleep_and_go_away', 'a')
         t2 = api.schedule(engine, 'print_sleep_and_go_away', 'a')
@@ -224,8 +224,8 @@ def test_worker_max_runs(engine):
 
 
 def test_worker_max_mem(engine):
-    with workers(engine, maxmem=100) as (_, wids):
-        wid = wids[0]
+    with workers(engine, maxmem=100) as mon:
+        wid = mon.wids[0]
 
         t = api.schedule(engine, 'allocate_and_leak_mbytes', 100)
         t.join()
@@ -236,8 +236,8 @@ def test_worker_max_mem(engine):
 
 
 def test_task_abortion(engine):
-    with workers(engine) as (_, wids):
-        wid = wids[0]
+    with workers(engine) as mon:
+        wid = mon.wids[0]
 
         t = api.schedule(engine, 'infinite_loop')
         guard(engine, 'select count(id) from rework.task where worker = {}'.format(wid),
@@ -269,8 +269,8 @@ def test_task_abortion(engine):
 
 
 def test_worker_unplanned_death(engine):
-    with workers(engine) as (mon, wids):
-        wid = wids[0]
+    with workers(engine) as mon:
+        wid = mon.wids[0]
 
         t = api.schedule(engine, 'unstopable_death')
 

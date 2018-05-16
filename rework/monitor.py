@@ -7,7 +7,7 @@ import psutil
 
 from sqlalchemy import select
 
-from rework.helper import host, guard
+from rework.helper import host, guard, kill_process_tree
 from rework.schema import worker, task
 
 
@@ -17,9 +17,26 @@ except AttributeError:
     DEVNULL = open(os.devnull, 'wb')
 
 
+def mark_dead_workers(cn, wids, message):
+    # mark workers as dead
+    cn.execute(
+        worker.update().values(
+            running=False,
+            deathinfo=message
+        ).where(worker.c.id.in_(wids))
+    )
+    # mark tasks as done
+    cn.execute(
+        task.update().values(status='done'
+        ).where(worker.c.id == task.c.worker
+        ).where(worker.c.id.in_(wids))
+    )
+
+
 class Monitor(object):
     __slots__ = ('engine', 'domain', 'maxworkers',
-                 'maxruns', 'maxmem', 'debugport')
+                 'maxruns', 'maxmem', 'debugport',
+                 'workers')
 
     def __init__(self, engine, domain='default',
                  maxworkers=2, maxruns=0, maxmem=0, debug=False):
@@ -29,6 +46,11 @@ class Monitor(object):
         self.maxruns = maxruns
         self.maxmem = maxmem
         self.debugport = 6666 if debug else 0
+        self.workers = {}
+
+    @property
+    def wids(self):
+        return sorted(self.workers.keys())
 
     def spawn_worker(self, debug_port=0):
         wid = self.new_worker()
@@ -37,17 +59,7 @@ class Monitor(object):
                '--maxmem', str(self.maxmem),
                '--domain', self.domain,
                '--debug-port', str(debug_port)]
-        # NOTE for windows users:
-        # the subprocess pid herein might not be that of the actual worker
-        # process because of the way python scripts are handled:
-        # +- thescript.exe <params>
-        #   +- python.exe thescript.py <params>
-        # NOTE for posix users (zombie management):
-        # we don't store the popen object, hence it will be gc-ed,
-        # being then put in the sub._active list, and then
-        # the next time a Popen call is made, all zombies in _active
-        # will be reaped.
-        sub.Popen(cmd, stdout=DEVNULL, stderr=DEVNULL)
+        self.workers[wid] = sub.Popen(cmd, stdout=DEVNULL, stderr=DEVNULL)
         return wid
 
     def new_worker(self):
@@ -59,15 +71,9 @@ class Monitor(object):
                 )
             ).inserted_primary_key[0]
 
+    @property
     def num_workers(self):
-        sql = ("select count(id) from rework.worker "
-               "where host = %(host)s and running = true "
-               "and domain = %(domain)s")
-        with self.engine.connect() as cn:
-            return cn.execute(sql, {
-                'host': host(),
-                'domain': self.domain
-            }).scalar()
+        return len(self.workers)
 
     def grab_debug_port(self, base_debug_port, offset):
         if not base_debug_port:
@@ -82,7 +88,11 @@ class Monitor(object):
         return min(numbers)
 
     def ensure_workers(self):
-        numworkers = self.num_workers()
+        for wid, proc in self.workers.copy().items():
+            if proc.poll() is not None:
+                proc.wait()  # tell linux to reap the zombie
+                self.workers.pop(wid)
+        numworkers = self.num_workers
 
         procs = []
         debug_ports = []
@@ -96,47 +106,52 @@ class Monitor(object):
             procs.append(self.spawn_worker(debug_port=debug_port))
 
         # wait til they are up and running
-        guard(self.engine,
-              "select count(id) from rework.worker where running = true "
-              "and domain = '{}'".format(self.domain),
-              lambda c: c.scalar() == self.maxworkers,
-              timeout=20 + self.maxworkers * 2)
+        if procs:
+            guard(self.engine,
+                  "select count(id) from rework.worker where running = true "
+                  "and id in ({})".format(','.join(repr(wid) for wid in procs)),
+                  lambda c: c.scalar() == len(procs),
+                  timeout=20 + self.maxworkers * 2)
 
         return procs
 
+    def killall(self):
+        mark = []
+        for wid, proc in self.workers.items():
+            if proc.poll() is None:  # else it's already dead
+                # NOTE for windows users:
+                # the subprocess pid herein might not be that of the actual worker
+                # process because of the way python scripts are handled:
+                # +- thescript.exe <params>
+                #   +- python.exe thescript.py <params>
+                kill_process_tree(proc.pid)
+                proc.wait()
+            mark.append(wid)
+        with self.engine.connect() as cn:
+            mark_dead_workers(cn, mark, 'Forcefully killed by the monitor.')
+        self.workers = {}
+
     def preemptive_kill(self):
-        hostid = host()
-        sql = select([worker.c.id, worker.c.pid]).where(
-            worker.c.host == hostid
-        ).where(
+        sql = select([worker.c.id]).where(
             worker.c.kill == True
         ).where(
             worker.c.running == True
         ).where(
-            worker.c.domain == self.domain
+            worker.c.id.in_(wid for wid in self.workers)
         )
         killed = []
         with self.engine.connect() as cn:
-            for wid, pid in cn.execute(sql).fetchall():
-                try:
-                    psutil.Process(pid).kill()
-                except:
-                    print('could not kill {}'.format(pid))
+            for row in cn.execute(sql).fetchall():
+                wid = row.id
+                proc = self.workers.pop(wid)
+                if not kill_process_tree(proc.pid):
+                    print('could not kill {}'.format(proc.pid))
                     continue
-                sql = worker.update().values(
-                    running=False,
-                    deathinfo='preemptive kill at {}'.format(datetime.utcnow())
-                ).where(
-                    worker.c.id == wid
+
+                mark_dead_workers(cn, [wid],
+                                  'preemptive kill at {}'.format(datetime.utcnow())
                 )
-                cn.execute(sql)
-                sql = task.update().values(
-                    status='done'
-                ).where(
-                    worker.c.id == task.c.worker
-                )
-                cn.execute(sql)
-                killed.append((wid, pid))
+                killed.append(wid)
         return killed
 
     def reap_dead_workers(self):

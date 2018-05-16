@@ -2,8 +2,9 @@ import time
 
 import pytest
 
-from rework import api, monitor
-from rework.testutils import scrub, workers, guard
+from rework import api
+from rework.testutils import scrub, workers
+from rework.helper import guard
 
 
 def test_list_operations(engine, cli):
@@ -25,7 +26,7 @@ def test_list_operations(engine, cli):
 
 
 def test_debug_port(engine, cli):
-    with workers(engine, numworkers=3, debug=True) as (mon, wids):
+    with workers(engine, numworkers=3, debug=True) as mon:
         r = cli('list-workers', engine.url)
         assert '6666' in r.output
         assert '6667' in r.output
@@ -37,9 +38,16 @@ def test_debug_port(engine, cli):
         # port = mon.grab_debug_port(6666, 0)
         # assert port == 6669
 
-        cli('kill-worker', engine.url, wids[0])
-        mon.preemptive_kill()
-        guard(engine, 'select running from rework.worker where id = {}'.format(wids[0]),
+        killtarget = mon.wids[0]
+        cli('kill-worker', engine.url, killtarget)
+        killed = mon.preemptive_kill()
+
+        assert len(killed) == 1
+        assert killed[0] == killtarget
+        assert len(mon.wids) == 2
+
+        guard(engine,
+              'select running from rework.worker where id = {}'.format(killtarget),
               lambda r: not r.scalar())
 
         r = cli('list-workers', engine.url)
@@ -95,11 +103,11 @@ def test_kill_worker(engine, cli):
     with engine.connect() as cn:
         cn.execute('delete from rework.worker')
 
-    with workers(engine) as (mon, wids):
+    with workers(engine) as mon:
         t = api.schedule(engine, 'infinite_loop')
         t.join('running')  # let the worker pick up the task
 
-        r = cli('kill-worker', url, wids[0])
+        r = cli('kill-worker', url, mon.wids[0])
         mon.preemptive_kill()
 
         r = cli('list-workers', url)
@@ -123,8 +131,8 @@ def test_debug_worker(engine, cli):
 
 def test_shutdown_worker(engine, cli):
     url = engine.url
-    with workers(engine) as (_, wids):
-        cli('shutdown-worker', url, wids[0])
+    with workers(engine) as mon:
+        cli('shutdown-worker', url, mon.wids[0])
         time.sleep(1)
 
         r = cli('list-workers', url)

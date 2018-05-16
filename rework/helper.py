@@ -56,8 +56,23 @@ def host():
         return s.getsockname()[0]
 
 
-def kill(pid):
-    psutil.Process(pid).kill()
+def kill(pid, timeout=3):
+    def on_terminate(proc):
+        print('process {} terminated with exit code {}'.format(proc, proc.returncode))
+
+    # TERM then KILL
+    try:
+        proc = psutil.Process(pid)
+        proc.terminate()
+        _, alive = psutil.wait_procs([proc], timeout=timeout, callback=on_terminate)
+        if alive:
+            proc.kill()
+            _, alive = psutil.wait_procs([proc], timeout=timeout, callback=on_terminate)
+            if alive:
+                return False
+    except psutil.NoSuchProcess:
+        return True
+    return True
 
 
 def has_ancestor_pid(pid):
@@ -68,6 +83,20 @@ def has_ancestor_pid(pid):
         parent = parent.parent()
     return False
 
+
+def kill_process_tree(pid, timeout=3):
+    """Terminate all the children of this process.
+    inspired from https://psutil.readthedocs.io/en/latest/#terminate-my-children
+    """
+    try:
+        procs = psutil.Process(pid).children()
+    except psutil.NoSuchProcess:
+        print('process {} is already dead'.format(pid))
+        return True
+    for proc in procs:
+        kill_process_tree(proc.pid, timeout)
+        kill(proc.pid)
+    return kill(pid)
 
 # Logging
 
