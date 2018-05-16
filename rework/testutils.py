@@ -4,11 +4,13 @@ from rework.monitor import Monitor
 
 
 @contextmanager
-def workers(engine, numworkers=1, maxruns=0, maxmem=0, domain='default', debug=False):
+def workers(engine, numworkers=1, minworkers=None,
+            maxruns=0, maxmem=0,
+            domain='default', debug=False):
     with engine.connect() as cn:
         cn.execute('delete from rework.task')
         cn.execute('delete from rework.worker')
-    monitor = Monitor(engine, domain, numworkers, maxruns, maxmem, debug)
+    monitor = Monitor(engine, domain, minworkers, numworkers, maxruns, maxmem, debug)
     monitor.ensure_workers()
 
     yield monitor

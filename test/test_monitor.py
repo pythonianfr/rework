@@ -82,7 +82,7 @@ def test_basic_worker_task_execution(engine):
     guard(engine, 'select count(id) from rework.worker where running = true',
           lambda res: res.scalar() == 0)
 
-    mon = Monitor(engine, 'default', 1, 0, 0)
+    mon = Monitor(engine, 'default', maxworkers=1)
     mon.ensure_workers()
 
     guard(engine, 'select count(id) from rework.worker where running = true',

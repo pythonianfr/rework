@@ -71,6 +71,87 @@ def test_debug_port(engine, cli):
         assert '6668' in r.output
 
 
+def test_minworkers(engine, cli):
+    with workers(engine, minworkers=1, numworkers=4) as mon:
+        r = cli('list-workers', engine.url)
+        assert r.output.count('running (idle)') == 1
+
+        # progressive ramp up, one task
+        t1 = api.schedule(engine, 'infinite_loop')
+        t1.join(target='running')
+
+        new = mon.ensure_workers()
+        assert len(new) == 0
+
+        r = cli('list-workers', engine.url)
+        assert r.output.count('\n') == 1
+        assert r.output.count('running (idle)') == 0
+        assert scrub(r.output).count('running #<X>') == 1
+
+        # now with three tasks
+        t2 = api.schedule(engine, 'infinite_loop')
+        t3 = api.schedule(engine, 'infinite_loop')
+
+        new = mon.ensure_workers()
+        assert len(new) == 2
+
+        t2.join(target='running')
+        t3.join(target='running')
+        r = cli('list-workers', engine.url)
+        assert scrub(r.output).count('running #<X>') == 3
+        assert r.output.count('running (idle)') == 0
+
+        # just one useless turn for fun
+        new = mon.ensure_workers()
+        assert len(new) == 0
+        r = cli('list-workers', engine.url)
+        assert scrub(r.output).count('running #<X>') == 3
+        assert r.output.count('running (idle)') == 0
+
+        # t4 should run and t5 remain in queue
+        t4 = api.schedule(engine, 'infinite_loop')
+        t5 = api.schedule(engine, 'infinite_loop')
+
+        new = mon.ensure_workers()
+        assert len(new) == 1
+        t4.join(target='running')
+        assert t5.status == 'queued'
+
+        r = cli('list-workers', engine.url)
+        assert scrub(r.output).count('running #<X>') == 4
+        assert r.output.count('running (idle)') == 0
+        r = cli('list-tasks', engine.url)
+        assert r.output.count('running') == 4
+        assert r.output.count('queued') == 1
+
+        # ramp down
+        t1.abort(); t2.abort(); t1.join(); t2.join()
+
+        mon.ensure_workers()
+        r = cli('list-workers', engine.url)
+        assert scrub(r.output).count('running #<X>') == 3
+        assert r.output.count('running (idle)') == 0
+
+        mon.ensure_workers()
+        r = cli('list-workers', engine.url)
+        assert scrub(r.output).count('running #<X>') == 3
+        assert r.output.count('running (idle)') == 0
+
+        t3.abort(); t4.abort(); t3.join(); t4.join()
+
+        mon.ensure_workers()
+        r = cli('list-workers', engine.url)
+        assert scrub(r.output).count('running #<X>') == 1
+        assert r.output.count('running (idle)') == 0
+
+        t5.abort()
+        t5.join()
+        mon.ensure_workers()
+        r = cli('list-workers', engine.url)
+        assert scrub(r.output).count('running #<X>') == 0
+        assert r.output.count('running (idle)') == 1
+
+
 def test_abort_task(engine, cli):
     url = engine.url
     with workers(engine):

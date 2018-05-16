@@ -45,6 +45,7 @@ def new_worker(**config):
 @rework.command()
 @click.argument('dburi')
 @click.option('--maxworkers', type=int, default=2)
+@click.option('--minworkers', type=int)
 @click.option('--maxruns', type=int, default=0)
 @click.option('--maxmem', type=int, default=0,
               help='shutdown on Mb consummed')

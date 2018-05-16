@@ -5,7 +5,7 @@ from datetime import datetime
 
 import psutil
 
-from sqlalchemy import select
+from sqlalchemy import select, not_
 
 from rework.helper import host, guard, kill_process_tree
 from rework.schema import worker, task
@@ -33,20 +33,33 @@ def mark_dead_workers(cn, wids, message):
     )
 
 
+def clip(val, low, high):
+    if val < low:
+        return low
+    if val > high:
+        return high
+    return val
+
+
 class Monitor(object):
-    __slots__ = ('engine', 'domain', 'maxworkers',
+    __slots__ = ('engine', 'domain',
+                 'minworkers', 'maxworkers',
                  'maxruns', 'maxmem', 'debugport',
-                 'workers')
+                 'workers', 'host')
 
     def __init__(self, engine, domain='default',
-                 maxworkers=2, maxruns=0, maxmem=0, debug=False):
+                 minworkers=None, maxworkers=2,
+                 maxruns=0, maxmem=0, debug=False):
         self.engine = engine
         self.domain = domain
         self.maxworkers = maxworkers
+        self.minworkers = minworkers if minworkers is not None else maxworkers
+        assert 0 <= self.minworkers <= self.maxworkers
         self.maxruns = maxruns
         self.maxmem = maxmem
         self.debugport = 6666 if debug else 0
         self.workers = {}
+        self.host = host()
 
     @property
     def wids(self):
@@ -87,16 +100,50 @@ class Monitor(object):
         assert numbers
         return min(numbers)
 
+    @property
+    def queued_tasks(self):
+        return self.engine.execute(
+            'select count(*) '
+            ' from rework.task as task, rework.operation as op '
+            'where '
+            ' task.status = \'queued\' and '
+            ' task.operation = op.id and '
+            ' op.domain = %(domain)s and '
+            ' op.host = %(host)s',
+            domain=self.domain,
+            host=self.host
+        ).scalar()
+
+    def busy_workers(self, cn):
+        if not self.workers:
+            return []
+        return [
+            row.id for row in
+            cn.execute(
+                select([worker.c.id]
+                ).where(worker.c.id.in_(wid for wid in self.workers)
+                ).where(task.c.worker == worker.c.id
+                ).where(task.c.status != 'done')
+            ).fetchall()
+        ]
+
     def ensure_workers(self):
         for wid, proc in self.workers.copy().items():
             if proc.poll() is not None:
                 proc.wait()  # tell linux to reap the zombie
                 self.workers.pop(wid)
+
         numworkers = self.num_workers
+        busycount = len(self.busy_workers(self.engine))
+        idle = numworkers - busycount
+        assert idle >= 0
 
         procs = []
         debug_ports = []
-        for offset in range(self.maxworkers - numworkers):
+        needed_workers = clip(self.queued_tasks - idle,
+                              self.minworkers - numworkers,
+                              self.maxworkers - numworkers)
+        for offset in range(needed_workers):
             if self.debugport:
                 debug_ports.append(self.grab_debug_port(self.debugport, offset))
             else:
