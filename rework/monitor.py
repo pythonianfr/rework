@@ -67,7 +67,8 @@ class Monitor(object):
 
     def spawn_worker(self, debug_port=0):
         wid = self.new_worker()
-        cmd = ['rework', 'new-worker', str(self.engine.url), str(wid), str(os.getpid()),
+        cmd = ['rework',
+               'new-worker', str(self.engine.url), str(wid), str(os.getpid()),
                '--maxruns', str(self.maxruns),
                '--maxmem', str(self.maxmem),
                '--domain', self.domain,
@@ -126,9 +127,8 @@ class Monitor(object):
             ).fetchall()
         ]
 
-    def retirable_workers(self, cn, busylist=()):
-        sql = select([worker.c.id]
-        ).where(worker.c.id.in_(self.wids))
+    def idle_worker(self, cn, busylist=()):
+        sql = select([worker.c.id]).where(worker.c.id.in_(self.wids))
         if busylist:
             sql = sql.where(not_(worker.c.id.in_(busylist)))
         sql = sql.limit(1)
@@ -143,20 +143,23 @@ class Monitor(object):
             # let' not even try to do anything if
             # the task queue is unempty
             if not needed and idle > self.minworkers:
-                candidate = self.retirable_workers(cn, busy)
+                candidate = self.idle_worker(cn, busy)
                 # we now have a case to at least retire one
                 sql = worker.update().where(worker.c.id == candidate
                 ).values(shutdown=True)
                 cn.execute(sql)
 
     def ensure_workers(self):
+        # rid self.workers of dead things
         for wid, proc in self.workers.copy().items():
             if proc.poll() is not None:
                 proc.wait()  # tell linux to reap the zombie
                 self.workers.pop(wid)
 
+        # reduce by one the worker pool if possible
         self.shrink_workers()
 
+        # compute the needed workers
         with self.engine.connect() as cn:
             numworkers = self.num_workers
             busycount = len(self.busy_workers(cn))
@@ -164,12 +167,12 @@ class Monitor(object):
 
         idle = numworkers - busycount
         assert idle >= 0
-
-        procs = []
-        debug_ports = []
         needed_workers = clip(waiting - idle,
                               self.minworkers - numworkers,
                               self.maxworkers - numworkers)
+
+        procs = []
+        debug_ports = []
         for offset in range(needed_workers):
             if self.debugport:
                 debug_ports.append(self.grab_debug_port(self.debugport, offset))
@@ -206,13 +209,10 @@ class Monitor(object):
         self.workers = {}
 
     def preemptive_kill(self):
-        sql = select([worker.c.id]).where(
-            worker.c.kill == True
-        ).where(
-            worker.c.running == True
-        ).where(
-            worker.c.id.in_(self.wids)
-        )
+        sql = select(
+            [worker.c.id]).where(worker.c.kill == True
+            ).where(worker.c.running == True
+            ).where(worker.c.id.in_(self.wids))
         killed = []
         with self.engine.connect() as cn:
             for row in cn.execute(sql).fetchall():
@@ -222,21 +222,20 @@ class Monitor(object):
                     print('could not kill {}'.format(proc.pid))
                     continue
 
-                mark_dead_workers(cn, [wid],
-                                  'preemptive kill at {}'.format(datetime.utcnow())
+                mark_dead_workers(
+                    cn, [wid],
+                    'preemptive kill at {}'.format(datetime.utcnow())
                 )
                 killed.append(wid)
         return killed
 
     def reap_dead_workers(self):
-        sql = ("select id, pid from rework.worker "
-               "where host = %(host)s and running = true "
-               "and domain = %(domain)s")
+        sql = ('select id, pid from rework.worker '
+               'where host = %(host)s and running = true '
+               'and domain = %(domain)s')
         deadlist = []
-        for wid, pid in self.engine.execute(sql, {
-                'host': host(),
-                'domain': self.domain
-        }).fetchall():
+        for wid, pid in self.engine.execute(
+                sql, {'host': host(), 'domain': self.domain}).fetchall():
             try:
                 cmd = ' '.join(psutil.Process(pid).cmdline())
                 if 'new-worker' not in cmd and str(self.engine.url) not in cmd:
@@ -251,15 +250,10 @@ class Monitor(object):
                 deathinfo='Unaccounted death (hard crash)'
             )
             # also mark the tasks as failed
-            tsql = task.update().where(
-                worker.c.id.in_(deadlist)
-            ).where(
-                task.c.worker == worker.c.id
-            ).where(
-                task.c.status == 'running'
-            ).values(
-                status='done'
-            )
+            tsql = task.update().where(worker.c.id.in_(deadlist)
+            ).where(task.c.worker == worker.c.id
+            ).where(task.c.status == 'running'
+            ).values(status='done')
             with self.engine.connect() as cn:
                 cn.execute(wsql)
                 cn.execute(tsql)
