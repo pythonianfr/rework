@@ -27,6 +27,9 @@ class Task(object):
         self.tid = tid
         self.operation = operation
 
+    def __repr__(self):
+        return 'Task({}, {})'.format(self.operation, self.state)
+
     @classmethod
     def fromqueue(cls, engine, wid, domain='default'):
         with engine.connect() as cn:

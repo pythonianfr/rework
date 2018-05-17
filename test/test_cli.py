@@ -152,6 +152,34 @@ def test_minworkers(engine, cli):
         assert r.output.count('running (idle)') == 1
 
 
+def test_shrink_minworkers(engine, cli):
+    with workers(engine, minworkers=0, numworkers=4) as mon:
+        r = cli('list-workers', engine.url)
+        assert r.output.count('running (idle)') == 0
+
+        # ramp up, more tasks than maxworkers
+        # we want to saturate the monitor
+        tasks = {}
+        for idx in range(6):
+            tasks[idx] = api.schedule(engine, 'print_sleep_and_go_away', 1)
+
+        assert [task.state for task in tasks.values()] == [
+            'queued', 'queued', 'queued', 'queued', 'queued', 'queued']
+
+        new = mon.ensure_workers()
+        assert len(new) == 4
+
+        for t in tasks.values():
+            t.join()
+
+        assert [task.state for task in tasks.values()] == [
+            'done', 'done', 'done', 'done', 'done', 'done']
+
+        new = mon.ensure_workers()
+        assert len(new) == 0          # ok
+        assert len(mon.workers) == 4  # nok
+
+
 def test_abort_task(engine, cli):
     url = engine.url
     with workers(engine):
