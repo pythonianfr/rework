@@ -100,9 +100,8 @@ class Monitor(object):
         assert numbers
         return min(numbers)
 
-    @property
-    def queued_tasks(self):
-        return self.engine.execute(
+    def queued_tasks(self, cn):
+        return cn.execute(
             'select count(*) '
             ' from rework.task as task, rework.operation as op '
             'where '
@@ -127,20 +126,48 @@ class Monitor(object):
             ).fetchall()
         ]
 
+    def retirable_workers(self, cn, busylist=()):
+        sql = select([worker.c.id]
+        ).where(worker.c.id.in_(wid for wid in self.workers))
+        if busylist:
+            sql = sql.where(not_(worker.c.id.in_(busylist)))
+        sql = sql.limit(1)
+        return cn.execute(sql).scalar()
+
+    def shrink_workers(self):
+        with self.engine.connect() as cn:
+            needed = self.queued_tasks(cn)
+            busy = self.busy_workers(cn)
+            idle = self.num_workers - len(busy)
+            # ask idle workers to shutdown
+            # let' not even try to do anything if
+            # the task queue is unempty
+            if not needed and idle > self.minworkers:
+                candidate = self.retirable_workers(cn, busy)
+                # we now have a case to at least retire one
+                sql = worker.update().where(worker.c.id == candidate
+                ).values(shutdown=True)
+                cn.execute(sql)
+
     def ensure_workers(self):
         for wid, proc in self.workers.copy().items():
             if proc.poll() is not None:
                 proc.wait()  # tell linux to reap the zombie
                 self.workers.pop(wid)
 
-        numworkers = self.num_workers
-        busycount = len(self.busy_workers(self.engine))
+        self.shrink_workers()
+
+        with self.engine.connect() as cn:
+            numworkers = self.num_workers
+            busycount = len(self.busy_workers(cn))
+            waiting = self.queued_tasks(cn)
+
         idle = numworkers - busycount
         assert idle >= 0
 
         procs = []
         debug_ports = []
-        needed_workers = clip(self.queued_tasks - idle,
+        needed_workers = clip(waiting - idle,
                               self.minworkers - numworkers,
                               self.maxworkers - numworkers)
         for offset in range(needed_workers):

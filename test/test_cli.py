@@ -1,5 +1,6 @@
-import pytest
+import os
 
+import pytest
 from rework import api
 from rework.testutils import scrub, workers
 from rework.helper import guard
@@ -169,6 +170,9 @@ def test_shrink_minworkers(engine, cli):
         new = mon.ensure_workers()
         assert len(new) == 4
 
+        # occupy a worker
+        api.schedule(engine, 'infinite_loop')
+
         for t in tasks.values():
             t.join()
 
@@ -176,8 +180,24 @@ def test_shrink_minworkers(engine, cli):
             'done', 'done', 'done', 'done', 'done', 'done']
 
         new = mon.ensure_workers()
-        assert len(new) == 0          # ok
-        assert len(mon.workers) == 4  # nok
+        assert len(new) == 0
+
+        # give 4 times a chance to shutdown a spare worker
+        # 3 of them should go away
+        for _ in range(1, 5):
+            assert len(mon.ensure_workers()) == 0
+
+        guard(engine,
+              'select count(*) from rework.worker '
+              'where shutdown = true and running = false',
+            lambda r: r.scalar() == 3)
+
+        # give the monitor a chance to forget about the gone workers
+        mon.ensure_workers()
+        if os.name != 'nt':
+            # windows proc management is unfortunately racy :/
+            # we see the right amount of workers here after a small delay
+            assert len(mon.workers) == 1
 
 
 def test_abort_task(engine, cli):
