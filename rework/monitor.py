@@ -120,7 +120,7 @@ class Monitor(object):
             row.id for row in
             cn.execute(
                 select([worker.c.id]
-                ).where(worker.c.id.in_(wid for wid in self.workers)
+                ).where(worker.c.id.in_(self.wids)
                 ).where(task.c.worker == worker.c.id
                 ).where(task.c.status != 'done')
             ).fetchall()
@@ -128,7 +128,7 @@ class Monitor(object):
 
     def retirable_workers(self, cn, busylist=()):
         sql = select([worker.c.id]
-        ).where(worker.c.id.in_(wid for wid in self.workers))
+        ).where(worker.c.id.in_(self.wids))
         if busylist:
             sql = sql.where(not_(worker.c.id.in_(busylist)))
         sql = sql.limit(1)
@@ -211,7 +211,7 @@ class Monitor(object):
         ).where(
             worker.c.running == True
         ).where(
-            worker.c.id.in_(wid for wid in self.workers)
+            worker.c.id.in_(self.wids)
         )
         killed = []
         with self.engine.connect() as cn:
