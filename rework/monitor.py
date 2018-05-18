@@ -89,13 +89,13 @@ class Monitor(object):
     def num_workers(self):
         return len(self.workers)
 
-    def grab_debug_port(self, base_debug_port, offset):
-        if not base_debug_port:
+    def grab_debug_port(self, offset):
+        if not self.debugport:
             return 0
-        allnumbers = set(range(base_debug_port, base_debug_port + self.maxworkers))
+        allnumbers = set(range(self.debugport, self.debugport + self.maxworkers))
         usednumbers = set(num for num, in self.engine.execute(
             'select debugport from rework.worker where running = true').fetchall())
-        for num in range(base_debug_port, base_debug_port + offset):
+        for num in range(self.debugport, self.debugport + offset):
             usednumbers.add(num)
         numbers = allnumbers - usednumbers
         assert numbers
@@ -174,10 +174,7 @@ class Monitor(object):
         procs = []
         debug_ports = []
         for offset in range(needed_workers):
-            if self.debugport:
-                debug_ports.append(self.grab_debug_port(self.debugport, offset))
-            else:
-                debug_ports.append(0)
+            debug_ports.append(self.grab_debug_port(offset))
 
         for debug_port in debug_ports:
             procs.append(self.spawn_worker(debug_port=debug_port))

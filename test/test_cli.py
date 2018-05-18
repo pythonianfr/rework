@@ -32,10 +32,7 @@ def test_debug_port(engine, cli):
         assert '6668' in r.output
 
         with pytest.raises(AssertionError):
-            mon.grab_debug_port(6666, 0)
-
-        # port = mon.grab_debug_port(6666, 0)
-        # assert port == 6669
+            mon.grab_debug_port(0)
 
         killtarget = mon.wids[0]
         cli('kill-worker', engine.url, killtarget)
@@ -52,7 +49,7 @@ def test_debug_port(engine, cli):
         r = cli('list-workers', engine.url)
         assert '[dead] debugport = 6666' in r.output
 
-        port = mon.grab_debug_port(6666, 0)
+        port = mon.grab_debug_port(0)
         assert port == 6666 # recycled
 
         procs = mon.ensure_workers()
