@@ -171,6 +171,10 @@ class Monitor(object):
                               self.minworkers - numworkers,
                               self.maxworkers - numworkers)
 
+        # bail out if there's nothing to do
+        if not needed_workers:
+            return []
+
         procs = []
         debug_ports = []
         for offset in range(needed_workers):
