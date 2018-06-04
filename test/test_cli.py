@@ -1,4 +1,5 @@
 import os
+import time
 
 import pytest
 from rework import api
@@ -191,9 +192,9 @@ def test_shrink_minworkers(engine, cli):
 
         # give the monitor a chance to forget about the gone workers
         mon.ensure_workers()
-        if os.name != 'nt':
-            # windows proc management is unfortunately racy :/
-            # we see the right amount of workers here after a small delay
+        if len(mon.workers) > 1:
+            time.sleep(1)
+            mon.ensure_workers()
             assert len(mon.workers) == 1
 
 
