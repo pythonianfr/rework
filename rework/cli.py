@@ -1,6 +1,8 @@
 from __future__ import print_function
 
 from time import sleep
+from datetime import datetime
+import tzlocal
 
 import click
 from colorama import init, Fore, Style
@@ -13,6 +15,9 @@ from rework import schema
 from rework.worker import run_worker
 from rework.task import Task
 from rework.monitor import Monitor
+
+
+TZ = tzlocal.get_localzone()
 
 
 @with_plugins(iter_entry_points('rework.subcommands'))
@@ -101,6 +106,28 @@ def list_workers(dburi):
             if traceback:
                 print(Fore.YELLOW + traceback, end=' ')
         print(Style.RESET_ALL)
+
+
+@rework.command(name='list-monitors')
+@click.argument('dburi')
+def list_monitors(dburi):
+    init()
+    engine = create_engine(dburi)
+    sql = ('select id, domain, options, lastseen from rework.monitor')
+    now = TZ.localize(datetime.utcnow())
+    for mid, domain, options, lastseen in engine.execute(sql):
+        color = Fore.GREEN
+        delta = (now - lastseen).total_seconds()
+        if delta > 60:
+            color = Fore.RED
+        elif delta > 10:
+            color = Fore.MAGENTA
+        print(mid,
+              color + lastseen.astimezone(TZ).strftime('%Y-%m-%d %H:%M:%S%z'), end=' ')
+        print(Style.RESET_ALL, end=' ')
+        print(domain, 'options({})'.format(
+            ', '.join('{}={}'.format(k, v) for k, v in options.items()))
+        )
 
 
 @rework.command(name='shutdown-worker')

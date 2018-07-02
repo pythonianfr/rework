@@ -16,7 +16,8 @@ setup(name='rework',
           'psycopg2',
           'pystuck',
           'click',
-          'click-plugins'
+          'click-plugins',
+          'tzlocal'
       ],
       entry_points={
           'console_scripts': [

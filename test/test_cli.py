@@ -25,6 +25,17 @@ def test_list_operations(engine, cli):
 """.strip() == scrub(r.output).strip()
 
 
+def test_list_monitors(engine, cli):
+    with workers(engine):
+        r = cli('list-monitors', engine.url)
+
+        assert (
+            '<X> <X>-<X>-<X> <X>:<X>:<X>+<X>  '
+            'default options(maxmem=<X>, maxruns=<X>, debugport=<X>, '
+            'maxworkers=<X>, minworkers=<X>)'
+        ) == scrub(r.output)
+
+
 def test_debug_port(engine, cli):
     with workers(engine, numworkers=3, debug=True) as mon:
         r = cli('list-workers', engine.url)
@@ -237,7 +248,7 @@ def test_kill_worker(engine, cli):
 
         r = cli('list-workers', url)
         assert ('<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] preemptive kill '
-                'at <X>-<X>-<X> <X>:<X>:<X>.<X>'
+                'at <X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X>'
         ) == scrub(r.output)
 
         r = cli('list-tasks', url)

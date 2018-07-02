@@ -2,6 +2,7 @@ import os
 import time
 import subprocess as sub
 from datetime import datetime
+import tzlocal
 
 import psutil
 
@@ -10,6 +11,8 @@ from sqlalchemy import select, not_
 from rework.helper import host, guard, kill_process_tree
 from rework.schema import worker, task, monitor
 
+
+TZ = tzlocal.get_localzone()
 
 try:
     DEVNULL = sub.DEVNULL
@@ -225,7 +228,7 @@ class Monitor(object):
 
                 mark_dead_workers(
                     cn, [wid],
-                    'preemptive kill at {}'.format(datetime.utcnow())
+                    'preemptive kill at {}'.format(TZ.localize(datetime.utcnow()))
                 )
                 killed.append(wid)
         return killed
@@ -293,7 +296,7 @@ class Monitor(object):
             cn.execute(
                 monitor.update().where(
                     monitor.c.id == self.monid
-                ).values(lastseen=datetime.utcnow())
+                ).values(lastseen=TZ.localize(datetime.utcnow()))
             )
 
     def unregister(self):
