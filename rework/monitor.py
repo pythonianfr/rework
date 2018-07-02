@@ -8,7 +8,7 @@ import psutil
 from sqlalchemy import select, not_
 
 from rework.helper import host, guard, kill_process_tree
-from rework.schema import worker, task
+from rework.schema import worker, task, monitor
 
 
 try:
@@ -45,7 +45,7 @@ class Monitor(object):
     __slots__ = ('engine', 'domain',
                  'minworkers', 'maxworkers',
                  'maxruns', 'maxmem', 'debugport',
-                 'workers', 'host')
+                 'workers', 'host', 'monid')
 
     def __init__(self, engine, domain='default',
                  minworkers=None, maxworkers=2,
@@ -271,7 +271,46 @@ class Monitor(object):
         with self.engine.connect() as cn:
             cn.execute(sql, domain=self.domain)
 
+    def register(self):
+        # register in db
+        with self.engine.connect() as cn:
+            cn.execute('delete from rework.monitor where domain = %(domain)s',
+                       domain=self.domain)
+            self.monid = cn.execute(
+                monitor.insert().values(
+                    domain=self.domain,
+                    options={
+                        'maxworkers': self.maxworkers,
+                        'minworkers': self.minworkers,
+                        'maxruns': self.maxruns,
+                        'maxmem': self.maxmem,
+                        'debugport': self.debugport
+                    })
+            ).inserted_primary_key[0]
+
+    def dead_man_switch(self):
+        with self.engine.connect() as cn:
+            cn.execute(
+                monitor.update().where(
+                    monitor.c.id == self.monid
+                ).values(lastseen=datetime.utcnow())
+            )
+
+    def unregister(self):
+        assert self.monid
+        with self.engine.connect() as cn:
+            cn.execute(
+                monitor.delete().where(monitor.c.id == self.monid)
+            )
+
     def run(self):
+        try:
+            self.register()
+            self._run()
+        finally:
+            self.unregister()
+
+    def _run(self):
         workers = []
         while True:
             self.preemptive_kill()
@@ -286,4 +325,5 @@ class Monitor(object):
             if new:
                 print('spawned {} active workers'.format(len(new)))
             workers += new
+            self.dead_man_switch()
             time.sleep(1)

@@ -9,6 +9,16 @@ from sqlalchemy.schema import CreateSchema
 meta = MetaData()
 
 
+monitor = Table(
+    'monitor', meta,
+    Column('id', Integer, primary_key=True),
+    Column('domain', String, nullable=False, index=True),
+    Column('options', JSONB(none_as_null=True)),
+    Column('lastseen', DateTime(timezone=True), default=func.now(), index=True),
+    schema='rework'
+)
+
+
 worker = Table(
     'worker', meta,
     Column('id', Integer, primary_key=True),
@@ -74,12 +84,12 @@ log = Table(
 def init(engine):
     with engine.connect() as cn:
         cn.execute(CreateSchema('rework'))
-        for table in (worker, operation, task, log):
+        for table in (monitor, worker, operation, task, log):
             table.create(cn)
 
 
 def reset(engine):
     with engine.connect() as cn:
-        for table in (log, task, worker, operation):
+        for table in (log, task, worker, operation, monitor):
             table.drop(cn, checkfirst=True)
         cn.execute('drop schema if exists rework cascade')

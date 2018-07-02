@@ -99,6 +99,28 @@ def test_basic_worker_task_execution(engine):
           lambda res: res.scalar() == 0)
 
 
+def test_monitor_base(engine):
+    with workers(engine) as mon:
+        assert engine.execute(
+            'select count(id) from rework.monitor where id = {}'.format(mon.monid)
+        ).scalar() == 1
+
+        res = engine.execute(
+            'select options from rework.monitor where id = {}'.format(mon.monid)
+        ).scalar()
+        assert {
+            'maxmem': 0,
+            'maxruns': 0,
+            'debugport': 0,
+            'maxworkers': 1,
+            'minworkers': 1
+        } == res
+
+    # generic monitor assertions
+    guard(engine, 'select count(id) from rework.monitor where id = {}'.format(mon.monid),
+          lambda r: r.scalar() == 0)
+
+
 def test_domain(engine):
     with workers(engine, maxruns=1) as mon:
         wid = mon.wids[0]

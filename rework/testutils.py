@@ -11,10 +11,12 @@ def workers(engine, numworkers=1, minworkers=None,
         cn.execute('delete from rework.task')
         cn.execute('delete from rework.worker')
     monitor = Monitor(engine, domain, minworkers, numworkers, maxruns, maxmem, debug)
+    monitor.register()
     monitor.ensure_workers()
 
     yield monitor
     monitor.killall()
+    monitor.unregister()
 
 
 def scrub(anstr, subst='X'):
