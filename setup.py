@@ -16,7 +16,6 @@ setup(name='rework',
           'psycopg2',
           'pystuck',
           'click',
-          'click-plugins',
           'tzlocal'
       ],
       entry_points={

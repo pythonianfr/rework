@@ -7,7 +7,6 @@ import tzlocal
 import click
 from colorama import init, Fore, Style
 from pkg_resources import iter_entry_points
-from click_plugins import with_plugins
 
 from sqlalchemy import create_engine
 
@@ -20,7 +19,6 @@ from rework.monitor import Monitor
 TZ = tzlocal.get_localzone()
 
 
-@with_plugins(iter_entry_points('rework.subcommands'))
 @click.group()
 def rework():
     pass
@@ -28,7 +26,8 @@ def rework():
 
 @rework.command(name='init-db')
 @click.argument('dburi')
-def init_db(dburi):
+@click.pass_context
+def init_db(ctx, dburi):
     engine = create_engine(dburi)
     schema.reset(engine)
     schema.init(engine)
@@ -260,3 +259,7 @@ def vacuum(dburi, workers=False, tasks=False):
                                "select count(*) from deleted"
             ).scalar()
             print('deleted {} tasks'.format(count))
+
+
+for ep in iter_entry_points('rework.subcommands'):
+    rework.add_command(ep.load())
