@@ -276,6 +276,7 @@ def test_task_abortion(engine):
         # this is potentially racy but might work most of the time
         assert t.state == 'aborting'
 
+        mon.preemptive_kill()
         t.join()
         assert t.state == 'aborted'
 
@@ -287,7 +288,7 @@ def test_task_abortion(engine):
             'select deathinfo from rework.worker where id = {}'.format(wid)
         ).scalar()
 
-        assert 'Task <X> aborted' == scrub(diagnostic)
+        assert 'preemptive kill at <X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X>' == scrub(diagnostic)
 
 
 def test_worker_unplanned_death(engine):

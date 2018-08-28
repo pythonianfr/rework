@@ -8,7 +8,7 @@ import logging
 
 from sqlalchemy import select
 
-from rework.schema import task, log
+from rework.schema import task, worker, log
 from rework.helper import PGLogHandler, PGLogWriter
 
 
@@ -211,3 +211,9 @@ class Task(object):
                     abort=True
                 )
             )
+            cn.execute(
+                worker.update().where(worker.c.id == task.c.worker
+                ).where(task.c.id == self.tid
+                ).values(kill=True)
+            )
+

@@ -74,35 +74,6 @@ def die_if_shutdown(engine, wid):
         raise SystemExit('Worker {} exiting.'.format(os.getpid()))
 
 
-# Task abortion
-
-@contextmanager
-def abortion_monitor(engine, wid, task):
-
-    def track_mem_and_die_if_task_aborted():
-        while True:
-            time.sleep(1)
-            if task.status == 'done':
-                return
-            if not task.aborted:
-                track_memory_consumption(engine, wid)
-                continue
-
-            # abortion
-            task.finish()
-            with engine.connect() as cn:
-                diesql = death_sql(wid, 'Task {} aborted'.format(task.tid))
-                cn.execute(diesql)
-            kill(os.getpid())
-
-    monitor = Thread(name='monitor_abort',
-                     target=track_mem_and_die_if_task_aborted)
-    monitor.daemon = True
-    monitor.start()
-    yield
-    monitor.join()
-
-
 @contextmanager
 def running_status(engine, wid, debug_port):
     with engine.connect() as cn:
@@ -152,9 +123,8 @@ def _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain):
         heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs)
         task = Task.fromqueue(engine, int(worker_id), domain)
         while task:
-            with abortion_monitor(engine, worker_id, task):
-                task.run()
-                runs += 1
+            task.run()
+            runs += 1
             heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs)
             task = Task.fromqueue(engine, worker_id)
 

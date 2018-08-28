@@ -135,7 +135,9 @@ def test_minworkers(engine, cli):
         assert r.output.count('queued') == 1
 
         # ramp down
-        t1.abort(); t2.abort(); t1.join(); t2.join()
+        t1.abort(); t2.abort()
+        mon.preemptive_kill()
+        t1.join(); t2.join()
 
         mon.ensure_workers()
         r = cli('list-workers', engine.url)
@@ -147,7 +149,9 @@ def test_minworkers(engine, cli):
         assert scrub(r.output).count('running #<X>') == 3
         assert r.output.count('running (idle)') == 0
 
-        t3.abort(); t4.abort(); t3.join(); t4.join()
+        t3.abort(); t4.abort()
+        mon.preemptive_kill()
+        t3.join(); t4.join()
 
         mon.ensure_workers()
         r = cli('list-workers', engine.url)
@@ -155,6 +159,7 @@ def test_minworkers(engine, cli):
         assert r.output.count('running (idle)') == 0
 
         t5.abort()
+        mon.preemptive_kill()
         t5.join()
         mon.ensure_workers()
         r = cli('list-workers', engine.url)
@@ -163,6 +168,8 @@ def test_minworkers(engine, cli):
 
 
 def test_shrink_minworkers(engine, cli):
+    with engine.connect() as cn:
+        cn.execute('delete from rework.worker')
     with workers(engine, minworkers=0, numworkers=4) as mon:
         r = cli('list-workers', engine.url)
         assert r.output.count('running (idle)') == 0
@@ -211,7 +218,7 @@ def test_shrink_minworkers(engine, cli):
 
 def test_abort_task(engine, cli):
     url = engine.url
-    with workers(engine):
+    with workers(engine) as mon:
         r = cli('list-workers', url)
         assert '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running (idle)]' == scrub(r.output)
 
@@ -225,10 +232,12 @@ def test_abort_task(engine, cli):
         assert '<X> infinite_loop running [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]' == scrub(r.output)
 
         r = cli('abort-task', url, t.tid)
+        mon.preemptive_kill()
         t.join()
 
         r = cli('list-workers', url)
-        assert '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] Task <X> aborted' == scrub(r.output)
+        assert ('<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] preemptive kill at '
+                '<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X>') == scrub(r.output)
 
         r = cli('list-tasks', url)
         assert '<X> infinite_loop aborted [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]' == scrub(r.output)
