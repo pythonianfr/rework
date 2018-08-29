@@ -351,6 +351,8 @@ class Monitor(object):
             stats = self.ensure_workers()
             if stats.new:
                 print('spawned {} active workers'.format(len(stats.new)))
+            if stats.shrink:
+                print('worker {} asked to shutdown'.format(stats.shrink[0]))
             workers += stats.new
             self.dead_man_switch()
             time.sleep(1)
