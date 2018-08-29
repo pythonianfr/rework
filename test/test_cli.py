@@ -64,9 +64,9 @@ def test_debug_port(engine, cli):
         port = mon.grab_debug_port(0)
         assert port == 6666 # recycled
 
-        procs = mon.ensure_workers()
-        assert procs
-        guard(engine, 'select running from rework.worker where id = {}'.format(procs[0]),
+        stats = mon.ensure_workers()
+        assert stats.new
+        guard(engine, 'select running from rework.worker where id = {}'.format(stats.new[0]),
               lambda r: r.scalar())
 
         r = cli('list-workers', engine.url)
@@ -90,7 +90,7 @@ def test_minworkers(engine, cli):
         t1 = api.schedule(engine, 'infinite_loop')
         t1.join(target='running')
 
-        new = mon.ensure_workers()
+        new = mon.ensure_workers().new
         assert len(new) == 0
 
         r = cli('list-workers', engine.url)
@@ -102,7 +102,7 @@ def test_minworkers(engine, cli):
         t2 = api.schedule(engine, 'infinite_loop')
         t3 = api.schedule(engine, 'infinite_loop')
 
-        new = mon.ensure_workers()
+        new = mon.ensure_workers().new
         assert len(new) == 2
 
         t2.join(target='running')
@@ -112,7 +112,7 @@ def test_minworkers(engine, cli):
         assert r.output.count('running (idle)') == 0
 
         # just one useless turn for fun
-        new = mon.ensure_workers()
+        new = mon.ensure_workers().new
         assert len(new) == 0
         r = cli('list-workers', engine.url)
         assert scrub(r.output).count('running #<X>') == 3
@@ -122,7 +122,7 @@ def test_minworkers(engine, cli):
         t4 = api.schedule(engine, 'infinite_loop')
         t5 = api.schedule(engine, 'infinite_loop')
 
-        new = mon.ensure_workers()
+        new = mon.ensure_workers().new
         assert len(new) == 1
         t4.join(target='running')
         assert t5.status == 'queued'
@@ -176,7 +176,7 @@ def test_shrink_minworkers(engine, cli):
         assert [task.state for task in tasks.values()] == [
             'queued', 'queued', 'queued', 'queued', 'queued', 'queued']
 
-        new = mon.ensure_workers()
+        new = mon.ensure_workers().new
         assert len(new) == 4
 
         # occupy a worker
@@ -188,13 +188,13 @@ def test_shrink_minworkers(engine, cli):
         assert [task.state for task in tasks.values()] == [
             'done', 'done', 'done', 'done', 'done', 'done']
 
-        new = mon.ensure_workers()
+        new = mon.ensure_workers().new
         assert len(new) == 0
 
         # give 4 times a chance to shutdown a spare worker
         # 3 of them should go away
         for _ in range(1, 5):
-            assert len(mon.ensure_workers()) == 0
+            assert len(mon.ensure_workers().new) == 0
 
         guard(engine,
               'select count(*) from rework.worker '

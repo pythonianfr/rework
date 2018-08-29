@@ -44,6 +44,15 @@ def clip(val, low, high):
     return val
 
 
+class monstats(object):
+    __slots__ = ('new', 'deleted', 'shrink')
+
+    def __init__(self):
+        self.new = []
+        self.deleted = []
+        self.shrink = []
+
+
 class Monitor(object):
     __slots__ = ('engine', 'domain',
                  'minworkers', 'maxworkers',
@@ -151,16 +160,21 @@ class Monitor(object):
                 sql = worker.update().where(worker.c.id == candidate
                 ).values(shutdown=True)
                 cn.execute(sql)
+                return candidate
 
     def ensure_workers(self):
+        stats = monstats()
         # rid self.workers of dead things
         for wid, proc in self.workers.copy().items():
             if proc.poll() is not None:
                 proc.wait()  # tell linux to reap the zombie
                 self.workers.pop(wid)
+                stats.deleted.append(wid)
 
         # reduce by one the worker pool if possible
-        self.shrink_workers()
+        shuttingdown = self.shrink_workers()
+        if shuttingdown is not None:
+            stats.shrink.append(shuttingdown)
 
         # compute the needed workers
         with self.engine.connect() as cn:
@@ -176,7 +190,7 @@ class Monitor(object):
 
         # bail out if there's nothing to do
         if not needed_workers:
-            return []
+            return stats
 
         procs = []
         debug_ports = []
@@ -194,7 +208,8 @@ class Monitor(object):
                   lambda c: c.scalar() == len(procs),
                   timeout=20 + self.maxworkers * 2)
 
-        return procs
+        stats.new.extend(procs)
+        return stats
 
     def killall(self):
         mark = []
@@ -324,9 +339,9 @@ class Monitor(object):
                 workers = [(wid, proc)
                            for wid, proc in workers
                            if wid not in dead]
-            new = self.ensure_workers()
-            if new:
-                print('spawned {} active workers'.format(len(new)))
-            workers += new
+            stats = self.ensure_workers()
+            if stats.new:
+                print('spawned {} active workers'.format(len(stats.new)))
+            workers += stats.new
             self.dead_man_switch()
             time.sleep(1)
