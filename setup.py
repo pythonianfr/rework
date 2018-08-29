@@ -9,14 +9,17 @@ setup(name='rework',
       url='https://bitbucket.org/pythonian/rework',
       packages=['rework'],
       install_requires=[
-          'pytest_sa_pg',
           'psutil',
           'colorama',
           'sqlalchemy',
           'psycopg2',
           'pystuck',
           'click',
-          'tzlocal'
+          'tzlocal == 1.5.1'
+      ],
+      extra_require=[
+          'pytest',
+          'pytest_sa_pg'
       ],
       entry_points={
           'console_scripts': [
