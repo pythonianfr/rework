@@ -198,10 +198,15 @@ def test_shrink_minworkers(engine, cli):
         new = mon.ensure_workers().new
         assert len(new) == 0
 
-        # give 4 times a chance to shutdown a spare worker
-        # 3 of them should go away
-        for _ in range(1, 5):
-            assert len(mon.ensure_workers().new) == 0
+        # give 3 times a chance to shutdown a spare worker
+        for _ in range(1, 4):
+            stat = mon.ensure_workers()
+            shuttingdown = stat.shrink[0]
+            assert shuttingdown in mon.wids
+            guard(engine,
+                  'select running from rework.worker '
+                  'where id = {}'.format(shuttingdown),
+                  lambda r: not r.scalar())
 
         guard(engine,
               'select count(*) from rework.worker '
