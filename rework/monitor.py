@@ -52,6 +52,15 @@ class monstats(object):
         self.deleted = []
         self.shrink = []
 
+    def __str__(self):
+        return 'new: {} deleted: {} shrink: {}'.format(
+            ','.join(str(n) for n in self.new),
+            ','.join(str(d) for d in self.deleted),
+            ','.join(str(s) for s in self.shrink)
+        )
+
+    __repr__ = __str__
+
 
 class Monitor(object):
     __slots__ = ('engine', 'domain',
