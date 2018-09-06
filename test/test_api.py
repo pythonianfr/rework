@@ -24,7 +24,7 @@ def test_task_decorator(cleanup):
 
 
 def reset_ops(engine):
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         cn.execute('delete from rework.operation')
     api.__task_registry__.clear()
 

@@ -14,7 +14,7 @@ from rework.task import Task
 def track_memory_consumption(engine, wid):
     mem = memory_usage()
     sql = worker.update().where(worker.c.id == wid).values(mem=mem)
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         cn.execute(sql)
     return mem
 
@@ -44,7 +44,7 @@ def die_if_ancestor_died(engine, ppid, wid):
         # Our ancestor does not exist any more
         # this is an ambiguous signal that we also must
         # go to bed.
-        with engine.connect() as cn:
+        with engine.begin() as cn:
             cn.execute(death_sql(wid, 'ancestor died'))
         raise SystemExit('Worker {} exiting.'.format(os.getpid()))
 
@@ -58,7 +58,7 @@ def ask_shutdown(engine, wid):
     ).values(
         shutdown=True
     )
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         cn.execute(sql)
 
 
@@ -69,19 +69,19 @@ def shutdown_asked(engine, wid):
 
 def die_if_shutdown(engine, wid):
     if shutdown_asked(engine, wid):
-        with engine.connect() as cn:
+        with engine.begin() as cn:
             cn.execute(death_sql(wid, 'explicit shutdown'))
         raise SystemExit('Worker {} exiting.'.format(os.getpid()))
 
 
 @contextmanager
 def running_status(engine, wid, debug_port):
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         cn.execute(running_sql(wid, True, debug_port or None))
     try:
         yield
     finally:
-        with engine.connect() as cn:
+        with engine.begin() as cn:
             cn.execute(running_sql(wid, False, None))
 
 
@@ -97,7 +97,7 @@ def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0,
         with running_status(engine, worker_id, debug_port):
             _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain)
     except Exception:
-        with engine.connect() as cn:
+        with engine.begin() as cn:
             sql = worker.update().where(worker.c.id == worker_id).values(
                 traceback=traceback.format_exc()
             )

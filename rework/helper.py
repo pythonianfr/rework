@@ -41,7 +41,7 @@ def wait_true(func, timeout=6):
 def guard(engine, sql, expr, timeout=6):
 
     def check():
-        with engine.connect() as cn:
+        with engine.begin() as cn:
             return expr(cn.execute(sql))
 
     return wait_true(check, timeout)
@@ -135,7 +135,7 @@ class PGLogHandler(logging.Handler):
 
         def writeback_log(values, engine):
             sql = log.insert().values(values)
-            with engine.connect() as cn:
+            with engine.begin() as cn:
                 cn.execute(sql)
 
         th = Thread(target=writeback_log,

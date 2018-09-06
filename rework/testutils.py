@@ -7,7 +7,7 @@ from rework.monitor import Monitor
 def workers(engine, numworkers=1, minworkers=None,
             maxruns=0, maxmem=0,
             domain='default', debug=False):
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         cn.execute('delete from rework.task')
         cn.execute('delete from rework.worker')
     monitor = Monitor(engine, domain, minworkers, numworkers, maxruns, maxmem, debug)

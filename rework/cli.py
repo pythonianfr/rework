@@ -134,7 +134,7 @@ def list_monitors(dburi):
 @click.argument('worker-id')
 def shutdown_worker(dburi, worker_id):
     engine = create_engine(dburi)
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         worker = schema.worker
         cn.execute(worker.update().where(
             worker.c.id == worker_id
@@ -146,7 +146,7 @@ def shutdown_worker(dburi, worker_id):
 @click.argument('worker-id')
 def kill_worker(dburi, worker_id):
     engine = create_engine(dburi)
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         worker = schema.worker
         cn.execute(worker.update().where(
             worker.c.id == worker_id
@@ -245,7 +245,7 @@ def vacuum(dburi, workers=False, tasks=False):
 
     engine = create_engine(dburi)
     if workers:
-        with engine.connect() as cn:
+        with engine.begin() as cn:
             count = cn.execute('with deleted as '
                                '(delete from rework.worker where running = false returning 1) '
                                'select count(*) from deleted'
@@ -253,7 +253,7 @@ def vacuum(dburi, workers=False, tasks=False):
             print('deleted {} workers'.format(count))
 
     if tasks:
-        with engine.connect() as cn:
+        with engine.begin() as cn:
             count = cn.execute("with deleted as "
                                "(delete from rework.task where status = 'done' returning 1) "
                                "select count(*) from deleted"

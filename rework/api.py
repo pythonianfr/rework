@@ -50,7 +50,7 @@ def schedule(engine, opname, inputdata=None,
     if domain is not None:
         sql = sql.where(operation.c.domain == domain)
 
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         opids = cn.execute(sql).fetchall()
         if len(opids) > 1:
             raise ValueError('Ambiguous operation selection')
@@ -97,7 +97,7 @@ def freeze_operations(engine, domain=None, domain_map=None):
 
     sql = operation.insert()
     for value in values:
-        with engine.connect() as cn:
+        with engine.begin() as cn:
             try:
                 cn.execute(sql, value)
             except IntegrityError:

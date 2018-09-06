@@ -146,7 +146,7 @@ def test_domain(engine):
 
 
 def test_domain_map(engine, cleanup):
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         cn.execute('delete from rework.operation')
 
     api.freeze_operations(engine, domain='nondefault',
@@ -171,7 +171,7 @@ def test_worker_shutdown(engine):
         wid = mon.wids[0]
         assert not shutdown_asked(engine, wid)
 
-        with engine.connect() as cn:
+        with engine.begin() as cn:
             cn.execute(
                 worker.update().where(worker.c.id == wid).values(
                     shutdown=True
@@ -193,7 +193,7 @@ def test_worker_kill(engine):
     with workers(engine) as mon:
         wid = mon.wids[0]
 
-        with engine.connect() as cn:
+        with engine.begin() as cn:
             cn.execute(
                 worker.update().where(worker.c.id == wid).values(
                     kill=True
@@ -315,7 +315,7 @@ def test_task_error(engine):
 
 
 def test_task_logging_capture(engine):
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         cn.execute('delete from rework.task')
 
     with workers(engine, 2):
@@ -347,7 +347,7 @@ def test_task_logging_capture(engine):
 
 
 def test_logging_stress_test(engine):
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         cn.execute('delete from rework.log')
 
     with workers(engine):
@@ -374,8 +374,7 @@ def test_process_lock(engine):
         t = api.schedule(engine, 'stderr_swarm')
 
         def join():
-            with t.engine.connect() as cn:
-                Task.byid(cn, t.tid).join(timeout=2)
+            Task.byid(t.engine, t.tid).join(timeout=2)
 
         thr = threading.Thread(target=join)
         thr.start()

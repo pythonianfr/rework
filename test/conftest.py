@@ -46,6 +46,6 @@ def cleanup():
     api.__task_registry__.clear()
     api.__task_registry__.update(tasks)
     if ENGINE:
-        with ENGINE.connect() as cn:
+        with ENGINE.begin() as cn:
             cn.execute('delete from rework.operation')
         api.freeze_operations(ENGINE)

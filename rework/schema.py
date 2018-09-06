@@ -82,14 +82,14 @@ log = Table(
 
 
 def init(engine):
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         cn.execute(CreateSchema('rework'))
         for table in (monitor, worker, operation, task, log):
             table.create(cn)
 
 
 def reset(engine):
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         for table in (log, task, worker, operation, monitor):
             table.drop(cn, checkfirst=True)
         cn.execute('drop schema if exists rework cascade')

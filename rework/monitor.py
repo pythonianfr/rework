@@ -98,7 +98,7 @@ class Monitor(object):
         return wid
 
     def new_worker(self):
-        with self.engine.connect() as cn:
+        with self.engine.begin() as cn:
             return cn.execute(
                 worker.insert().values(
                     host=host(),
@@ -156,7 +156,7 @@ class Monitor(object):
         return cn.execute(sql).scalar()
 
     def shrink_workers(self):
-        with self.engine.connect() as cn:
+        with self.engine.begin() as cn:
             needed = self.queued_tasks(cn)
             busy = self.busy_workers(cn)
             idle = self.num_workers - len(busy)
@@ -186,7 +186,7 @@ class Monitor(object):
             stats.shrink.append(shuttingdown)
 
         # compute the needed workers
-        with self.engine.connect() as cn:
+        with self.engine.begin() as cn:
             numworkers = self.num_workers
             busycount = len(self.busy_workers(cn))
             waiting = self.queued_tasks(cn)
@@ -232,7 +232,7 @@ class Monitor(object):
                 kill_process_tree(proc.pid)
                 proc.wait()
             mark.append(wid)
-        with self.engine.connect() as cn:
+        with self.engine.begin() as cn:
             mark_dead_workers(cn, mark, 'Forcefully killed by the monitor.')
         self.workers = {}
 
@@ -242,7 +242,7 @@ class Monitor(object):
             ).where(worker.c.running == True
             ).where(worker.c.id.in_(self.wids))
         killed = []
-        with self.engine.connect() as cn:
+        with self.engine.begin() as cn:
             for row in cn.execute(sql).fetchall():
                 wid = row.id
                 proc = self.workers.pop(wid)
@@ -282,7 +282,7 @@ class Monitor(object):
             ).where(task.c.worker == worker.c.id
             ).where(task.c.status == 'running'
             ).values(status='done')
-            with self.engine.connect() as cn:
+            with self.engine.begin() as cn:
                 cn.execute(wsql)
                 cn.execute(tsql)
 
@@ -295,12 +295,12 @@ class Monitor(object):
                'and not shutdown '
                'and deathinfo is null '
                'and domain = %(domain)s')
-        with self.engine.connect() as cn:
+        with self.engine.begin() as cn:
             cn.execute(sql, domain=self.domain)
 
     def register(self):
         # register in db
-        with self.engine.connect() as cn:
+        with self.engine.begin() as cn:
             cn.execute('delete from rework.monitor where domain = %(domain)s',
                        domain=self.domain)
             self.monid = cn.execute(
@@ -316,7 +316,7 @@ class Monitor(object):
             ).inserted_primary_key[0]
 
     def dead_man_switch(self):
-        with self.engine.connect() as cn:
+        with self.engine.begin() as cn:
             cn.execute(
                 monitor.update().where(
                     monitor.c.id == self.monid
@@ -325,7 +325,7 @@ class Monitor(object):
 
     def unregister(self):
         assert self.monid
-        with self.engine.connect() as cn:
+        with self.engine.begin() as cn:
             cn.execute(
                 monitor.delete().where(monitor.c.id == self.monid)
             )

@@ -168,7 +168,7 @@ def test_minworkers(engine, cli):
 
 
 def test_shrink_minworkers(engine, cli):
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         cn.execute('delete from rework.worker')
     with workers(engine, minworkers=0, numworkers=4) as mon:
         r = cli('list-workers', engine.url)
@@ -250,7 +250,7 @@ def test_abort_task(engine, cli):
 
 def test_kill_worker(engine, cli):
     url = engine.url
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         cn.execute('delete from rework.worker')
 
     with workers(engine) as mon:
@@ -271,7 +271,7 @@ def test_kill_worker(engine, cli):
 
 def test_debug_worker(engine, cli):
     url = engine.url
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         cn.execute('delete from rework.worker')
 
     with workers(engine, debug=True):
@@ -311,7 +311,7 @@ def test_vacuum(engine, cli):
     r = cli('vacuum', engine.url)
     assert r.output == 'to cleanup old workers or tasks please use --workers or --tasks\n'
 
-    with engine.connect() as cn:
+    with engine.begin() as cn:
         cn.execute('delete from rework.worker')
 
     def run_stuff():

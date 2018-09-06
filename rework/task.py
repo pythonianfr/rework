@@ -32,7 +32,7 @@ class Task(object):
 
     @classmethod
     def fromqueue(cls, engine, wid, domain='default'):
-        with engine.connect() as cn:
+        with engine.begin() as cn:
             sql = ("select task.id, task.operation "
                    "from rework.task as task, rework.operation as op "
                    "where task.status = 'queued' "
@@ -55,7 +55,7 @@ class Task(object):
 
     @classmethod
     def byid(cls, engine, tid):
-        with engine.connect() as cn:
+        with engine.begin() as cn:
             sql = "select operation from rework.task where id = %(tid)s"
             operation = cn.execute(sql, tid=tid).scalar()
             if operation is None:
@@ -69,7 +69,7 @@ class Task(object):
         sql = task.update().where(task.c.id == self.tid).values(
             output=data
         )
-        with self.engine.connect() as cn:
+        with self.engine.begin() as cn:
             cn.execute(sql)
 
     @contextmanager
@@ -99,7 +99,7 @@ class Task(object):
         if fromid:
             sql = sql.where(log.c.id > fromid)
 
-        with self.engine.connect() as cn:
+        with self.engine.begin() as cn:
             return cn.execute(sql).fetchall()
 
     def _propvalue(self, prop):
@@ -179,7 +179,7 @@ class Task(object):
             sql = task.update().where(task.c.id == self.tid).values(
                 traceback=tb.format_exc()
             )
-            with self.engine.connect() as cn:
+            with self.engine.begin() as cn:
                 cn.execute(sql)
         finally:
             self.finish()
@@ -197,13 +197,13 @@ class Task(object):
             time.sleep(1)
 
     def finish(self):
-        with self.engine.connect() as cn:
+        with self.engine.begin() as cn:
             cn.execute(task.update().where(task.c.id == self.tid).values(
                 status='done')
             )
 
     def abort(self):
-        with self.engine.connect() as cn:
+        with self.engine.begin() as cn:
             # will still be marked as running
             # the worker kill must do the actual job
             cn.execute(
