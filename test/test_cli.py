@@ -4,7 +4,7 @@ import time
 import pytest
 from rework import api
 from rework.testutils import scrub, workers
-from rework.helper import guard
+from rework.helper import guard, wait_true
 
 
 def test_list_operations(engine, cli):
@@ -197,8 +197,13 @@ def test_shrink_minworkers(engine, cli):
 
         new = mon.ensure_workers().new
         assert len(new) == 0
+        assert len(mon.wids) == 4
 
         # give 3 times a chance to shutdown a spare worker
+        r = cli('list-workers', engine.url)
+        assert r.output.count('running') == 4
+        assert r.output.count('idle') == 3
+
         for _ in range(1, 4):
             stat = mon.ensure_workers()
             shuttingdown = stat.shrink[0]
@@ -213,12 +218,11 @@ def test_shrink_minworkers(engine, cli):
               'where shutdown = true and running = false',
             lambda r: r.scalar() == 3)
 
-        # give the monitor a chance to forget about the gone workers
-        mon.ensure_workers()
-        if len(mon.workers) > 1:
-            time.sleep(1)
+        def shrinking():
             mon.ensure_workers()
-            assert len(mon.workers) == 1
+            return len(mon.wids) == 1
+
+        wait_true(shrinking)
 
 
 def test_abort_task(engine, cli):

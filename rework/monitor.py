@@ -172,14 +172,18 @@ class Monitor(object):
                 cn.execute(sql)
                 return candidate
 
-    def ensure_workers(self):
+    def _cleanup_workers(self):
         stats = monstats()
-        # rid self.workers of dead things
         for wid, proc in self.workers.copy().items():
             if proc.poll() is not None:
                 proc.wait()  # tell linux to reap the zombie
                 self.workers.pop(wid)
                 stats.deleted.append(wid)
+        return stats
+
+    def ensure_workers(self):
+        # rid self.workers of dead things
+        stats = self._cleanup_workers()
 
         # reduce by one the worker pool if possible
         shuttingdown = self.shrink_workers()
