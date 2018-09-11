@@ -166,7 +166,8 @@ class Monitor(object):
             if not needed and idle > self.minworkers:
                 candidate = self.idle_worker(cn, busy)
                 # we now have a case to at least retire one
-                sql = worker.update().where(worker.c.id == candidate
+                sql = worker.update().where(
+                    worker.c.id == candidate
                 ).values(shutdown=True)
                 cn.execute(sql)
                 return candidate
