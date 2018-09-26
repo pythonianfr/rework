@@ -152,6 +152,7 @@ class Monitor(object):
         sql = select([worker.c.id]).where(worker.c.id.in_(self.wids))
         if busylist:
             sql = sql.where(not_(worker.c.id.in_(busylist)))
+        sql = sql.where(worker.c.shutdown == False)
         sql = sql.limit(1)
         return cn.execute(sql).scalar()
 

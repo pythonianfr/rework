@@ -183,11 +183,11 @@ def test_shrink_minworkers(engine, cli):
         assert [task.state for task in tasks.values()] == [
             'queued', 'queued', 'queued', 'queued', 'queued', 'queued']
 
-        new = mon.ensure_workers().new
-        assert len(new) == 4
+        stat1 = mon.ensure_workers()
+        assert len(stat1.new) == 4
 
         # occupy a worker
-        api.schedule(engine, 'infinite_loop')
+        looping = api.schedule(engine, 'infinite_loop')
 
         for t in tasks.values():
             t.join()
@@ -195,16 +195,23 @@ def test_shrink_minworkers(engine, cli):
         assert [task.state for task in tasks.values()] == [
             'done', 'done', 'done', 'done', 'done', 'done']
 
-        new = mon.ensure_workers().new
-        assert len(new) == 0
+        stat2 = mon.ensure_workers()
+        assert len(stat2.new) == 0
+        assert len(stat2.shrink) == 1
         assert len(mon.wids) == 4
 
-        # give 3 times a chance to shutdown a spare worker
-        r = cli('list-workers', engine.url)
-        assert r.output.count('running') == 4
-        assert r.output.count('idle') == 3
+        # wait for the first shutdown to happen
+        guard(engine,
+              'select running from rework.worker '
+              'where id = {}'.format(stat2.shrink[0]),
+              lambda r: not r.scalar())
 
-        for _ in range(1, 4):
+        # give 2 times a chance to shutdown a spare worker
+        r = cli('list-workers', engine.url)
+        assert r.output.count('running') == 3
+        assert r.output.count('idle') == 2
+
+        for _ in range(1, 3):
             stat = mon.ensure_workers()
             shuttingdown = stat.shrink[0]
             assert shuttingdown in mon.wids
@@ -216,13 +223,22 @@ def test_shrink_minworkers(engine, cli):
         guard(engine,
               'select count(*) from rework.worker '
               'where shutdown = true and running = false',
-            lambda r: r.scalar() == 3)
+              lambda r: r.scalar() == 3)
 
         def shrinking():
             mon.ensure_workers()
             return len(mon.wids) == 1
 
         wait_true(shrinking)
+
+        # finish the show
+        looping.abort()
+        mon.preemptive_kill()
+        looping.join()
+        guard(engine,
+              'select count(*) from rework.worker '
+              'where running = true',
+              lambda r: r.scalar() == 0)
 
 
 def test_abort_task(engine, cli):
