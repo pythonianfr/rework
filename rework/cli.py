@@ -30,6 +30,7 @@ def rework():
 @click.argument('dburi')
 @click.pass_context
 def init_db(ctx, dburi):
+    " initialize a postgres database with everything needed "
     engine = create_engine(dburi)
     schema.reset(engine)
     schema.init(engine)
@@ -68,6 +69,7 @@ def register_operations(dburi, module, domain=None, asdomain=None):
 @click.option('--domain', default='default')
 @click.option('--debug-port', type=int, default=0)
 def new_worker(**config):
+    " spawn a new worker -- this is a purely *internal* command "
     run_worker(**config)
 
 
@@ -81,6 +83,7 @@ def new_worker(**config):
 @click.option('--domain', default='default')
 @click.option('--debug', is_flag=True, default=False)
 def deploy(dburi, **config):
+    " start a monitor controlling min/max workers "
     engine = create_engine(dburi)
     monitor = Monitor(engine, **config)
     monitor.run()
@@ -158,6 +161,11 @@ def list_monitors(dburi):
 @click.argument('dburi')
 @click.argument('worker-id')
 def shutdown_worker(dburi, worker_id):
+    """ ask a worker to shut down as soon as it becomes idle
+
+    If you want to immediately and unconditionally terminate
+    a worker, use `rework kill-worker`
+    """
     engine = create_engine(dburi)
     with engine.begin() as cn:
         worker = schema.worker
@@ -170,6 +178,11 @@ def shutdown_worker(dburi, worker_id):
 @click.argument('dburi')
 @click.argument('worker-id')
 def kill_worker(dburi, worker_id):
+    """ ask to preemptively kill a given worker to its monitor
+
+    If you want to not risk interrupting any ongoing work,
+    you should use `rework shutdown` instead.
+    """
     engine = create_engine(dburi)
     with engine.begin() as cn:
         worker = schema.worker
@@ -249,6 +262,11 @@ def log_task(dburi, taskid, fromid=None, watch=False):
 @click.argument('dburi')
 @click.argument('taskid', type=int)
 def abort_task(dburi, taskid):
+    """ immediately abort the given task
+
+    This will be done by doing a preemptive kill on
+    its associated worker.
+    """
     engine = create_engine(dburi)
     task = Task.byid(engine, taskid)
     task.abort()
@@ -259,6 +277,7 @@ def abort_task(dburi, taskid):
 @click.option('--workers', is_flag=True, default=False)
 @click.option('--tasks', is_flag=True, default=False)
 def vacuum(dburi, workers=False, tasks=False):
+    " delete non-runing workers or finished tasks "
     if not (workers or tasks):
         print('to cleanup old workers or tasks '
               'please use --workers or --tasks')
