@@ -31,18 +31,72 @@ def test_register_operations(engine, cli):
     assert 'boring_task' not in r.output
     assert 'scrap_sites' not in r.output
 
+    api.__task_registry__.clear()
+
     newtaskspath = Path(__file__).parent / 'newtasks.py'
     r = cli('register-operations', engine.url, newtaskspath)
-    assert 'all operations registered' in r.output
+    assert 'registered 2 new operation (0 already known)' in r.output
+    r = cli('register-operations', engine.url, newtaskspath)
+    assert 'registered 0 new operation (2 already known)' in r.output
 
     r = cli('list-operations', engine.url)
     assert 'boring_task' in r.output
     assert 'scrap_sites' in r.output
 
     # cleanup
-    with engine.begin() as cn:
-        cn.execute("delete from rework.operation where name in "
-                   "('boring_task', 'scrap_sites')")
+    def cleanup():
+        api.__task_registry__.clear()
+        with engine.begin() as cn:
+            cn.execute("delete from rework.operation where name in "
+                       "('boring_task', 'scrap_sites')")
+
+    cleanup()
+
+    # per-domain
+    r = cli('register-operations', engine.url, newtaskspath, domain='default')
+    assert 'registered 1 new operation (0 already known)' in r.output
+    r = cli('list-operations', engine.url)
+    assert 'boring_task' in r.output
+    assert 'scrap_sites' not in r.output
+
+    r = cli('register-operations', engine.url, newtaskspath, domain='scrappers')
+    assert 'registered 1 new operation (0 already known)' in r.output
+    r = cli('list-operations', engine.url)
+    assert 'boring_task' in r.output
+    assert 'scrap_sites' in r.output
+
+    cleanup()
+
+    # per-domain + asdomain
+    r = cli('register-operations', engine.url, newtaskspath,
+            domain='default', asdomain='cloudhost')
+    assert 'registered 1 new operation (0 already known)' in r.output
+    r = cli('list-operations', engine.url)
+    assert 'boring_task' in r.output
+    assert 'scrap_sites' not in r.output
+
+    r = cli('register-operations', engine.url, newtaskspath,
+            domain='scrappers', asdomain='cloudscrappers')
+    assert 'registered 1 new operation (0 already known)' in r.output
+    r = cli('list-operations', engine.url)
+    assert 'boring_task' in r.output
+    assert 'scrap_sites' in r.output
+
+    # error situations
+
+    cleanup()
+
+    r = cli('register-operations', engine.url, newtaskspath,
+            domain='nu-such-domain')
+    assert 'registered 0 new operation (0 already known)' in r.output
+
+    r = cli('register-operations', engine.url, newtaskspath, domain='default')
+    r = cli('register-operations', engine.url, newtaskspath)  # all domains
+    assert 'registered 1 new operation (1 already known)' in r.output
+
+    # keep the other tests sane !
+    cleanup()
+    from . import tasks
 
 
 def test_list_monitors(engine, cli):

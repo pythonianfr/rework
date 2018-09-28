@@ -38,9 +38,9 @@ def init_db(ctx, dburi):
 @rework.command(name='register-operations')
 @click.argument('dburi')
 @click.argument('module', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
-@click.option('--domain', default='default')
-@click.option('--asdomain', default=None)
-def register_operations(dburi, module, domain='default', asdomain=None):
+@click.option('--domain')
+@click.option('--asdomain')
+def register_operations(dburi, module, domain=None, asdomain=None):
     """register operations from a python module containing
     python functions decorated with `api.task`
 
@@ -51,8 +51,11 @@ def register_operations(dburi, module, domain='default', asdomain=None):
     """
     mod = imp.load_source('operations', module)
     engine = create_engine(dburi)
-    api.freeze_operations(engine)
-    print('all operations registered')
+    ok, ko = api.freeze_operations(engine, domain)
+
+    print('registered {} new operation ({} already known)'.format(
+        len(ok), len(ko)
+    ))
 
 
 @rework.command(name='new-worker')

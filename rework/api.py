@@ -96,9 +96,14 @@ def freeze_operations(engine, domain=None, domain_map=None):
         })
 
     sql = operation.insert()
+    recorded = []
+    alreadyknown = []
     for value in values:
         with engine.begin() as cn:
             try:
                 cn.execute(sql, value)
+                recorded.append(value)
             except IntegrityError:
-                pass
+                alreadyknown.append(value)
+
+    return recorded, alreadyknown

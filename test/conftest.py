@@ -34,8 +34,12 @@ def engine(request):
 
 @pytest.fixture
 def cli():
-    def runner(*args):
-        return CliRunner().invoke(rcli.rework, [str(a) for a in args])
+    def runner(*args, **kw):
+        args = [str(a) for a in args]
+        for k, v in kw.items():
+            args.append('--{}'.format(k))
+            args.append(str(v))
+        return CliRunner().invoke(rcli.rework, args)
     return runner
 
 
