@@ -1,5 +1,6 @@
 import os
 import time
+from pathlib import Path
 
 import pytest
 from rework import api
@@ -23,6 +24,25 @@ def test_list_operations(engine, cli):
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(log_swarm)
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(stderr_swarm)
 """.strip() == scrub(r.output).strip()
+
+
+def test_register_operations(engine, cli):
+    r = cli('list-operations', engine.url)
+    assert 'boring_task' not in r.output
+    assert 'scrap_sites' not in r.output
+
+    newtaskspath = Path(__file__).parent / 'newtasks.py'
+    r = cli('register-operations', engine.url, newtaskspath)
+    assert 'all operations registered' in r.output
+
+    r = cli('list-operations', engine.url)
+    assert 'boring_task' in r.output
+    assert 'scrap_sites' in r.output
+
+    # cleanup
+    with engine.begin() as cn:
+        cn.execute("delete from rework.operation where name in "
+                   "('boring_task', 'scrap_sites')")
 
 
 def test_list_monitors(engine, cli):

@@ -1,8 +1,10 @@
 from __future__ import print_function
 
+import imp
 from time import sleep
 from datetime import datetime
 import tzlocal
+from pathlib import Path
 
 import click
 from colorama import init, Fore, Style
@@ -10,7 +12,7 @@ from pkg_resources import iter_entry_points
 
 from sqlalchemy import create_engine
 
-from rework import schema
+from rework import schema, api
 from rework.worker import run_worker
 from rework.task import Task
 from rework.monitor import Monitor
@@ -31,6 +33,26 @@ def init_db(ctx, dburi):
     engine = create_engine(dburi)
     schema.reset(engine)
     schema.init(engine)
+
+
+@rework.command(name='register-operations')
+@click.argument('dburi')
+@click.argument('module', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
+@click.option('--domain', default='default')
+@click.option('--asdomain', default=None)
+def register_operations(dburi, module, domain='default', asdomain=None):
+    """register operations from a python module containing
+    python functions decorated with `api.task`
+
+    It is possible to filter by domain and also to specify a
+    subtitution domain.
+
+    The registered operations will be relative to the current host.
+    """
+    mod = imp.load_source('operations', module)
+    engine = create_engine(dburi)
+    api.freeze_operations(engine)
+    print('all operations registered')
 
 
 @rework.command(name='new-worker')
