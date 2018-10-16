@@ -26,6 +26,7 @@ def test_basic_task_operations(engine):
     assert [
         ('allocate_and_leak_mbytes', 'tasks.py'),
         ('capture_logs', 'tasks.py'),
+        ('flush_captured_stdout', 'tasks.py'),
         ('infinite_loop', 'tasks.py'),
         ('log_swarm', 'tasks.py'),
         ('normal_exception', 'tasks.py'),
@@ -380,3 +381,11 @@ def test_process_lock(engine):
         thr.start()
         thr.join()
         assert t.state == 'done'
+
+
+def test_flush_captured_stdout(engine):
+    with workers(engine):
+        t = api.schedule(engine, 'flush_captured_stdout')
+        t.join()
+        assert t.state == 'failed'
+        assert 'flush' in t.traceback

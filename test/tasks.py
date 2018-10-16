@@ -80,3 +80,12 @@ def stderr_swarm(task):
     sys.stderr.write('X' * 8192)
     sys.stderr.flush()
     task.save_output(42)
+
+
+@api.task
+def flush_captured_stdout(task):
+    with task.capturelogs(std=True):
+        print('Hello')
+        import sys
+        sys.stdout.flush()
+

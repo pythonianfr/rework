@@ -23,6 +23,7 @@ def test_list_operations(engine, cli):
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(capture_logs)
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(log_swarm)
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(stderr_swarm)
+<X> host(<X>) `<X>.<X>.<X>.<X>` path(flush_captured_stdout)
 """.strip() == scrub(r.output).strip()
 
 
