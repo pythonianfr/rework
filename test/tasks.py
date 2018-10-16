@@ -69,7 +69,7 @@ def capture_logs(task):
 @api.task
 def log_swarm(task):
     logger = logging.getLogger('APP')
-    with task.capturelogs():
+    with task.capturelogs(sync=True):
         for i in range(1, 250):
             logger.info('I will fill your database, %s', i)
 
