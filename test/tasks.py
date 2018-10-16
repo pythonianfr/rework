@@ -85,8 +85,12 @@ def stderr_swarm(task):
 @api.task
 def flush_captured_stdout(task):
     with task.capturelogs(std=True):
-        print('Hello')
+        print('Hello ', end='')
         import sys
-        sys.stdout.flush()
+        sys.stdout.flush()  # force Hello on one line
         print('World')
+
+        print('This is an unfinished statement ', end='')
+        print('which could go on for a ', end='')
+        print('long time, but I have had enough')
 

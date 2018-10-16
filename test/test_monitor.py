@@ -383,7 +383,7 @@ def test_process_lock(engine):
         assert t.state == 'done'
 
 
-def test_flush_captured_stdout(engine):
+def test_captured_stdout(engine):
     with workers(engine):
         t = api.schedule(engine, 'flush_captured_stdout')
         t.join()
@@ -391,3 +391,6 @@ def test_flush_captured_stdout(engine):
         logs = t.logs()
         assert 'Hello' in logs[0][1]
         assert 'World' in logs[1][1]
+        assert 'This is' in logs[2][1]
+        assert 'go on' in logs[3][1]
+        assert 'enough' in logs[4][1]
