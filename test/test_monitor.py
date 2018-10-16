@@ -387,5 +387,7 @@ def test_flush_captured_stdout(engine):
     with workers(engine):
         t = api.schedule(engine, 'flush_captured_stdout')
         t.join()
-        assert t.state == 'failed'
-        assert 'flush' in t.traceback
+        assert t.state == 'done'
+        logs = t.logs()
+        assert 'Hello' in logs[0][1]
+        assert 'World' in logs[1][1]

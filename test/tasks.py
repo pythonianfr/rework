@@ -88,4 +88,5 @@ def flush_captured_stdout(task):
         print('Hello')
         import sys
         sys.stdout.flush()
+        print('World')
 

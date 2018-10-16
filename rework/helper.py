@@ -169,3 +169,6 @@ class PGLogWriter(object):
                 self.stream, self.level, '', -1, message, (), ()
             )
         )
+
+    def flush(self):
+        pass
