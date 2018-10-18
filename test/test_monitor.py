@@ -389,8 +389,15 @@ def test_captured_stdout(engine):
         t.join()
         assert t.state == 'done'
         logs = t.logs()
-        assert 'Hello' in logs[0][1]
-        assert 'World' in logs[1][1]
-        assert 'This is' in logs[2][1]
-        assert 'go on' in logs[3][1]
-        assert 'enough' in logs[4][1]
+        assert len(logs) == 5
+
+        assert 'Hello World' in logs[0][1]
+        third = logs[1][1]
+        assert third.endswith(
+            'This is an unfinished statement which could go on '
+            'for a long time, but I have had enough'
+        )
+        fourth = logs[2][1]
+        assert fourth.endswith('A truly multiline')
+        fifth = logs[3][1]
+        assert fifth.endswith('statement.')

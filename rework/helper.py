@@ -151,7 +151,7 @@ class PGLogHandler(logging.Handler):
 
 
 class PGLogWriter(object):
-    __slots__ = ('stream', 'handler', 'level')
+    __slots__ = ('stream', 'handler', 'level', 'pending')
 
     def __init__(self, stream, handler):
         self.stream = stream
@@ -160,15 +160,25 @@ class PGLogWriter(object):
             self.level = logging.INFO
         else:
             self.level = logging.WARNING
+        self.pending = []
 
     def write(self, message):
-        if not message.strip():
+        linefeed = '\n' in message
+        if not linefeed and not message.strip():
             return
-        self.handler.emit(
-            logging.LogRecord(
-                self.stream, self.level, '', -1, message, (), ()
-            )
-        )
+        self.pending.append(message)
+        if linefeed:
+            self.flush()
 
     def flush(self):
-        pass
+        message = ''.join(msg for msg in self.pending)
+        if not '\n' in message:
+            return
+        self.pending = []
+        if message:
+            for part in message.strip().split('\n'):
+                self.handler.emit(
+                    logging.LogRecord(
+                        self.stream, self.level, '', -1, part, (), ()
+                    )
+                )

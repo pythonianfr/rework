@@ -90,7 +90,12 @@ def flush_captured_stdout(task):
         sys.stdout.flush()  # force Hello on one line
         print('World')
 
+        print('', end='')  # this won't show up ever
+        sys.stdout.flush()
+
         print('This is an unfinished statement ', end='')
         print('which could go on for a ', end='')
+        sys.stdout.flush()
         print('long time, but I have had enough')
 
+        print('A truly multiline\nstatement.')
