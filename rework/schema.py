@@ -55,6 +55,7 @@ task = Table(
            ForeignKey('rework.operation.id', ondelete='cascade'),
            index=True, nullable=False),
     Column('created', DateTime(timezone=True), server_default=func.now()),
+    Column('finished', DateTime(timezone=True)),
     Column('input', BYTEA),
     Column('output', BYTEA),
     Column('traceback', String),

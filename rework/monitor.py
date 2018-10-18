@@ -8,7 +8,7 @@ import psutil
 
 from sqlalchemy import select, not_
 
-from rework.helper import host, guard, kill_process_tree
+from rework.helper import host, guard, kill_process_tree, utcnow
 from rework.schema import worker, task, monitor
 
 
@@ -30,9 +30,12 @@ def mark_dead_workers(cn, wids, message):
     )
     # mark tasks as done
     cn.execute(
-        task.update().values(status='done'
+        task.update().values(
+            finished=utcnow(),
+            status='done'
         ).where(worker.c.id == task.c.worker
-        ).where(worker.c.id.in_(wids))
+        ).where(worker.c.id.in_(wids)
+        ).where(task.c.status != 'done')
     )
 
 
@@ -279,18 +282,11 @@ class Monitor(object):
                 deadlist.append(wid)
 
         if deadlist:
-            wsql = worker.update().where(worker.c.id.in_(deadlist)).values(
-                running=False,
-                deathinfo='Unaccounted death (hard crash)'
-            )
-            # also mark the tasks as failed
-            tsql = task.update().where(worker.c.id.in_(deadlist)
-            ).where(task.c.worker == worker.c.id
-            ).where(task.c.status == 'running'
-            ).values(status='done')
             with self.engine.begin() as cn:
-                cn.execute(wsql)
-                cn.execute(tsql)
+                mark_dead_workers(
+                    cn, deadlist,
+                    'Unaccounted death (hard crash)'
+                )
 
         return deadlist
 

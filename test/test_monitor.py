@@ -245,6 +245,10 @@ def test_worker_max_runs(engine):
         assert t2.state == 'queued'
         assert t2.worker is None
 
+        end = t2._propvalue('finished')
+        assert end is None
+
+
 
 def test_worker_max_mem(engine):
     with workers(engine, maxmem=100) as mon:
@@ -291,6 +295,10 @@ def test_task_abortion(engine):
 
         assert 'preemptive kill at <X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X>' == scrub(diagnostic)
 
+        start = t._propvalue('created')
+        end = t._propvalue('finished')
+        assert end > start
+
 
 def test_worker_unplanned_death(engine):
     with workers(engine) as mon:
@@ -306,6 +314,10 @@ def test_worker_unplanned_death(engine):
 
         assert t.state == 'done'
 
+        start = t._propvalue('created')
+        end = t._propvalue('finished')
+        assert end > start
+
 
 def test_task_error(engine):
     with workers(engine):
@@ -313,6 +325,10 @@ def test_task_error(engine):
         t.join()
         assert t.traceback.strip().endswith('oops')
         assert t.state == 'failed'
+
+        start = t._propvalue('created')
+        end = t._propvalue('finished')
+        assert end > start
 
 
 def test_task_logging_capture(engine):

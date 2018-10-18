@@ -19,7 +19,10 @@ ENGINE = None
 
 @pytest.fixture(scope='session')
 def engine(request):
-    db.setup_local_pg_cluster(request, DATADIR, PORT)
+    db.setup_local_pg_cluster(request, DATADIR, PORT, {
+        'timezone': 'UTC',
+        'log_timezone': 'UTC'
+    })
     e = create_engine('postgresql://localhost:{}/postgres'.format(PORT))
     schema.reset(e)
     schema.init(e)

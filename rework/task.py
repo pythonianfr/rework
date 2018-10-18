@@ -9,7 +9,7 @@ import logging
 from sqlalchemy import select
 
 from rework.schema import task, worker, log
-from rework.helper import PGLogHandler, PGLogWriter
+from rework.helper import PGLogHandler, PGLogWriter, utcnow
 
 
 __task_registry__ = {}
@@ -199,6 +199,7 @@ class Task(object):
     def finish(self):
         with self.engine.begin() as cn:
             cn.execute(task.update().where(task.c.id == self.tid).values(
+                finished=utcnow(),
                 status='done')
             )
 
