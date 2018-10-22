@@ -128,8 +128,8 @@ def test_domain(engine):
         t1 = api.schedule(engine, 'run_in_non_default_domain')
         t2 = api.schedule(engine, 'print_sleep_and_go_away', 1)
 
-        guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
-              lambda r: r.scalar() == True)
+        guard(engine, 'select running from rework.worker where id = {}'.format(wid),
+              lambda r: r.scalar() == False)
 
         assert t1.status == 'queued'
         assert t2.status == 'done'
@@ -139,8 +139,8 @@ def test_domain(engine):
         t1 = api.schedule(engine, 'run_in_non_default_domain')
         t2 = api.schedule(engine, 'print_sleep_and_go_away', 1)
 
-        guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
-              lambda r: r.scalar() == True)
+        guard(engine, 'select running from rework.worker where id = {}'.format(wid),
+              lambda r: r.scalar() == False)
 
         assert t1.status == 'done'
         assert t2.status == 'queued'
@@ -226,9 +226,8 @@ def test_worker_max_runs(engine):
         t = api.schedule(engine, 'print_sleep_and_go_away', 'a')
         t.join()
 
-        guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
-              lambda r: r.scalar() == True)
-        assert shutdown_asked(engine, wid)
+        guard(engine, 'select running from rework.worker where id = {}'.format(wid),
+              lambda r: r.scalar() == False)
 
     with workers(engine, maxruns=1) as mon:
         wid = mon.wids[0]
@@ -238,9 +237,8 @@ def test_worker_max_runs(engine):
 
         t1.join()
 
-        guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
-              lambda r: r.scalar() == True)
-        assert shutdown_asked(engine, wid)
+        guard(engine, 'select running from rework.worker where id = {}'.format(wid),
+              lambda r: r.scalar() == False)
 
         assert t2.state == 'queued'
         assert t2.worker is None

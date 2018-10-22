@@ -107,11 +107,11 @@ def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0,
         raise
 
 
-def heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs):
+def heartbeat(engine, worker_id, ppid, maxmem):
     die_if_ancestor_died(engine, ppid, worker_id)
     mem = track_memory_consumption(engine, worker_id)
 
-    if (maxmem and mem > maxmem) or (maxruns and runs >= maxruns):
+    if (maxmem and mem > maxmem):
         ask_shutdown(engine, worker_id)
 
     die_if_shutdown(engine, worker_id)
@@ -120,12 +120,17 @@ def heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs):
 def _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain):
     runs = 0
     while True:
-        heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs)
+        heartbeat(engine, worker_id, ppid, maxmem)
         task = Task.fromqueue(engine, int(worker_id), domain)
         while task:
             task.run()
+
+            # run count
             runs += 1
-            heartbeat(engine, worker_id, ppid, maxruns, maxmem, runs)
+            if maxruns and runs >= maxruns:
+                return
+
+            heartbeat(engine, worker_id, ppid, maxmem)
             task = Task.fromqueue(engine, worker_id)
 
         time.sleep(1)
