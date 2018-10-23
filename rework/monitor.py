@@ -315,17 +315,15 @@ class Monitor(object):
 
     def cleanup_unstarted(self):
         sql = ('with deleted as '
-               '(delete from rework.worker '
-               ' where not running '
-               ' and traceback is null '
-               ' and not shutdown '
-               ' and deathinfo is null '
-               ' and domain = %(domain)s '
+               '(delete from rework.worker as w '
+               ' where not w.running '
+               '   and pid is null '
+               '   and domain = %(domain)s '
                ' returning 1) '
                'select count(*) from deleted')
         with self.engine.begin() as cn:
             deleted = cn.execute(sql, domain=self.domain).scalar()
-            print(f'cleaned {deleted} workers')
+            return deleted
 
     def register(self):
         # register in db
@@ -367,11 +365,13 @@ class Monitor(object):
             self.unregister()
 
     def _run(self):
+        deleted = self.cleanup_unstarted()
+        if deleted:
+            print('cleaned {} unstarted workers'.format(deleted))
         workers = []
         while True:
             self.preemptive_kill()
             dead = self.reap_dead_workers()
-            self.cleanup_unstarted()
             if dead:
                 print('reaped {} dead workers'.format(len(dead)))
                 workers = [(wid, proc)

@@ -435,14 +435,60 @@ def test_cleanup_unstarted(engine):
     mon.register()
     mon.ensure_workers()
 
+    with engine.begin() as cn:
+        cn.execute(
+            worker.insert().values(
+                host='127.0.0.1',
+                domain='default'
+            )
+        )  # unborn worker
+
     nworkers = engine.execute('select count(*) from rework.worker').scalar()
-    assert nworkers == 1
+    assert nworkers == 2
 
     t = api.schedule(engine, 'raw_input', b'foo')
     t.join()
 
     mon.killall(msg=None)
-    mon.cleanup_unstarted()
+    deleted = mon.cleanup_unstarted()
+    assert deleted == 1
 
-    assert engine.execute('select count(*) from rework.worker').scalar() == 0
-    assert engine.execute('select count(*) from rework.task').scalar() == 0
+    assert engine.execute('select count(*) from rework.worker').scalar() == 1
+    assert engine.execute('select count(*) from rework.task').scalar() == 1
+
+    deleted = mon.cleanup_unstarted()
+    assert deleted == 0
+
+
+def test_more_unstarted(engine):
+    with engine.begin() as cn:
+        cn.execute('delete from rework.task')
+        cn.execute('delete from rework.worker')
+    with workers(engine) as mon:
+        nworkers = engine.execute('select count(*) from rework.worker').scalar()
+        assert nworkers == 1
+
+        with engine.begin() as cn:
+            cn.execute(
+                worker.insert().values(
+                    host='127.0.0.1',
+                    domain='default'
+                )
+            )  # unborn worker
+
+        nworkers = engine.execute('select count(*) from rework.worker').scalar()
+        assert nworkers == 2
+
+        t1 = api.schedule(engine, 'raw_input', b'foo')
+        t2 = api.schedule(engine, 'raw_input', b'foo')
+        t1.join()
+        t2.join()
+        assert engine.execute('select count(*) from rework.task').scalar() == 2
+
+        nworkers = engine.execute('select count(*) from rework.worker').scalar()
+        assert nworkers == 2
+        mon.cleanup_unstarted()
+        nworkers = engine.execute('select count(*) from rework.worker').scalar()
+        assert nworkers == 1
+
+        assert engine.execute('select count(*) from rework.task').scalar() == 2

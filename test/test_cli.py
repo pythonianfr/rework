@@ -111,6 +111,23 @@ def test_list_monitors(engine, cli):
         ) == scrub(r.output)
 
 
+def test_list_workers(engine, cli):
+    with workers(engine):
+        r = cli('list-workers', engine.url)
+        assert '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running (idle)]' == scrub(r.output)
+
+    from rework import schema
+    sql = schema.worker.insert().values(host='12345', domain='default')
+    with engine.begin() as cn:
+        cn.execute(sql)
+
+    r = cli('list-workers', engine.url)
+    assert (
+        '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] Forcefully killed by the monitor. \n'
+        '<X> <nopid>@<X> <X> Mb [unstarted]'
+    )== scrub(r.output)
+
+
 def test_debug_port(engine, cli):
     with workers(engine, numworkers=3, debug=True) as mon:
         r = cli('list-workers', engine.url)
