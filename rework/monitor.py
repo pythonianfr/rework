@@ -314,14 +314,18 @@ class Monitor(object):
         return deadlist
 
     def cleanup_unstarted(self):
-        sql = ('delete from rework.worker '
-               'where not running '
-               'and traceback is null '
-               'and not shutdown '
-               'and deathinfo is null '
-               'and domain = %(domain)s')
+        sql = ('with deleted as '
+               '(delete from rework.worker '
+               ' where not running '
+               ' and traceback is null '
+               ' and not shutdown '
+               ' and deathinfo is null '
+               ' and domain = %(domain)s '
+               ' returning 1) '
+               'select count(*) from deleted')
         with self.engine.begin() as cn:
-            cn.execute(sql, domain=self.domain)
+            deleted = cn.execute(sql, domain=self.domain).scalar()
+            print(f'cleaned {deleted} workers')
 
     def register(self):
         # register in db
