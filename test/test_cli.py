@@ -431,5 +431,11 @@ def test_vacuum(engine, cli):
 
     run_stuff()
 
+    ntasks = engine.execute('select count(*) from rework.task').scalar()
+    assert ntasks == 3
+
     r = cli('vacuum', engine.url, '--workers')
     assert r.output == 'deleted 2 workers\n'
+
+    ntasks = engine.execute('select count(*) from rework.task').scalar()
+    assert ntasks == 0
