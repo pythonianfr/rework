@@ -252,7 +252,7 @@ class Monitor(object):
         stats.new.extend(procs)
         return stats
 
-    def killall(self):
+    def killall(self, msg='Forcefully killed by the monitor.'):
         mark = []
         for wid, proc in self.workers.items():
             if proc.poll() is None:  # else it's already dead
@@ -265,7 +265,7 @@ class Monitor(object):
                 proc.wait()
             mark.append(wid)
         with self.engine.begin() as cn:
-            mark_dead_workers(cn, mark, 'Forcefully killed by the monitor.')
+            mark_dead_workers(cn, mark, msg)
         self.workers = {}
 
     def preemptive_kill(self):

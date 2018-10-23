@@ -424,3 +424,25 @@ def test_captured_stdout(engine):
         assert fourth.endswith('A truly multiline')
         fifth = logs[3][1]
         assert fifth.endswith('statement.')
+
+
+def test_cleanup_unstarted(engine):
+    with engine.begin() as cn:
+        cn.execute('delete from rework.task')
+        cn.execute('delete from rework.worker')
+
+    mon = Monitor(engine, 'default', None, 1, 1, 0, False)
+    mon.register()
+    mon.ensure_workers()
+
+    nworkers = engine.execute('select count(*) from rework.worker').scalar()
+    assert nworkers == 1
+
+    t = api.schedule(engine, 'raw_input', b'foo')
+    t.join()
+
+    mon.killall(msg=None)
+    mon.cleanup_unstarted()
+
+    assert engine.execute('select count(*) from rework.worker').scalar() == 0
+    assert engine.execute('select count(*) from rework.task').scalar() == 0
