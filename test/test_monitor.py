@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 import threading
+import time
 
 import pytest
 
@@ -144,6 +145,16 @@ def test_domain(engine):
 
         assert t1.status == 'done'
         assert t2.status == 'queued'
+
+
+def test_worker_two_runs_nondfefault_domain(engine):
+    with workers(engine, maxruns=2, domain='nondefault') as mon:
+        t1 = api.schedule(engine, 'run_in_non_default_domain')
+        t2 = api.schedule(engine, 'run_in_non_default_domain')
+
+    time.sleep(2)
+    assert t1.status == 'queued'
+    assert t2.status == 'queued'
 
 
 def test_domain_map(engine, cleanup):
