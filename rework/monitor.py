@@ -6,9 +6,15 @@ import tzlocal
 
 import psutil
 
-from sqlalchemy import select, not_
+from sqlalchemy import select, not_, bindparam
 
-from rework.helper import host, guard, kill_process_tree, utcnow
+from rework.helper import (
+    guard,
+    host,
+    kill_process_tree,
+    memory_usage,
+    utcnow
+)
 from rework.schema import worker, task, monitor
 
 
@@ -185,9 +191,26 @@ class Monitor(object):
                 stats.deleted.append(wid)
         return stats
 
+    def track_memory(self):
+        if not self.workers:
+            return
+        sql = worker.update().where(
+                worker.c.id == bindparam('wid')
+        ).values({
+            'mem': bindparam('mem')
+        })
+        with self.engine.begin() as cn:
+            cn.execute(sql, [
+                {'wid': wid, 'mem': memory_usage(proc.pid)}
+                for wid, proc in self.workers.items()
+            ])
+
     def ensure_workers(self):
         # rid self.workers of dead things
         stats = self._cleanup_workers()
+
+        # update mem stats
+        self.track_memory()
 
         # reduce by one the worker pool if possible
         shuttingdown = self.shrink_workers()

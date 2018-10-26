@@ -247,14 +247,23 @@ def test_worker_max_runs(engine):
         assert end is None
 
 
-
 def test_worker_max_mem(engine):
     with workers(engine, maxmem=100) as mon:
         wid = mon.wids[0]
 
-        t = api.schedule(engine, 'allocate_and_leak_mbytes', 100)
-        t.join()
+        t1 = api.schedule(engine, 'allocate_and_leak_mbytes', 50)
+        t1.join()
 
+        assert engine.execute(
+            'select mem from rework.worker where id = {}'.format(wid)
+        ).scalar() == 0
+        mon.track_memory()
+        assert engine.execute(
+            'select mem from rework.worker where id = {}'.format(wid)
+        ).scalar() > 50
+
+        t2 = api.schedule(engine, 'allocate_and_leak_mbytes', 100)
+        t2.join()
         guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
               lambda r: r.scalar() == True)
         assert shutdown_asked(engine, wid)

@@ -1,6 +1,5 @@
 import time
 import os
-from threading import Thread
 from contextlib import contextmanager
 import traceback
 
@@ -9,14 +8,6 @@ from sqlalchemy import create_engine, select
 from rework.helper import has_ancestor_pid, kill, memory_usage
 from rework.schema import worker
 from rework.task import Task
-
-
-def track_memory_consumption(engine, wid):
-    mem = memory_usage()
-    sql = worker.update().where(worker.c.id == wid).values(mem=mem)
-    with engine.begin() as cn:
-        cn.execute(sql)
-    return mem
 
 
 def running_sql(wid, running, debugport):
@@ -109,8 +100,8 @@ def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0,
 
 def heartbeat(engine, worker_id, ppid, maxmem):
     die_if_ancestor_died(engine, ppid, worker_id)
-    mem = track_memory_consumption(engine, worker_id)
 
+    mem = memory_usage(os.getpid())
     if (maxmem and mem > maxmem):
         ask_shutdown(engine, worker_id)
 

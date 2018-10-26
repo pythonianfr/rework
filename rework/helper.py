@@ -6,7 +6,6 @@ import logging
 from datetime import datetime
 
 import pytz
-from six.moves.queue import Queue
 import psutil
 
 from rework.schema import log
@@ -16,8 +15,8 @@ def utcnow():
     return datetime.utcnow().replace(tzinfo=pytz.utc)
 
 
-def memory_usage():
-    process = psutil.Process(os.getpid())
+def memory_usage(pid):
+    process = psutil.Process(pid)
     return int(process.memory_info().rss / float(2 ** 20))
 
 
