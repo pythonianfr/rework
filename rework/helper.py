@@ -53,12 +53,9 @@ def guard(engine, sql, expr, timeout=6):
 
 
 def host():
-    try:
-        return socket.gethostbyname(socket.gethostname())
-    except:  # things can get nasty :/
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(('8.8.8.8', 1))
-        return s.getsockname()[0]
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(('8.8.8.8', 1))
+    return s.getsockname()[0]
 
 
 def kill(pid, timeout=3):
