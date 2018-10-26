@@ -340,7 +340,8 @@ def test_abort_task(engine, cli):
                 '<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X>') == scrub(r.output)
 
         r = cli('list-tasks', url)
-        assert '<X> infinite_loop aborted [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]' == scrub(r.output)
+        assert ('<X> infinite_loop aborted [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+                '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]') == scrub(r.output)
 
 
 def test_kill_worker(engine, cli):
@@ -361,7 +362,8 @@ def test_kill_worker(engine, cli):
         ) == scrub(r.output)
 
         r = cli('list-tasks', url)
-        assert '<X> infinite_loop done [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]' == scrub(r.output)
+        assert ('<X> infinite_loop done [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+                '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]') == scrub(r.output)
 
 
 def test_debug_worker(engine, cli):
