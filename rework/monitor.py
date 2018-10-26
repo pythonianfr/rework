@@ -361,6 +361,8 @@ class Monitor(object):
         try:
             self.register()
             self._run()
+        except:
+            self.killall(msg='monitor exit')
         finally:
             self.unregister()
 
