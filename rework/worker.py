@@ -78,6 +78,7 @@ def running_status(engine, wid, debug_port):
 
 def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0,
                domain='default', debug_port=0):
+    worker_id = int(worker_id)
     if debug_port:
         import pystuck
         pystuck.run_server(port=debug_port)
@@ -112,7 +113,7 @@ def _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain):
     runs = 0
     while True:
         heartbeat(engine, worker_id, ppid, maxmem)
-        task = Task.fromqueue(engine, int(worker_id), domain)
+        task = Task.fromqueue(engine, worker_id, domain)
         while task:
             task.run()
 
@@ -122,6 +123,6 @@ def _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain):
                 return
 
             heartbeat(engine, worker_id, ppid, maxmem)
-            task = Task.fromqueue(engine, worker_id)
+            task = Task.fromqueue(engine, worker_id, domain)
 
         time.sleep(1)
