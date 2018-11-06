@@ -94,9 +94,12 @@ def flush_captured_stdout(task):
         sys.stdout.flush()
 
         print('This is an unfinished statement ', end='')
-        print('which could go on for a ', end='')
+        print('which could go on for a', end='')
+        print(' ', end='')
         sys.stdout.flush()
         print('long time, but I have had enough')
 
         print('A truly multiline\nstatement.')
         print('Honor the', 'space.')
+        # won't show up
+        print(' ', end='')
