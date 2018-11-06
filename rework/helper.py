@@ -171,9 +171,9 @@ class PGLogWriter(object):
         if linefeed:
             self.flush()
 
-    def flush(self):
+    def flush(self, force=False):
         message = ''.join(msg for msg in self.pending)
-        if not message or not '\n' in message:
+        if not message or not '\n' in message and not force:
             return
 
         self.pending = []

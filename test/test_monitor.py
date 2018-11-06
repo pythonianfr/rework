@@ -427,7 +427,7 @@ def test_captured_stdout(engine):
         t.join()
         assert t.state == 'done'
         logs = t.logs()
-        assert len(logs) == 6
+        assert len(logs) == 7
 
         logs = [line.split(':')[-1] for lid, line in logs]
         assert logs == [
@@ -436,7 +436,8 @@ def test_captured_stdout(engine):
             ' A truly multiline',
             ' statement.',
             ' ',
-            ' Honor the space.'
+            ' Honor the space.',
+            '  (hi) '
         ]
 
 

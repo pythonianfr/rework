@@ -101,5 +101,4 @@ def flush_captured_stdout(task):
 
         print('A truly multiline\nstatement.')
         print('Honor the', 'space.')
-        # won't show up
-        print(' ', end='')
+        print(' (hi) ', end='')

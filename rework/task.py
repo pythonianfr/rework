@@ -86,6 +86,9 @@ class Task(object):
         try:
             yield
         finally:
+            if std:
+                sys.stdout.flush(force=True)
+                sys.stderr.flush(force=True)
             if pghdlr in root.handlers:
                 root.handlers.remove(pghdlr)
             pghdlr.flush()
