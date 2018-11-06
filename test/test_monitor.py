@@ -427,7 +427,7 @@ def test_captured_stdout(engine):
         t.join()
         assert t.state == 'done'
         logs = t.logs()
-        assert len(logs) == 5
+        assert len(logs) == 6
 
         assert 'Hello World' in logs[0][1]
         third = logs[1][1]
@@ -439,6 +439,8 @@ def test_captured_stdout(engine):
         assert fourth.endswith('A truly multiline')
         fifth = logs[3][1]
         assert fifth.endswith('statement.')
+        sixth = logs[5][1]
+        assert 'thespace' in sixth
 
 
 def test_cleanup_unstarted(engine):

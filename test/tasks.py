@@ -99,3 +99,4 @@ def flush_captured_stdout(task):
         print('long time, but I have had enough')
 
         print('A truly multiline\nstatement.')
+        print('Honor the', 'space.')
