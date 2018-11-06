@@ -440,7 +440,7 @@ def test_captured_stdout(engine):
         fifth = logs[3][1]
         assert fifth.endswith('statement.')
         sixth = logs[5][1]
-        assert 'thespace' in sixth
+        assert 'the space' in sixth
 
 
 def test_cleanup_unstarted(engine):

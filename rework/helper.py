@@ -165,7 +165,7 @@ class PGLogWriter(object):
 
     def write(self, message):
         linefeed = '\n' in message
-        if not linefeed and not message.strip():
+        if not linefeed and not message.strip('\n\r'):
             return
         self.pending.append(message)
         if linefeed:
@@ -173,12 +173,12 @@ class PGLogWriter(object):
 
     def flush(self):
         message = ''.join(msg for msg in self.pending)
-        if not '\n' in message:
+        if not message or not '\n' in message:
             return
+
         self.pending = []
-        if message:
-            for part in message.strip().split('\n'):
-                self.handler.emit(
+        for part in message.splitlines():
+            self.handler.emit(
                     logging.LogRecord(
                         self.stream, self.level, '', -1, part, (), ()
                     )
