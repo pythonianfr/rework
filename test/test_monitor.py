@@ -429,18 +429,15 @@ def test_captured_stdout(engine):
         logs = t.logs()
         assert len(logs) == 6
 
-        assert 'Hello World' in logs[0][1]
-        third = logs[1][1]
-        assert third.endswith(
-            'This is an unfinished statement which could go on '
-            'for a long time, but I have had enough'
-        )
-        fourth = logs[2][1]
-        assert fourth.endswith('A truly multiline')
-        fifth = logs[3][1]
-        assert fifth.endswith('statement.')
-        sixth = logs[5][1]
-        assert 'the space' in sixth
+        logs = [line.split(':')[-1] for lid, line in logs]
+        assert logs == [
+            ' Hello World',
+            ' This is an unfinished statement which could go on for a long time, but I have had enough',
+            ' A truly multiline',
+            ' statement.',
+            ' ',
+            ' Honor the space.'
+        ]
 
 
 def test_cleanup_unstarted(engine):
