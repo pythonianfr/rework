@@ -2,7 +2,7 @@ from setuptools import setup
 
 
 setup(name='rework',
-      version='0.6.0',
+      version='0.7.0',
       author='Aurelien Campeas',
       author_email='aurelien.campeas@pythonian.fr',
       description='A database-oriented distributed task dispatcher',
