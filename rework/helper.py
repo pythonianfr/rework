@@ -4,9 +4,12 @@ import socket
 import time
 import logging
 from datetime import datetime
+from pathlib import Path
 
 import pytz
 import psutil
+from sqlalchemy.engine import url
+from inireader import reader
 
 from rework.schema import log
 
@@ -98,6 +101,48 @@ def kill_process_tree(pid, timeout=3):
         kill_process_tree(proc.pid, timeout)
         kill(proc.pid)
     return kill(pid)
+
+
+# configuration lookup
+
+def get_cfg_path():
+    if 'REWORKCFGPATH' is os.environ:
+        cfgpath = Path(os.environ['REWORKCFGPATH'])
+        if cfgpath.exists():
+            return cfgpath
+    cfgpath = Path('rework.cfg')
+    if cfgpath.exists():
+        return cfgpath
+    cfgpath = Path('~/rework.cfg').expanduser()
+    if cfgpath.exists():
+        return cfgpath
+
+    return None
+
+
+def find_dburi(something):
+    try:
+        url.make_url(something)
+    except Exception:
+        pass
+    else:
+        return something
+
+    # lookup in the env, then in cwd, then in the home
+    cfgpath = get_cfg_path()
+    if not cfgpath:
+        raise Exception('could not use nor look up the db uri')
+
+    try:
+        cfg = reader(cfgpath)
+        return cfg['dburi'][something]
+    except Exception as exc:
+        raise Exception(
+            f'could not find the `{something}` entry in the '
+            f'[dburi] section of the `{cfgpath.resolve()}` '
+            f'conf file (cause: {exc.__class__.__name__} -> {exc})'
+        )
+
 
 # Logging
 

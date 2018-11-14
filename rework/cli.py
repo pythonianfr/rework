@@ -14,6 +14,7 @@ from pkg_resources import iter_entry_points
 from sqlalchemy import create_engine
 
 from rework import schema, api
+from rework.helper import find_dburi
 from rework.worker import run_worker
 from rework.task import Task
 from rework.monitor import Monitor
@@ -32,7 +33,7 @@ def rework():
 @click.pass_context
 def init_db(ctx, dburi):
     " initialize a postgres database with everything needed "
-    engine = create_engine(dburi)
+    engine = create_engine(find_dburi(dburi))
     schema.reset(engine)
     schema.init(engine)
 
@@ -52,7 +53,7 @@ def register_operations(dburi, module, domain=None, asdomain=None):
     The registered operations will be relative to the current host.
     """
     mod = imp.load_source('operations', module)
-    engine = create_engine(dburi)
+    engine = create_engine(find_dburi(dburi))
     ok, ko = api.freeze_operations(engine, domain)
 
     print('registered {} new operation ({} already known)'.format(
@@ -85,7 +86,7 @@ def new_worker(**config):
 @click.option('--debug', is_flag=True, default=False)
 def deploy(dburi, **config):
     " start a monitor controlling min/max workers "
-    engine = create_engine(dburi)
+    engine = create_engine(find_dburi(dburi))
     monitor = Monitor(engine, **config)
     monitor.run()
 
@@ -94,7 +95,7 @@ def deploy(dburi, **config):
 @click.argument('dburi')
 def list_operations(dburi):
     init()
-    engine = create_engine(dburi)
+    engine = create_engine(find_dburi(dburi))
     sql = 'select id, host, name, path from rework.operation'
     for oid, hostid, opname, modpath in engine.execute(sql):
         print(Fore.WHITE + '{}'.format(oid), end=' ')
@@ -106,7 +107,7 @@ def list_operations(dburi):
 @click.argument('dburi')
 def list_workers(dburi):
     init()
-    engine = create_engine(dburi)
+    engine = create_engine(find_dburi(dburi))
     sql = ('select id, host, pid, mem, debugport, running, shutdown, traceback, deathinfo '
            'from rework.worker order by id, running')
     for wid, host, pid, mem, debugport, running, shutdown, traceback, deathinfo in engine.execute(sql):
@@ -140,7 +141,7 @@ def list_workers(dburi):
 @click.argument('dburi')
 def list_monitors(dburi):
     init()
-    engine = create_engine(dburi)
+    engine = create_engine(find_dburi(dburi))
     sql = ('select id, domain, options, lastseen from rework.monitor')
     now = TZ.localize(datetime.utcnow())
     for mid, domain, options, lastseen in engine.execute(sql):
@@ -167,7 +168,7 @@ def shutdown_worker(dburi, worker_id):
     If you want to immediately and unconditionally terminate
     a worker, use `rework kill-worker`
     """
-    engine = create_engine(dburi)
+    engine = create_engine(find_dburi(dburi))
     with engine.begin() as cn:
         worker = schema.worker
         cn.execute(worker.update().where(
@@ -184,7 +185,7 @@ def kill_worker(dburi, worker_id):
     If you want to not risk interrupting any ongoing work,
     you should use `rework shutdown` instead.
     """
-    engine = create_engine(dburi)
+    engine = create_engine(find_dburi(dburi))
     with engine.begin() as cn:
         worker = schema.worker
         cn.execute(worker.update().where(
@@ -208,7 +209,7 @@ status_color = {
 @click.option('--logcount/--no-logcount', default=False)
 def list_tasks(dburi, tracebacks=False, logcount=False):
     init()
-    engine = create_engine(dburi)
+    engine = create_engine(find_dburi(dburi))
     opmap = dict(engine.execute('select id, name from rework.operation').fetchall())
     sql = ('select id from rework.task order by id')
     for tid, in engine.execute(sql):
@@ -241,7 +242,7 @@ def list_tasks(dburi, tracebacks=False, logcount=False):
 @click.option('--watch', is_flag=True, default=False)
 @click.option('--fromid', type=int)
 def log_task(dburi, taskid, fromid=None, watch=False):
-    engine = create_engine(dburi)
+    engine = create_engine(find_dburi(dburi))
     task = Task.byid(engine, taskid)
 
     def watchlogs(fromid):
@@ -274,7 +275,7 @@ def abort_task(dburi, taskid):
     This will be done by doing a preemptive kill on
     its associated worker.
     """
-    engine = create_engine(dburi)
+    engine = create_engine(find_dburi(dburi))
     task = Task.byid(engine, taskid)
     task.abort()
 
@@ -294,7 +295,7 @@ def vacuum(dburi, workers=False, tasks=False):
               'at the same time')
         return
 
-    engine = create_engine(dburi)
+    engine = create_engine(find_dburi(dburi))
     if workers:
         with engine.begin() as cn:
             count = cn.execute('with deleted as '
