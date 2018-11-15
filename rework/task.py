@@ -168,6 +168,12 @@ class Task(object):
         return 'done'
 
     def run(self):
+        with self.engine.begin() as cn:
+            cn.execute(
+                task.update().where(task.c.id == self.tid).values(
+                    started=utcnow()
+                )
+            )
         try:
             name, path = self.engine.execute("""
                 select name, path

@@ -44,7 +44,7 @@ def test_basic_task_operations(engine):
     assert t.output == 42
     assert t.metadata == {'user': 'Joe'}
 
-    cdate = t._propvalue('created')
+    cdate = t._propvalue('queued')
     now = datetime.now()
     assert now.year == cdate.year
     assert now.month == cdate.month
@@ -317,9 +317,10 @@ def test_task_abortion(engine):
 
         assert 'preemptive kill at <X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X>' == scrub(diagnostic)
 
-        start = t._propvalue('created')
-        end = t._propvalue('finished')
-        assert end > start
+        queued = t._propvalue('queued')
+        started = t._propvalue('started')
+        finished = t._propvalue('finished')
+        assert finished > started > queued
 
 
 def test_worker_unplanned_death(engine):
@@ -336,7 +337,7 @@ def test_worker_unplanned_death(engine):
 
         assert t.state == 'done'
 
-        start = t._propvalue('created')
+        start = t._propvalue('queued')
         end = t._propvalue('finished')
         assert end > start
 
@@ -348,7 +349,7 @@ def test_task_error(engine):
         assert t.traceback.strip().endswith('oops')
         assert t.state == 'failed'
 
-        start = t._propvalue('created')
+        start = t._propvalue('queued')
         end = t._propvalue('finished')
         assert end > start
 

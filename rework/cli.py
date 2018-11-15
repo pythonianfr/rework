@@ -223,9 +223,14 @@ def list_tasks(dburi, tracebacks=False, logcount=False):
             count = engine.execute(sql, {'tid': task.tid}).scalar()
             print(Style.RESET_ALL + '{} log lines'.format(count), end=' ')
         finished = task._propvalue('finished')
+        started = task._propvalue('started')
         print(Fore.WHITE + '[{}]'.format(
-            task._propvalue('created').strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
+            task._propvalue('queued').strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
               end=' ')
+        if started:
+            print(Fore.WHITE + '→ [{}]'.format(
+                started.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
+            end=' ')
         if finished:
             print(Fore.WHITE + '→ [{}]'.format(
                 finished.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
