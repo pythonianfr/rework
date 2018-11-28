@@ -12,7 +12,11 @@ from rework.task import __task_registry__, Task
 
 
 def task(*args, **kw):
-    assert args and callable(args[0]) or 'domain' in kw, "Use either @task or @task(domain='domain')"
+    msg = "Use either @task or @task(domain='domain')"
+    if args:
+        assert callable(args[0]), msg
+    else:
+        assert 'domain' in kw, msg
     domain = 'default'
 
     def register_task(func):
