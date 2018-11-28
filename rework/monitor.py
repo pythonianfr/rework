@@ -31,6 +31,7 @@ def mark_dead_workers(cn, wids, message):
     cn.execute(
         worker.update().values(
             running=False,
+            finished=utcnow(),
             deathinfo=message
         ).where(worker.c.id.in_(wids))
     )

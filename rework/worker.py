@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 import os
 from contextlib import contextmanager
 import traceback
@@ -17,6 +18,7 @@ def running_sql(wid, running, debugport):
     }
     if running:
         value['pid'] = os.getpid()
+        value['started'] = datetime.utcnow()
     return worker.update().where(
         worker.c.id == wid).values(
             **value
@@ -26,7 +28,8 @@ def running_sql(wid, running, debugport):
 def death_sql(wid, cause):
     return worker.update().where(worker.c.id == wid).values(
         deathinfo=cause,
-        running=False
+        running=False,
+        finished=datetime.utcnow()
     )
 
 

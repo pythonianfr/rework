@@ -32,6 +32,9 @@ worker = Table(
     Column('kill', Boolean, nullable=False, default=False),
     Column('traceback', String),
     Column('deathinfo', String),
+    Column('created', DateTime(timezone=True), server_default=func.now()),
+    Column('started', DateTime(timezone=True)),
+    Column('finished', DateTime(timezone=True)),
     schema='rework'
 )
 

@@ -108,9 +108,11 @@ def list_operations(dburi):
 def list_workers(dburi):
     init()
     engine = create_engine(find_dburi(dburi))
-    sql = ('select id, host, pid, mem, debugport, running, shutdown, traceback, deathinfo '
+    sql = ('select id, host, pid, mem, debugport, running, shutdown, traceback, '
+           'deathinfo, created, started, finished '
            'from rework.worker order by id, running')
-    for wid, host, pid, mem, debugport, running, shutdown, traceback, deathinfo in engine.execute(sql):
+    for (wid, host, pid, mem, debugport, running, shutdown, traceback,
+         deathinfo, created, started, finished) in engine.execute(sql):
         color = Fore.GREEN
         dead = not running and pid
         activity = '(idle)'
@@ -128,7 +130,20 @@ def list_workers(dburi):
               color + ('[running {}]'.format(activity) if running else '[dead]' if dead else '[unstarted]'),
               end=' ')
         if debugport:
-            print(Fore.RED + 'debugport = {}'.format(debugport))
+            print(Fore.RED + 'debugport = {}'.format(debugport), end=' ')
+
+        print(Fore.WHITE + '[{}]'.format(
+            created.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
+              end=' ')
+        if started:
+            print(Fore.WHITE + '→ [{}]'.format(
+                started.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
+            end=' ')
+        if finished:
+            print(Fore.WHITE + '→ [{}]'.format(
+                finished.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
+            end=' ')
+
         if dead:
             if deathinfo:
                 print(Fore.YELLOW + deathinfo, end=' ')

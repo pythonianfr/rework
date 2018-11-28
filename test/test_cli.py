@@ -114,7 +114,11 @@ def test_list_monitors(engine, cli):
 def test_list_workers(engine, cli):
     with workers(engine):
         r = cli('list-workers', engine.url)
-        assert '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running (idle)]' == scrub(r.output)
+        assert (
+            '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running (idle)] '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+        )== scrub(r.output)
 
     from rework import schema
     sql = schema.worker.insert().values(host='12345', domain='default')
@@ -123,8 +127,13 @@ def test_list_workers(engine, cli):
 
     r = cli('list-workers', engine.url)
     assert (
-        '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] Forcefully killed by the monitor. \n'
-        '<X> <nopid>@<X> <X> Mb [unstarted]'
+        '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+        '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+        '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+        'Forcefully killed by the monitor. \n'
+        '<X> <nopid>@<X> <X> Mb [unstarted] '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
     )== scrub(r.output)
 
 
@@ -337,13 +346,21 @@ def test_abort_task(engine, cli):
     url = engine.url
     with workers(engine) as mon:
         r = cli('list-workers', url)
-        assert '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running (idle)]' == scrub(r.output)
+        assert (
+            '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running (idle)] '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+        )== scrub(r.output)
 
         t = api.schedule(engine, 'infinite_loop')
         t.join('running')  # let the worker pick up the task
 
         r = cli('list-workers', url)
-        assert '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running #<X>]' == scrub(r.output)
+        assert (
+            '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running #<X>]'
+            ' [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+        ) == scrub(r.output)
 
         r = cli('list-tasks', url)
         assert (
@@ -356,8 +373,14 @@ def test_abort_task(engine, cli):
         t.join()
 
         r = cli('list-workers', url)
-        assert ('<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] preemptive kill at '
-                '<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X>') == scrub(r.output)
+        assert (
+            '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+            'preemptive kill at '
+            '<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X>'
+        ) == scrub(r.output)
 
         r = cli('list-tasks', url)
         assert (
@@ -380,8 +403,13 @@ def test_kill_worker(engine, cli):
         mon.preemptive_kill()
 
         r = cli('list-workers', url)
-        assert ('<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] preemptive kill '
-                'at <X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X>'
+        assert (
+            '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+            'preemptive kill at '
+            '<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X>'
         ) == scrub(r.output)
 
         r = cli('list-tasks', url)
@@ -399,7 +427,11 @@ def test_debug_worker(engine, cli):
 
     with workers(engine, debug=True):
         r = cli('list-workers', url)
-        assert '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running (idle)] debugport = <X>' == scrub(r.output)
+        assert (
+            '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running (idle)] debugport = <X> '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+        )== scrub(r.output)
 
 
 def test_shutdown_worker(engine, cli):
@@ -411,7 +443,7 @@ def test_shutdown_worker(engine, cli):
               lambda res: res.scalar() == 0)
 
         r = cli('list-workers', url)
-        assert '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] explicit shutdown' == scrub(r.output)
+        assert 'explicit shutdown' in scrub(r.output)
 
 
 def test_task_logs(engine, cli):
