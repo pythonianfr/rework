@@ -46,6 +46,7 @@ operation = Table(
     Column('name', String, nullable=False, index=True),
     Column('path', String, nullable=False),
     Column('domain', String, nullable=False, default='default'),
+    Column('timeout', String),
     UniqueConstraint('host', 'name', 'path', name='unique_operation'),
     schema='rework'
 )

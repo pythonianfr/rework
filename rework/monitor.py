@@ -2,8 +2,9 @@ import os
 import time
 import subprocess as sub
 from datetime import datetime
-import tzlocal
 
+import tzlocal
+import pytz
 import psutil
 
 from sqlalchemy import select, not_, bindparam
@@ -13,8 +14,10 @@ from rework.helper import (
     host,
     kill_process_tree,
     memory_usage,
+    parse_delta,
     utcnow
 )
+from rework.task import Task
 from rework.schema import worker, task, monitor
 
 
@@ -206,6 +209,27 @@ class Monitor(object):
                 for wid, proc in self.workers.items()
             ])
 
+    def track_timeouts(self):
+        if not self.workers:
+            return
+        sql = ('select task.id, task.started, timeout '
+               'from rework.operation as op, '
+               '     rework.task as task '
+               'where '
+               ' task.operation = op.id and '
+               ' timeout is not null and '
+               ' task.worker in ({})'
+        ).format(
+            ','.join(str(wid) for wid in self.wids)
+        )
+        with self.engine.begin() as cn:
+            for tid, start_time, timeout in cn.execute(sql).fetchall():
+                start_time = start_time.astimezone(pytz.utc)
+                delta = parse_delta(timeout)
+                now = datetime.utcnow().replace(tzinfo=pytz.utc)
+                if (now - start_time) > delta:
+                    Task.byid(self.engine, tid).abort()
+
     def ensure_workers(self):
         # rid self.workers of dead things
         stats = self._cleanup_workers()
@@ -373,6 +397,7 @@ class Monitor(object):
             print('cleaned {} unstarted workers'.format(deleted))
         workers = []
         while True:
+            self.track_timeouts()
             self.preemptive_kill()
             dead = self.reap_dead_workers()
             if dead:

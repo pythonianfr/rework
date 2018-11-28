@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 import threading
+import time
 
 import pytest
 
@@ -9,7 +10,7 @@ from rework.schema import worker
 from rework.monitor import Monitor
 from rework.task import Task, TimeOut
 from rework.worker import running_status, shutdown_asked
-from rework.helper import guard, wait_true
+from rework.helper import guard, wait_true, parse_delta, delta_isoformat
 from rework.testutils import scrub, workers
 
 
@@ -28,6 +29,8 @@ def test_basic_task_operations(engine):
         ('capture_logs', 'tasks.py'),
         ('flush_captured_stdout', 'tasks.py'),
         ('infinite_loop', 'tasks.py'),
+        ('infinite_loop_long_timeout', 'tasks.py'),
+        ('infinite_loop_timeout', 'tasks.py'),
         ('log_swarm', 'tasks.py'),
         ('normal_exception', 'tasks.py'),
         ('print_sleep_and_go_away', 'tasks.py'),
@@ -508,3 +511,33 @@ def test_more_unstarted(engine):
         assert nworkers == 1
 
         assert engine.execute('select count(*) from rework.task').scalar() == 2
+
+
+def test_timeout(engine):
+    # first, a small unittest on utility functions
+    d1 = datetime(2018, 1, 1)
+    d2 = datetime(2018, 3, 3, 12, 45, 30)
+    delta = d2 - d1
+    iso = delta_isoformat(delta)
+    assert iso == 'P61DT0H0M45930S'
+    delta_out = parse_delta(iso)
+    assert delta == delta_out
+
+    with workers(engine, numworkers=3) as mon:
+        t1 = api.schedule(engine, 'infinite_loop_timeout')
+        t2 = api.schedule(engine, 'infinite_loop_timeout')
+        t3 = api.schedule(engine, 'infinite_loop_long_timeout')
+        t1.join('running')
+        t2.join('running')
+        t2.join('running')
+
+        time.sleep(1)  # make sure we're going to time out
+        mon.track_timeouts()
+        assert t1.state == 'aborting'
+        assert t2.state == 'aborting'
+        assert t3.state == 'running'
+
+        mon.preemptive_kill()
+        assert t1.state == 'aborted'
+        assert t2.state == 'aborted'
+        assert t3.state == 'running'

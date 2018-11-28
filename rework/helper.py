@@ -3,8 +3,9 @@ from threading import Thread
 import socket
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
+import re
 
 import pytz
 import psutil
@@ -60,6 +61,8 @@ def host():
     return s.getsockname()[0]
 
 
+# process handling
+
 def kill(pid, timeout=3):
     def on_terminate(proc):
         print('process {} terminated with exit code {}'.format(proc, proc.returncode))
@@ -101,6 +104,26 @@ def kill_process_tree(pid, timeout=3):
         kill_process_tree(proc.pid, timeout)
         kill(proc.pid)
     return kill(pid)
+
+
+# timedelta (de)serialisation
+
+def delta_isoformat(td):
+    return 'P{}DT0H0M{}S'.format(
+        td.days, td.seconds
+    )
+
+
+_DELTA = re.compile('P(.*)DT(.*)H(.*)M(.*)S')
+def parse_delta(td):
+    match = _DELTA.match(td)
+    if not match:
+        raise Exception('unparseable time delta `{}`'.format(td))
+    days, hours, minutes, seconds = match.groups()
+    return timedelta(
+        days=int(days), hours=int(hours),
+        minutes=int(minutes), seconds=int(seconds)
+    )
 
 
 # configuration lookup

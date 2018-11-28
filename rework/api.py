@@ -1,12 +1,13 @@
 import sys
 from pickle import dumps
+from datetime import timedelta
 
 from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from rework.helper import host
+from rework.helper import host, delta_isoformat
 from rework.schema import task as taskentity, operation
 from rework.task import __task_registry__, Task
 
@@ -16,17 +17,24 @@ def task(*args, **kw):
     if args:
         assert callable(args[0]), msg
     else:
-        assert 'domain' in kw, msg
+        assert 'domain' in kw or 'timeout' in kw, msg
     domain = 'default'
+    timeout = None
 
     def register_task(func):
-        __task_registry__[(domain, func.__name__)] = func
+        __task_registry__[(domain, func.__name__)] = (func, timeout)
         return func
 
     if args and callable(args[0]):
         return register_task(args[0])
 
-    domain = kw.pop('domain')
+    domain = kw.pop('domain', domain)
+    timeout = kw.pop('timeout', None)
+    assert domain or timeout
+    if timeout is not None:
+        msg = 'timeout must be a timedelta object'
+        assert isinstance(timeout, timedelta), msg
+
     return register_task
 
 
@@ -83,11 +91,13 @@ def freeze_operations(engine, domain=None, domain_map=None):
     if domain_map:
         domain = domain_map.get(domain, domain)
 
-    for (fdomain, fname), func in __task_registry__.items():
+    for (fdomain, fname), (func, timeout) in __task_registry__.items():
         if domain_map:
             fdomain = domain_map.get(fdomain, fdomain)
         if domain is not None and domain != fdomain:
             continue
+        if timeout is not None:
+            timeout = delta_isoformat(timeout)
         funcmod = func.__module__
         module = sys.modules[funcmod]
         modpath = module.__file__
@@ -99,7 +109,8 @@ def freeze_operations(engine, domain=None, domain_map=None):
             'host': hostid,
             'name': fname,
             'path': modpath,
-            'domain': fdomain
+            'domain': fdomain,
+            'timeout': timeout
         })
 
     sql = operation.insert()

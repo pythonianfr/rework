@@ -17,6 +17,8 @@ def test_list_operations(engine, cli):
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(run_in_non_default_domain)
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(raw_input)
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(infinite_loop)
+<X> host(<X>) `<X>.<X>.<X>.<X>` path(infinite_loop_timeout)
+<X> host(<X>) `<X>.<X>.<X>.<X>` path(infinite_loop_long_timeout)
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(unstopable_death)
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(normal_exception)
 <X> host(<X>) `<X>.<X>.<X>.<X>` path(allocate_and_leak_mbytes)

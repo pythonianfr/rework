@@ -1,6 +1,7 @@
 from __future__ import print_function
 import time
 import logging
+from datetime import timedelta
 
 from rework import api
 
@@ -31,6 +32,16 @@ def raw_input(task):
 def infinite_loop(task):
     while True:
         time.sleep(1)
+
+
+@api.task(timeout=timedelta(seconds=1))
+def infinite_loop_timeout(task):
+    time.sleep(3600)
+
+
+@api.task(timeout=timedelta(minutes=1))
+def infinite_loop_long_timeout(task):
+    time.sleep(3600)
 
 
 @api.task
