@@ -30,9 +30,12 @@ def task(*args, **kw):
     return register_task
 
 
-def schedule(engine, opname, inputdata=None,
+def schedule(engine,
+             opname,
+             inputdata=None,
              rawinputdata=None,
-             hostid=None, module=None,
+             hostid=None,
+             module=None,
              domain=None,
              metadata=None):
     if metadata:
