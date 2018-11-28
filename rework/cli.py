@@ -304,7 +304,8 @@ def abort_task(dburi, taskid):
 @click.argument('dburi')
 @click.option('--workers', is_flag=True, default=False)
 @click.option('--tasks', is_flag=True, default=False)
-def vacuum(dburi, workers=False, tasks=False):
+@click.option('--finished', type=click.DateTime())
+def vacuum(dburi, workers=False, tasks=False, finished=None):
     " delete non-runing workers or finished tasks "
     if not (workers or tasks):
         print('to cleanup old workers or tasks '
@@ -316,19 +317,31 @@ def vacuum(dburi, workers=False, tasks=False):
         return
 
     engine = create_engine(find_dburi(dburi))
+    if finished is None:
+        finished = datetime.utcnow()
     if workers:
         with engine.begin() as cn:
-            count = cn.execute('with deleted as '
-                               '(delete from rework.worker where running = false returning 1) '
-                               'select count(*) from deleted'
+            count = cn.execute(
+                'with deleted as '
+                '(delete from rework.worker '
+                '        where running = false and '
+                '              finished < %(finished)s '
+                ' returning 1) '
+                'select count(*) from deleted',
+                finished=finished
             ).scalar()
             print('deleted {} workers'.format(count))
 
     if tasks:
         with engine.begin() as cn:
-            count = cn.execute("with deleted as "
-                               "(delete from rework.task where status = 'done' returning 1) "
-                               "select count(*) from deleted"
+            count = cn.execute(
+                'with deleted as '
+                '(delete from rework.task '
+                '        where status = \'done\' and '
+                '              finished < %(finished)s '
+                ' returning 1) '
+                'select count(*) from deleted',
+                finished=finished
             ).scalar()
             print('deleted {} tasks'.format(count))
 
