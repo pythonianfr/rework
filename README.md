@@ -74,14 +74,14 @@ def main(dburi):
     @api.freeze_operations(engine)
 
     # now, schedule tasks
-    t1 = api.schedule(engine, 'my_first_task', 24)
+    t1 = api.schedule(engine, 'my_first_task', 'hello')
     t2 = api.schedule(engine, 'my_first_task', 100)
 
     # wait til they are completed
     t1.join()
     t2.join()
 
-    assert t1.output == 42
+    assert t1.output == 'hellohello'
     assert t2.output == 200
 
 
