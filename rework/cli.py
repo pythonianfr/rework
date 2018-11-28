@@ -23,7 +23,18 @@ from rework.monitor import Monitor
 TZ = tzlocal.get_localzone()
 
 
-@click.group()
+class DeprecatingGroup(click.Group):
+
+    def get_command(self, ctx, cmd_name):
+        if cmd_name == 'deploy':
+            print(
+                '`deploy` is deprecated, please use `monitor` instead'
+            )
+            cmd_name = 'monitor'
+        return super().get_command(ctx, cmd_name)
+
+
+@click.command(cls=DeprecatingGroup)
 def rework():
     pass
 
@@ -84,7 +95,7 @@ def new_worker(**config):
               help='shutdown on Mb consummed')
 @click.option('--domain', default='default')
 @click.option('--debug', is_flag=True, default=False)
-def deploy(dburi, **config):
+def monitor(dburi, **config):
     " start a monitor controlling min/max workers "
     engine = create_engine(find_dburi(dburi))
     monitor = Monitor(engine, **config)
