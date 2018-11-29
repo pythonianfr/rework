@@ -221,6 +221,9 @@ API documentation
 .. autoclass:: rework.task.Task
    :members: capturelogs, join, input, raw_input, save_output, abort, metadata
 
+.. automodule:: rework.testutils
+   :members: workers
+
 
 Indices and tables
 ==================
