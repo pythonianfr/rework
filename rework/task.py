@@ -20,6 +20,15 @@ class TimeOut(Exception):
 
 
 class Task(object):
+    """A task object represents an execution of an operation within a worker.
+
+    The only official way to get a task is as a return value of an
+    `api.schedule(...)` call.
+
+    Tasks provide a series of convenience methods that helps writing
+    rework-enabled applications.
+
+    """
     __slots__ = ('engine', 'tid', 'operation')
 
     def __init__(self, engine, tid, operation):
@@ -64,6 +73,14 @@ class Task(object):
             return cls(engine, tid, operation)
 
     def save_output(self, data, raw=False):
+        """saves the output of a task run for later use by other
+        components. This is to be used from *within* an operation.
+
+        The `data` parameter can be any picklable python object.
+
+        The `raw` parameter, combined with a bytestring as input data,
+        allows to bypass the pickling protocol.
+        """
         if not raw:
             data = dumps(data, protocol=2)
         sql = task.update().where(task.c.id == self.tid).values(
@@ -74,6 +91,16 @@ class Task(object):
 
     @contextmanager
     def capturelogs(self, sync=False, level=logging.NOTSET, std=False):
+        """within this context, all logs at the given level will be captured
+        and be retrievable through the `Task.log(...)` api call
+
+        It is possible to specify the `level` (by default, everything
+        is captured).
+
+        The `std` parameter ensures all stdout/stderr outputs will be
+        captured, at INFO level.
+
+        """
         pghdlr = PGLogHandler(self, sync)
         root = logging.getLogger()
         assert not len(root.handlers)
@@ -97,6 +124,12 @@ class Task(object):
                 sys.stderr = err
 
     def logs(self, fromid=None):
+        """get the logs of the task as a list of tuples (log-id, log-line)
+
+        Is possible to specify the `fromid`, which must be a valid log
+        id.
+
+        """
         sql = select([log.c.id, log.c.line]).order_by(log.c.id
         ).where(log.c.task == self.tid)
         if fromid:
@@ -111,6 +144,9 @@ class Task(object):
 
     @property
     def metadata(self):
+        """get the metadata that was supplied to `api.schedule(...)` if any
+
+        """
         meta = self._propvalue('metadata')
         if meta is None:
             return {}
@@ -130,31 +166,55 @@ class Task(object):
 
     @property
     def input(self):
+        """provide the task input python object that was supplied to
+        `api.schedule(...)` if any
+
+        """
         val = self._propvalue('input')
         if val is not None:
             return loads(val)
 
     @property
     def raw_input(self):
+        """provide the task input that was supplied to `api.schedule(...)` if
+        any (either pickled python object or raw byte string)
+
+        """
         return self._propvalue('input')
 
     @property
     def output(self):
+        """provide the task output that was supplied to `task.save_output(...)`
+        if any
+
+        """
         out = self._propvalue('output')
         if out is not None:
             return loads(out)
 
     @property
     def raw_output(self):
+        """provide the task output that was supplied to `task.save_output(...)`
+        if any (either pickled python object or raw byte string)
+
+        """
         return self._propvalue('output')
 
     @property
     def traceback(self):
+        """get the traceback of a failed task (if any)
+
+        """
         return self._propvalue('traceback')
 
     @property
     def state(self):
-        " provide a comprehensive synthetic task state "
+        """provide a comprehensive synthetic task state
+
+        States can be any of `queued`, `running`, `done`, `failed`,
+        `aborting`, `aborted`
+
+        """
         status = self.status
         aborted = self.aborted
         if status != 'done':
@@ -194,7 +254,15 @@ class Task(object):
             self.finish()
 
     def join(self, target='done', timeout=0):
-        " synchronous wait on the task"
+        """synchronous wait on the task
+
+        It is possible to specify the `running` target if one only
+        wants to wait for the start of a task.
+
+        A `timeout` parameter can be given. If an actual timeout
+        occurs, then a `TimeOut` exception will be raised.
+
+        """
         assert target in ('running', 'done')
         assert timeout >= 0
         t0 = time.time()
@@ -213,6 +281,20 @@ class Task(object):
             )
 
     def abort(self):
+        """ask the abortion of the task
+
+        The effective abortion will be done by the responsible monitor
+        and is inherently asynchronous. To wait synchronously for an
+        abortion one can do as follows:
+
+        .. code-block:: python
+
+            t = api.schedule(engine, 'mytask', input=42)
+            t.join('running')
+            t.abort()
+            t.join()
+
+        """
         with self.engine.begin() as cn:
             # will still be marked as running
             # the worker kill must do the actual job

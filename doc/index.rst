@@ -207,10 +207,19 @@ After this, `list-workers` will provide an updated status:
    1 4124@10.211.55.3 43 Mb [dead] [2018-11-28 16:08:27.438491+01] → [2018-11-28 15:08:27.967432+01] → [2018-11-28 16:11:09.668587+01] monitor exit 
    2 4125@10.211.55.3 43 Mb [dead] [2018-11-28 16:08:27.442869+01] → [2018-11-28 15:08:27.967397+01] → [2018-11-28 16:11:09.668587+01] monitor exit 
 
+
+API documentation
+=================
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+.. automodule:: rework.api
+   :members: task, schedule
+
+.. autoclass:: rework.task.Task
+   :members: capturelogs, join, input, raw_input, save_output, abort, metadata
 
 
 Indices and tables

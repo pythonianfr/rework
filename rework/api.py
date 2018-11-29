@@ -13,6 +13,29 @@ from rework.task import __task_registry__, Task
 
 
 def task(*args, **kw):
+    """decorator to turn a python function into a rework operation
+    that will be executable as a task
+
+    There are two ways to use it:
+
+    .. code-block:: python
+
+        from rework import api
+
+        @api.task
+        def mytask(task):
+            pass
+
+        @api.task(domain='somedomain', timeout=timedelta(minutes=3))
+        def mytask(task):
+            pass
+
+    If you want to specify either a non-default domain or a timeout
+    parameter, the second notation (with keywords) must be used.
+
+    All operation functions must take a single `task` parameter.
+
+    """
     msg = "Use either @task or @task(domain='domain')"
     if args:
         assert callable(args[0]), msg
@@ -46,6 +69,25 @@ def schedule(engine,
              module=None,
              domain=None,
              metadata=None):
+    """schedule an operation to be run by a worker
+
+    It returns a `Task` object.
+    The operation name is the only mandatory parameter.
+
+    The `domain` can be specified to avoid an ambiguity if an
+    operation is defined within several domains.
+
+    An `inputdata` object can be given. It can be any picklable python
+    object. It will be available through `task.input`.
+
+    Alternatively `rawinputdata` can be provided. It must be a byte
+    string. It can be useful to transmit file contents and avoid the
+    pickling overhead. It will be available through `task.rawinput`.
+
+    Lastly, `metadata` can be provided as a json-serializable python
+    dictionary. It can contain anything.
+
+    """
     if metadata:
         assert isinstance(metadata, dict)
 
