@@ -1,7 +1,6 @@
 import os
 import time
 import subprocess as sub
-from datetime import datetime
 
 import tzlocal
 import pytz
@@ -226,7 +225,7 @@ class Monitor(object):
             for tid, start_time, timeout in cn.execute(sql).fetchall():
                 start_time = start_time.astimezone(pytz.utc)
                 delta = parse_delta(timeout)
-                now = datetime.utcnow().replace(tzinfo=pytz.utc)
+                now = utcnow()
                 if (now - start_time) > delta:
                     Task.byid(self.engine, tid).abort()
 
@@ -309,7 +308,7 @@ class Monitor(object):
 
                 mark_dead_workers(
                     cn, [wid],
-                    'preemptive kill at {}'.format(TZ.localize(datetime.utcnow()))
+                    'preemptive kill at {}'.format(utcnow().astimezone(TZ))
                 )
                 killed.append(wid)
         return killed
@@ -372,7 +371,7 @@ class Monitor(object):
             cn.execute(
                 monitor.update().where(
                     monitor.c.id == self.monid
-                ).values(lastseen=TZ.localize(datetime.utcnow()))
+                ).values(lastseen=utcnow().astimezone(TZ))
             )
 
     def unregister(self):

@@ -3,7 +3,6 @@ from __future__ import print_function
 
 import imp
 from time import sleep
-from datetime import datetime
 import tzlocal
 from pathlib import Path
 
@@ -14,7 +13,7 @@ from pkg_resources import iter_entry_points
 from sqlalchemy import create_engine
 
 from rework import schema, api
-from rework.helper import find_dburi
+from rework.helper import find_dburi, utcnow
 from rework.worker import run_worker
 from rework.task import Task
 from rework.monitor import Monitor
@@ -169,7 +168,7 @@ def list_monitors(dburi):
     init()
     engine = create_engine(find_dburi(dburi))
     sql = ('select id, domain, options, lastseen from rework.monitor')
-    now = TZ.localize(datetime.utcnow())
+    now = utcnow().astimezone(TZ)
     for mid, domain, options, lastseen in engine.execute(sql):
         color = Fore.GREEN
         delta = (now - lastseen).total_seconds()
@@ -329,7 +328,7 @@ def vacuum(dburi, workers=False, tasks=False, finished=None):
 
     engine = create_engine(find_dburi(dburi))
     if finished is None:
-        finished = datetime.utcnow()
+        finished = utcnow()
     if workers:
         with engine.begin() as cn:
             count = cn.execute(
