@@ -30,7 +30,7 @@ class DeprecatingGroup(click.Group):
                 '`deploy` is deprecated, please use `monitor` instead'
             )
             cmd_name = 'monitor'
-        return super().get_command(ctx, cmd_name)
+        return super(DeprecatingGroup, self).get_command(ctx, cmd_name)
 
 
 @click.command(cls=DeprecatingGroup)

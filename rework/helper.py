@@ -160,10 +160,12 @@ def find_dburi(something):
         cfg = reader(cfgpath)
         return cfg['dburi'][something]
     except Exception as exc:
-        raise Exception(
-            f'could not find the `{something}` entry in the '
-            f'[dburi] section of the `{cfgpath.resolve()}` '
-            f'conf file (cause: {exc.__class__.__name__} -> {exc})'
+        raise Exception((
+            'could not find the `{}` entry in the '
+            '[dburi] section of the `{}` '
+            'conf file (cause: {} -> {})').format(
+                something, cfgpath.resolve(),
+                exc.__class__.__name__, exc)
         )
 
 
