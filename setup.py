@@ -15,7 +15,8 @@ setup(name='rework',
           'psycopg2',
           'pystuck',
           'click',
-          'tzlocal == 1.5.1'
+          'tzlocal == 1.5.1',
+          'inireader'
       ],
       extra_require=[
           'pytest',
