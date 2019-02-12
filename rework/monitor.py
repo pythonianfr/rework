@@ -9,6 +9,7 @@ import psutil
 from sqlalchemy import select, not_, bindparam
 
 from rework.helper import (
+    cpu_usage,
     guard,
     host,
     kill_process_tree,
@@ -194,17 +195,21 @@ class Monitor(object):
                 stats.deleted.append(wid)
         return stats
 
-    def track_memory(self):
+    def track_resources(self):
         if not self.workers:
             return
         sql = worker.update().where(
                 worker.c.id == bindparam('wid')
         ).values({
-            'mem': bindparam('mem')
+            'mem': bindparam('mem'),
+            'cpu': bindparam('cpu')
         })
         with self.engine.begin() as cn:
             cn.execute(sql, [
-                {'wid': wid, 'mem': memory_usage(proc.pid)}
+                {'wid': wid,
+                 'mem': memory_usage(proc.pid),
+                 'cpu': cpu_usage(proc.pid)
+                }
                 for wid, proc in self.workers.items()
             ])
 
@@ -233,8 +238,8 @@ class Monitor(object):
         # rid self.workers of dead things
         stats = self._cleanup_workers()
 
-        # update mem stats
-        self.track_memory()
+        # update mem/cpu stats
+        self.track_resources()
 
         # reduce by one the worker pool if possible
         shuttingdown = self.shrink_workers()

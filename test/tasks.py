@@ -31,6 +31,9 @@ def raw_input(task):
 @api.task
 def infinite_loop(task):
     while True:
+        if task.input:
+            # allow to eat a cpu
+            continue
         time.sleep(1)
 
 

@@ -275,11 +275,10 @@ def test_worker_max_mem(engine):
         assert engine.execute(
             'select mem from rework.worker where id = {}'.format(wid)
         ).scalar() == 0
-        mon.track_memory()
+        mon.track_resources()
         assert engine.execute(
             'select mem from rework.worker where id = {}'.format(wid)
         ).scalar() > 50
-
         t2 = api.schedule(engine, 'allocate_and_leak_mbytes', 100)
         t2.join()
         guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
@@ -291,7 +290,7 @@ def test_task_abortion(engine):
     with workers(engine) as mon:
         wid = mon.wids[0]
 
-        t = api.schedule(engine, 'infinite_loop')
+        t = api.schedule(engine, 'infinite_loop', True)
         guard(engine, 'select count(id) from rework.task where worker = {}'.format(wid),
               lambda res: res.scalar() == 1)
 
@@ -300,6 +299,13 @@ def test_task_abortion(engine):
         with pytest.raises(TimeOut) as err:
             t.join(timeout=.1)
         assert err.value.args[0] == t
+
+        # check cpu usage
+        mon.track_resources()
+        cpu = engine.execute(
+            'select cpu from rework.worker where id = {}'.format(wid)
+        ).scalar()
+        assert cpu > 0
 
         t.abort()
         assert t.aborted

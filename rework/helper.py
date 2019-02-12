@@ -24,6 +24,11 @@ def memory_usage(pid):
     return int(process.memory_info().rss / float(2 ** 20))
 
 
+def cpu_usage(pid):
+    process = psutil.Process(pid)
+    return process.cpu_percent(interval=0.02)
+
+
 def wait_true(func, timeout=6):
     outcome = []
 
