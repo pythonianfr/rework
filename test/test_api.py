@@ -1,5 +1,6 @@
 import pytest
 
+from rework.helper import host
 from rework import api
 
 
@@ -71,6 +72,7 @@ def test_schedule_domain(engine, cleanup):
 
     api.freeze_operations(engine, domain='test')
     api.freeze_operations(engine, domain='production')
+    api.freeze_operations(engine, domain='production', hostid='192.168.122.42')
 
     with pytest.raises(ValueError) as err:
         api.schedule(engine, 'foo')
@@ -78,7 +80,23 @@ def test_schedule_domain(engine, cleanup):
 
 
     api.schedule(engine, 'foo', domain='test')
+    # there two of them but .schedule will by default pick the one
+    # matching the *current* host
     api.schedule(engine, 'foo', domain='production')
+    api.schedule(engine, 'foo', domain='production', hostid='192.168.122.42')
+    api.schedule(engine, 'foo', domain='production', hostid=host())
+
+    hosts = [
+        host for host, in engine.execute(
+            'select host from rework.task as t, rework.operation as op '
+            'where t.operation = op.id'
+        ).fetchall()
+    ]
+    assert hosts.count(host()) == 3
+    assert hosts.count('192.168.122.42') == 1
+
+    with pytest.raises(Exception):
+        api.schedule(engine, 'foo', domain='production', hostid='172.16.0.1')
 
     with pytest.raises(Exception):
         api.schedule(engine, 'foo', domain='bogusdomain')

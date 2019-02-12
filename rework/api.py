@@ -94,12 +94,14 @@ def schedule(engine,
     if inputdata is not None:
         rawinputdata = dumps(inputdata, protocol=2)
 
-    if hostid is None:
-        hostid = host()
+    sql = select(
+        [operation.c.id]
+    ).where(
+        operation.c.name == opname
+    )
 
-    sql = select([operation.c.id]
-    ).where(operation.c.name == opname
-    ).where(operation.c.host == hostid)
+    if hostid is not None:
+        sql = sql.where(operation.c.host == hostid)
 
     if module is not None:
         sql = sql.where(operation.c.modname == module)
@@ -110,6 +112,16 @@ def schedule(engine,
     with engine.begin() as cn:
         opids = cn.execute(sql).fetchall()
         if len(opids) > 1:
+            if hostid is None:
+                return schedule(
+                    engine,
+                    opname,
+                    rawinputdata=rawinputdata,
+                    hostid=host(),
+                    module=module,
+                    domain=domain,
+                    metadata=metadata
+                )
             raise ValueError('Ambiguous operation selection')
         if not len(opids):
             raise Exception('No operation was found for these parameters')
@@ -126,9 +138,11 @@ def schedule(engine,
     return Task(engine, tid, opid)
 
 
-def freeze_operations(engine, domain=None, domain_map=None):
+def freeze_operations(engine, domain=None, domain_map=None,
+                      hostid=None):
     values = []
-    hostid = host()
+    if hostid is None:
+        hostid = host()
 
     if domain_map:
         domain = domain_map.get(domain, domain)
