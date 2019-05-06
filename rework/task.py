@@ -103,7 +103,6 @@ class Task(object):
         """
         pghdlr = PGLogHandler(self, sync)
         root = logging.getLogger()
-        assert not len(root.handlers)
         root.setLevel(level)
         root.addHandler(pghdlr)
         if std:
