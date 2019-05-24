@@ -25,8 +25,18 @@ def memory_usage(pid):
 
 
 def cpu_usage(pid):
-    process = psutil.Process(pid)
-    return process.cpu_percent(interval=0.02)
+    try:
+        proc = psutil.Process(pid)
+    except NoSuchProcess:
+        return 0
+    return _cpu_tree_usage(proc)
+
+
+def _cpu_tree_usage(proc):
+    cpu = proc.cpu_percent(interval=0.02)
+    for proc in proc.children():
+        cpu += _cpu_tree_usage(proc)
+    return cpu
 
 
 def wait_true(func, timeout=6):
