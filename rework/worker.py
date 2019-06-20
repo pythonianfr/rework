@@ -5,13 +5,14 @@ import traceback
 
 from sqlalchemy import create_engine, select
 
+from sqlhelp import select, update
+
 from rework.helper import (
     has_ancestor_pid,
     kill,
     memory_usage,
     utcnow
 )
-from rework.schema import worker
 from rework.task import Task
 
 
@@ -23,14 +24,11 @@ def running_sql(wid, running, debugport):
     if running:
         value['pid'] = os.getpid()
         value['started'] = utcnow()
-    return worker.update().where(
-        worker.c.id == wid).values(
-            **value
-    )
+    return update('rework.worker').where(id=wid).values(**value)
 
 
 def death_sql(wid, cause):
-    return worker.update().where(worker.c.id == wid).values(
+    return update('rework.worker').where(id=wid).values(
         deathinfo=cause,
         running=False,
         finished=utcnow()
@@ -43,7 +41,7 @@ def die_if_ancestor_died(engine, ppid, wid):
         # this is an ambiguous signal that we also must
         # go to bed.
         with engine.begin() as cn:
-            cn.execute(death_sql(wid, 'ancestor died'))
+            death_sql(wid, 'ancestor died').do(cn)
         raise SystemExit('Worker {} exiting.'.format(os.getpid()))
 
 
@@ -51,36 +49,34 @@ def die_if_ancestor_died(engine, ppid, wid):
 
 
 def ask_shutdown(engine, wid):
-    sql = worker.update().where(
-        worker.c.id == wid
-    ).values(
-        shutdown=True
-    )
     with engine.begin() as cn:
-        cn.execute(sql)
+        update('rework.worker').where(id=wid).values(
+            shutdown=True
+        ).do(cn)
 
 
 def shutdown_asked(engine, wid):
-    sql = select([worker.c.shutdown]).where(worker.c.id == wid)
-    return engine.execute(sql).scalar()
+    return select('shutdown').table('rework.worker').where(
+        id=wid
+    ).do(engine).scalar()
 
 
 def die_if_shutdown(engine, wid):
     if shutdown_asked(engine, wid):
         with engine.begin() as cn:
-            cn.execute(death_sql(wid, 'explicit shutdown'))
+            death_sql(wid, 'explicit shutdown').do(cn)
         raise SystemExit('Worker {} exiting.'.format(os.getpid()))
 
 
 @contextmanager
 def running_status(engine, wid, debug_port):
     with engine.begin() as cn:
-        cn.execute(running_sql(wid, True, debug_port or None))
+        running_sql(wid, True, debug_port or None).do(cn)
     try:
         yield
     finally:
         with engine.begin() as cn:
-            cn.execute(running_sql(wid, False, None))
+            running_sql(wid, False, None).do(cn)
 
 
 def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0,
@@ -97,10 +93,9 @@ def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0,
             _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain)
     except Exception:
         with engine.begin() as cn:
-            sql = worker.update().where(worker.c.id == worker_id).values(
+            update('rework.worker').where(id=worker_id).values(
                 traceback=traceback.format_exc()
-            )
-            cn.execute(sql)
+            ).do(cn)
         raise
     except SystemExit as exit:
         raise

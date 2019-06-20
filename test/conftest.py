@@ -24,10 +24,8 @@ def engine(request):
         'log_timezone': 'UTC'
     })
     e = create_engine('postgresql://localhost:{}/postgres'.format(PORT))
-    schema.reset(e)
-    schema.init(e)
+    schema.init(e, drop=True)
     api.freeze_operations(e)
-
     # help the `cleanup` fixture
     # (for some reason, working with a fresh engine therein won't work)
     global ENGINE

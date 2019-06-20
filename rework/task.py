@@ -6,9 +6,8 @@ import traceback as tb
 from contextlib import contextmanager
 import logging
 
-from sqlalchemy import select
+from sqlhelp import select, update
 
-from rework.schema import task, worker, log
 from rework.helper import PGLogHandler, PGLogWriter, utcnow
 
 
@@ -55,10 +54,14 @@ class Task(object):
                 return
 
             tid, opid = tid_operation
-            sql = task.update().where(task.c.id == tid).values(
+            update(
+                'rework.task'
+            ).where(
+                id=tid
+            ).values(
                 status='running',
-                worker=wid)
-            cn.execute(sql)
+                worker=wid
+            ).do(cn)
 
             return cls(engine, tid, opid)
 
@@ -83,11 +86,14 @@ class Task(object):
         """
         if not raw:
             data = dumps(data, protocol=2)
-        sql = task.update().where(task.c.id == self.tid).values(
-            output=data
-        )
         with self.engine.begin() as cn:
-            cn.execute(sql)
+            update(
+                'rework.task'
+            ).where(
+                id=self.tid
+            ).values(
+                output=data
+            ).do(cn)
 
     @contextmanager
     def capturelogs(self, sync=False, level=logging.NOTSET, std=False):
@@ -129,17 +135,20 @@ class Task(object):
         id.
 
         """
-        sql = select([log.c.id, log.c.line]).order_by(log.c.id
-        ).where(log.c.task == self.tid)
+        q = select('id', 'line').table('rework.log').where(
+            task=self.tid
+        )
         if fromid:
-            sql = sql.where(log.c.id > fromid)
+            q.where('id > %(fromid)s', fromid=fromid)
 
+        q.order('id')
         with self.engine.begin() as cn:
-            return cn.execute(sql).fetchall()
+            return q.do(cn).fetchall()
 
     def _propvalue(self, prop):
-        sql = select([task.c[prop]]).where(task.c.id == self.tid)
-        return self.engine.execute(sql).scalar()
+        return select(prop).table('rework.task').where(
+            id=self.tid
+        ).do(self.engine).scalar()
 
     @property
     def metadata(self):
@@ -171,7 +180,10 @@ class Task(object):
         """
         val = self._propvalue('input')
         if val is not None:
-            return loads(val)
+            try:
+                return loads(val)
+            except:
+                raise TypeError('cannot unpickle the raw bytes')
 
     @property
     def raw_input(self):
@@ -179,7 +191,9 @@ class Task(object):
         any (either pickled python object or raw byte string)
 
         """
-        return self._propvalue('input')
+        val = self._propvalue('input')
+        if val is not None:
+            return bytes(val)
 
     @property
     def output(self):
@@ -189,7 +203,10 @@ class Task(object):
         """
         out = self._propvalue('output')
         if out is not None:
-            return loads(out)
+            try:
+                return loads(out)
+            except:
+                raise TypeError('cannot unpickle the raw bytes')
 
     @property
     def raw_output(self):
@@ -197,7 +214,9 @@ class Task(object):
         if any (either pickled python object or raw byte string)
 
         """
-        return self._propvalue('output')
+        val = self._propvalue('output')
+        if val is not None:
+            return bytes(val)
 
     @property
     def traceback(self):
@@ -228,11 +247,13 @@ class Task(object):
 
     def run(self):
         with self.engine.begin() as cn:
-            cn.execute(
-                task.update().where(task.c.id == self.tid).values(
-                    started=utcnow()
-                )
-            )
+            update(
+                'rework.task'
+            ).where(
+                id=self.tid
+            ).values(
+                started=utcnow()
+            ).do(cn)
         try:
             name, path = self.engine.execute("""
                 select name, path
@@ -244,11 +265,14 @@ class Task(object):
             func = getattr(mod, name)
             func(self)
         except:
-            sql = task.update().where(task.c.id == self.tid).values(
-                traceback=tb.format_exc()
-            )
             with self.engine.begin() as cn:
-                cn.execute(sql)
+                update(
+                    'rework.task'
+                ).where(
+                    id=self.tid
+                ).values(
+                    traceback=tb.format_exc()
+                ).do(cn)
         finally:
             self.finish()
 
@@ -274,10 +298,14 @@ class Task(object):
 
     def finish(self):
         with self.engine.begin() as cn:
-            cn.execute(task.update().where(task.c.id == self.tid).values(
+            update(
+                'rework.task'
+            ).where(
+                id=self.tid
+            ).values(
                 finished=utcnow(),
-                status='done')
-            )
+                status='done'
+            ).do(cn)
 
     def abort(self):
         """ask the abortion of the task
@@ -297,14 +325,16 @@ class Task(object):
         with self.engine.begin() as cn:
             # will still be marked as running
             # the worker kill must do the actual job
-            cn.execute(
-                task.update().where(task.c.id == self.tid).values(
-                    abort=True
-                )
-            )
-            cn.execute(
-                worker.update().where(worker.c.id == task.c.worker
-                ).where(task.c.id == self.tid
-                ).values(kill=True)
-            )
+            update('rework.task').where(id=self.tid).values(
+                abort=True
+            ).do(cn)
+
+            update(
+                'rework.worker as worker').table('rework.task as task'
+            ).where(
+                'worker.id = task.worker',
+                'task.id = %(id)s', id=self.tid
+            ).values(
+                kill=True
+            ).do(cn)
 

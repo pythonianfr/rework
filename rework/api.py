@@ -1,14 +1,16 @@
 import sys
 from pickle import dumps
 from datetime import timedelta
+import json
 
 from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from sqlhelp import select, insert
+
 from rework.helper import host, delta_isoformat
-from rework.schema import task as taskentity, operation
 from rework.task import __task_registry__, Task
 
 
@@ -94,23 +96,21 @@ def schedule(engine,
     if inputdata is not None:
         rawinputdata = dumps(inputdata, protocol=2)
 
-    sql = select(
-        [operation.c.id]
-    ).where(
-        operation.c.name == opname
+    q = select('id').table('rework.operation').where(
+        name=opname
     )
 
     if hostid is not None:
-        sql = sql.where(operation.c.host == hostid)
+        q.where(host=hostid)
 
     if module is not None:
-        sql = sql.where(operation.c.modname == module)
+        q.where(modname=module)
 
     if domain is not None:
-        sql = sql.where(operation.c.domain == domain)
+        q.where(domain=domain)
 
     with engine.begin() as cn:
-        opids = cn.execute(sql).fetchall()
+        opids = q.do(cn).fetchall()
         if len(opids) > 1:
             if hostid is None:
                 return schedule(
@@ -126,14 +126,15 @@ def schedule(engine,
         if not len(opids):
             raise Exception('No operation was found for these parameters')
         opid = opids[0][0]
-        sql = taskentity.insert()
-        value = {
-            'operation': opid,
-            'input': rawinputdata,
-            'status': 'queued',
-            'metadata': metadata
-        }
-        tid = cn.execute(sql, **value).inserted_primary_key[0]
+        q = insert(
+            'rework.task'
+        ).values(
+            operation=opid,
+            input=rawinputdata,
+            status='queued',
+            metadata=json.dumps(metadata)
+        )
+        tid = q.do(cn).scalar()
 
     return Task(engine, tid, opid)
 
@@ -169,13 +170,17 @@ def freeze_operations(engine, domain=None, domain_map=None,
             'timeout': timeout
         })
 
-    sql = operation.insert()
     recorded = []
     alreadyknown = []
     for value in values:
         with engine.begin() as cn:
             try:
-                cn.execute(sql, value)
+                q = insert(
+                    'rework.operation'
+                ).values(
+                    **value
+                )
+                q.do(cn)
                 recorded.append(value)
             except IntegrityError:
                 alreadyknown.append(value)

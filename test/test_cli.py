@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 
 import pytest
+from sqlhelp import insert
 from rework import api
 from rework.testutils import scrub, workers
 from rework.helper import guard, wait_true
@@ -122,10 +123,13 @@ def test_list_workers(engine, cli):
             '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
         )== scrub(r.output)
 
-    from rework import schema
-    sql = schema.worker.insert().values(host='12345', domain='default')
     with engine.begin() as cn:
-        cn.execute(sql)
+        insert(
+            'rework.worker'
+        ).values(
+            host='12345',
+            domain='default'
+        ).do(cn)
 
     r = cli('list-workers', engine.url)
     assert (

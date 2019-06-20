@@ -12,8 +12,6 @@ import psutil
 from sqlalchemy.engine import url
 from inireader import reader
 
-from rework.schema import log
-
 
 def utcnow():
     return datetime.utcnow().replace(tzinfo=pytz.utc)
@@ -220,9 +218,11 @@ class PGLogHandler(logging.Handler):
         self.lastflush = time.time()
 
         def writeback_log(values, engine):
-            sql = log.insert().values(values)
             with engine.begin() as cn:
-                cn.execute(sql)
+                sql = ('insert into rework.log '
+                       '(task, tstamp, line) '
+                       'values (%(task)s, %(tstamp)s, %(line)s)')
+                cn.execute(sql, values)
 
         th = Thread(target=writeback_log,
                     args=(values, self.task.engine))

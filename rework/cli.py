@@ -11,8 +11,9 @@ from colorama import init, Fore, Style
 from pkg_resources import iter_entry_points
 
 from sqlalchemy import create_engine
+from sqlhelp import update
 
-from rework import schema, api
+from rework import api
 from rework.helper import find_dburi, utcnow
 from rework.worker import run_worker
 from rework.task import Task
@@ -44,8 +45,7 @@ def rework():
 def init_db(ctx, dburi):
     " initialize a postgres database with everything needed "
     engine = create_engine(find_dburi(dburi))
-    schema.reset(engine)
-    schema.init(engine)
+    schema.init(engine, drop=True)
 
 
 @rework.command(name='register-operations')
@@ -195,10 +195,9 @@ def shutdown_worker(dburi, worker_id):
     """
     engine = create_engine(find_dburi(dburi))
     with engine.begin() as cn:
-        worker = schema.worker
-        cn.execute(worker.update().where(
-            worker.c.id == worker_id
-        ).values(shutdown=True))
+        update('rework.worker').where(id=worker_id).values(
+            shutdown=True
+        ).do(cn)
 
 
 @rework.command(name='kill-worker')
@@ -212,10 +211,9 @@ def kill_worker(dburi, worker_id):
     """
     engine = create_engine(find_dburi(dburi))
     with engine.begin() as cn:
-        worker = schema.worker
-        cn.execute(worker.update().where(
-            worker.c.id == worker_id
-        ).values(kill=True))
+        update('rework.worker').where(id=worker_id).values(
+            kill=True
+        ).do(cn)
 
 
 status_color = {

@@ -4,9 +4,9 @@ import threading
 import time
 
 import pytest
+from sqlhelp import insert, update
 
 from rework import api
-from rework.schema import worker
 from rework.monitor import Monitor
 from rework.task import Task, TimeOut
 from rework.worker import running_status, shutdown_asked
@@ -61,6 +61,29 @@ def test_basic_task_operations(engine):
     with pytest.raises(Exception) as err:
         api.schedule(engine, 'no_such_task')
     assert err.value.args[0] == 'No operation was found for these parameters'
+
+
+def test_task_input_output(engine):
+    with workers(engine) as mon:
+        t = api.schedule(engine, 'raw_input', rawinputdata=b'Hello Babar')
+        t.join()
+
+        with pytest.raises(TypeError):
+            t.input
+        ri = t.raw_input
+        with pytest.raises(TypeError):
+            t.output
+        ro = t.raw_output
+        assert ri == b'Hello Babar'
+        assert ro == b'Hello Babar and Celeste'
+
+        t = api.schedule(engine, 'unstopable_death')
+        wait_true(mon.reap_dead_workers)
+
+        assert t.input is None
+        assert t.raw_input is None
+        assert t.output is None
+        assert t.raw_output is None
 
 
 def test_basic_worker_operations(engine):
@@ -191,11 +214,9 @@ def test_worker_shutdown(engine):
         assert not shutdown_asked(engine, wid)
 
         with engine.begin() as cn:
-            cn.execute(
-                worker.update().where(worker.c.id == wid).values(
-                    shutdown=True
-                )
-            )
+            update('rework.worker').where(id=wid).values(
+                shutdown=True
+            ).do(cn)
         assert shutdown_asked(engine, wid)
         guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
               lambda r: r.scalar() == True)
@@ -213,11 +234,9 @@ def test_worker_kill(engine):
         wid = mon.wids[0]
 
         with engine.begin() as cn:
-            cn.execute(
-                worker.update().where(worker.c.id == wid).values(
-                    kill=True
-                )
-            )
+            update('rework.worker').where(id=wid).values(
+                kill=True
+            ).do(cn)
         guard(engine, 'select kill from rework.worker where id = {}'.format(wid),
               lambda r: r.scalar() == True)
 
@@ -461,12 +480,10 @@ def test_cleanup_unstarted(engine):
     mon.ensure_workers()
 
     with engine.begin() as cn:
-        cn.execute(
-            worker.insert().values(
-                host='127.0.0.1',
-                domain='default'
-            )
-        )  # unborn worker
+        insert('rework.worker').values(
+            host='127.0.0.1',
+            domain='default'
+        ).do(cn)  # unborn worker
 
     nworkers = engine.execute('select count(*) from rework.worker').scalar()
     assert nworkers == 2
@@ -494,12 +511,10 @@ def test_more_unstarted(engine):
         assert nworkers == 1
 
         with engine.begin() as cn:
-            cn.execute(
-                worker.insert().values(
-                    host='127.0.0.1',
-                    domain='default'
-                )
-            )  # unborn worker
+            insert('rework.worker').values(
+                host='127.0.0.1',
+                domain='default'
+            ).do(cn)  # unborn worker
 
         nworkers = engine.execute('select count(*) from rework.worker').scalar()
         assert nworkers == 2

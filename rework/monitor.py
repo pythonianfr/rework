@@ -1,12 +1,13 @@
 import os
 import time
 import subprocess as sub
+import json
 
 import tzlocal
 import pytz
 import psutil
 
-from sqlalchemy import select, not_, bindparam
+from sqlhelp import select, insert, update
 
 from rework.helper import (
     cpu_usage,
@@ -18,7 +19,6 @@ from rework.helper import (
     utcnow
 )
 from rework.task import Task
-from rework.schema import worker, task, monitor
 
 
 TZ = tzlocal.get_localzone()
@@ -30,23 +30,27 @@ except AttributeError:
 
 
 def mark_dead_workers(cn, wids, message):
+    if not wids:
+        return
     # mark workers as dead
-    cn.execute(
-        worker.update().values(
-            running=False,
-            finished=utcnow(),
-            deathinfo=message
-        ).where(worker.c.id.in_(wids))
-    )
+    update('rework.worker').where('id in %(ids)s', ids=tuple(wids)).values(
+        running=False,
+        finished=utcnow(),
+        deathinfo=message
+    ).do(cn)
     # mark tasks as done
-    cn.execute(
-        task.update().values(
-            finished=utcnow(),
-            status='done'
-        ).where(worker.c.id == task.c.worker
-        ).where(worker.c.id.in_(wids)
-        ).where(task.c.status != 'done')
-    )
+    update(
+        'rework.task as task'
+    ).table('rework.worker as worker'
+    ).where(
+        "task.status != 'done'",
+        'worker.id = task.worker',
+        'worker.id in %(ids)s',
+        ids=tuple(wids),
+    ).values(
+        finished=utcnow(),
+        status='done'
+    ).do(cn)
 
 
 def clip(val, low, high):
@@ -112,12 +116,13 @@ class Monitor(object):
 
     def new_worker(self):
         with self.engine.begin() as cn:
-            return cn.execute(
-                worker.insert().values(
-                    host=host(),
-                    domain=self.domain
-                )
-            ).inserted_primary_key[0]
+            q = insert(
+                'rework.worker'
+            ).values(
+                host=host(),
+                domain=self.domain
+            )
+            return q.do(cn).scalar()
 
     @property
     def num_workers(self):
@@ -151,23 +156,31 @@ class Monitor(object):
     def busy_workers(self, cn):
         if not self.workers:
             return []
+        q = select('worker.id').table(
+                'rework.worker as worker'
+            ).join(
+                'rework.task as task on (worker.id = task.worker)'
+            ).where(
+                'worker.id in %(ids)s', ids=tuple(self.wids)
+            ).where(
+                "task.status != 'done'"
+            )
         return [
             row.id for row in
-            cn.execute(
-                select([worker.c.id]
-                ).where(worker.c.id.in_(self.wids)
-                ).where(task.c.worker == worker.c.id
-                ).where(task.c.status != 'done')
-            ).fetchall()
+            q.do(cn).fetchall()
         ]
 
     def idle_worker(self, cn, busylist=()):
-        sql = select([worker.c.id]).where(worker.c.id.in_(self.wids))
+        q = select(
+            'id'
+        ).table('rework.worker'
+        ).where('id in %(ids)s', ids=tuple(self.wids))
+
         if busylist:
-            sql = sql.where(not_(worker.c.id.in_(busylist)))
-        sql = sql.where(worker.c.shutdown == False)
-        sql = sql.limit(1)
-        return cn.execute(sql).scalar()
+            q.where('not id in %(nid)s', nid=tuple(busylist))
+        q.where(shutdown=False)
+        q.limit(1)
+        return q.do(cn).scalar()
 
     def shrink_workers(self):
         with self.engine.begin() as cn:
@@ -180,10 +193,9 @@ class Monitor(object):
             if not needed and idle > self.minworkers:
                 candidate = self.idle_worker(cn, busy)
                 # we now have a case to at least retire one
-                sql = worker.update().where(
-                    worker.c.id == candidate
-                ).values(shutdown=True)
-                cn.execute(sql)
+                update('rework.worker').where(id=candidate).values(
+                    shutdown=True
+                ).do(cn)
                 return candidate
 
     def _cleanup_workers(self):
@@ -198,20 +210,13 @@ class Monitor(object):
     def track_resources(self):
         if not self.workers:
             return
-        sql = worker.update().where(
-                worker.c.id == bindparam('wid')
-        ).values({
-            'mem': bindparam('mem'),
-            'cpu': bindparam('cpu')
-        })
-        with self.engine.begin() as cn:
-            cn.execute(sql, [
-                {'wid': wid,
-                 'mem': memory_usage(proc.pid),
-                 'cpu': cpu_usage(proc.pid)
-                }
-                for wid, proc in self.workers.items()
-            ])
+        for wid, proc in self.workers.items():
+            q = update('rework.worker').where(id=wid).values(
+                mem=memory_usage(proc.pid),
+                cpu=cpu_usage(proc.pid)
+            )
+            with self.engine.begin() as cn:
+                q.do(cn)
 
     def track_timeouts(self):
         if not self.workers:
@@ -298,13 +303,17 @@ class Monitor(object):
         self.workers = {}
 
     def preemptive_kill(self):
-        sql = select(
-            [worker.c.id]).where(worker.c.kill == True
-            ).where(worker.c.running == True
-            ).where(worker.c.id.in_(self.wids))
+        if not self.wids:
+            return
+        q = select('id' ).table('rework.worker').where(
+            'kill = true',
+            'running = true'
+        ).where(
+            'id in %(ids)s', ids=tuple(self.wids)
+        )
         killed = []
         with self.engine.begin() as cn:
-            for row in cn.execute(sql).fetchall():
+            for row in q.do(cn).fetchall():
                 wid = row.id
                 proc = self.workers.pop(wid)
                 if not kill_process_tree(proc.pid):
@@ -359,31 +368,32 @@ class Monitor(object):
         with self.engine.begin() as cn:
             cn.execute('delete from rework.monitor where domain = %(domain)s',
                        domain=self.domain)
-            self.monid = cn.execute(
-                monitor.insert().values(
-                    domain=self.domain,
-                    options={
-                        'maxworkers': self.maxworkers,
-                        'minworkers': self.minworkers,
-                        'maxruns': self.maxruns,
-                        'maxmem': self.maxmem,
-                        'debugport': self.debugport
-                    })
-            ).inserted_primary_key[0]
+            q = insert(
+                'rework.monitor'
+            ).values(
+                domain=self.domain,
+                options=json.dumps({
+                    'maxworkers': self.maxworkers,
+                    'minworkers': self.minworkers,
+                    'maxruns': self.maxruns,
+                    'maxmem': self.maxmem,
+                    'debugport': self.debugport
+                })
+            )
+            self.monid = q.do(cn).scalar()
 
     def dead_man_switch(self):
         with self.engine.begin() as cn:
-            cn.execute(
-                monitor.update().where(
-                    monitor.c.id == self.monid
-                ).values(lastseen=utcnow().astimezone(TZ))
-            )
+            update('rework.monitor').where(id=self.monid).values(
+                lastseen=utcnow().astimezone(TZ)
+            ).do(cn)
 
     def unregister(self):
         assert self.monid
         with self.engine.begin() as cn:
             cn.execute(
-                monitor.delete().where(monitor.c.id == self.monid)
+                'delete from rework.monitor where id = %(id)s',
+                id=self.monid
             )
 
     def run(self):
