@@ -550,7 +550,7 @@ def test_timeout(engine):
         t3 = api.schedule(engine, 'infinite_loop_long_timeout')
         t1.join('running')
         t2.join('running')
-        t2.join('running')
+        t3.join('running')
 
         time.sleep(1)  # make sure we're going to time out
         mon.track_timeouts()
