@@ -14,7 +14,12 @@ from sqlalchemy import create_engine
 from sqlhelp import update
 
 from rework import api
-from rework.helper import find_dburi, utcnow
+from rework.helper import (
+    cleanup_tasks,
+    cleanup_workers,
+    find_dburi,
+    utcnow
+)
 from rework.worker import run_worker
 from rework.task import Task
 from rework.monitor import Monitor
@@ -328,30 +333,12 @@ def vacuum(dburi, workers=False, tasks=False, finished=None):
     if finished is None:
         finished = utcnow()
     if workers:
-        with engine.begin() as cn:
-            count = cn.execute(
-                'with deleted as '
-                '(delete from rework.worker '
-                '        where running = false and '
-                '              finished < %(finished)s '
-                ' returning 1) '
-                'select count(*) from deleted',
-                finished=finished
-            ).scalar()
-            print('deleted {} workers'.format(count))
+        count = cleanup_workers(engine, finished)
+        print('deleted {} workers'.format(count))
 
     if tasks:
-        with engine.begin() as cn:
-            count = cn.execute(
-                'with deleted as '
-                '(delete from rework.task '
-                '        where status = \'done\' and '
-                '              finished < %(finished)s '
-                ' returning 1) '
-                'select count(*) from deleted',
-                finished=finished
-            ).scalar()
-            print('deleted {} tasks'.format(count))
+        count = cleanup_tasks(engine, finished)
+        print('deleted {} tasks'.format(count))
 
 
 for ep in iter_entry_points('rework.subcommands'):

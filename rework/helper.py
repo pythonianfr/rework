@@ -74,6 +74,36 @@ def host():
     return s.getsockname()[0]
 
 
+# db cleanup
+
+def cleanup_workers(engine, finished):
+    with engine.begin() as cn:
+        count = cn.execute(
+            'with deleted as '
+            '(delete from rework.worker '
+            '        where running = false and '
+            '              finished < %(finished)s '
+            ' returning 1) '
+            'select count(*) from deleted',
+            finished=finished
+        ).scalar()
+    return count
+
+
+def cleanup_tasks(engine, finished):
+    with engine.begin() as cn:
+        count = cn.execute(
+            'with deleted as '
+            '(delete from rework.task '
+            '        where status = \'done\' and '
+            '              finished < %(finished)s '
+            ' returning 1) '
+            'select count(*) from deleted',
+            finished=finished
+        ).scalar()
+    return count
+
+
 # process handling
 
 def kill(pid, timeout=3):
