@@ -19,6 +19,9 @@ setup(name='rework',
           'tzlocal == 1.5.1',
           'inireader'
       ],
+      package_data={'rework': [
+          'schema.sql'
+      ]},
       extra_require=[
           'pytest',
           'pytest_sa_pg'
