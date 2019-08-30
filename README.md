@@ -4,8 +4,6 @@ REWORK
 This is a python task scheduling and execution tool, which needs only
 python and Postgres to work (using sqlalchemy).
 
-[TOC]
-
 
 # Principles
 
