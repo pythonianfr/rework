@@ -96,7 +96,7 @@ On another terminal, one needs to *start* the workers that will
 execute the tasks. Do as follows:
 
 ```shell
-rework deploy postgres://babar:password@localhost:5432/jobstore
+rework monitor postgres://babar:password@localhost:5432/jobstore
 ```
 
 Then, the script will quickly terminate, as both tasks have been
@@ -200,7 +200,7 @@ The task object provides:
 ## Operations
 
 If you read the previous chapter, you already know the `init-db` and
-`deploy` commands.
+`monitor` commands.
 
 The `rework` command, if typed without subcommand, shows its usage:
 
@@ -213,7 +213,7 @@ Options:
 
 Commands:
   abort-task
-  deploy
+  monitor
   init-db
   kill-worker
   list-operations
