@@ -20,7 +20,7 @@ from rework.helper import (
     find_dburi,
     utcnow
 )
-from rework.worker import run_worker
+from rework.worker import Worker
 from rework.task import Task
 from rework.monitor import Monitor
 
@@ -87,7 +87,8 @@ def register_operations(dburi, module, domain=None, asdomain=None):
 @click.option('--debug-port', type=int, default=0)
 def new_worker(**config):
     " spawn a new worker -- this is a purely *internal* command "
-    run_worker(**config)
+    worker = Worker(**config)
+    worker.run()
 
 
 @rework.command()

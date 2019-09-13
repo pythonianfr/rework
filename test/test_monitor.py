@@ -9,7 +9,7 @@ from sqlhelp import insert, update
 from rework import api
 from rework.monitor import Monitor
 from rework.task import Task, TimeOut
-from rework.worker import running_status, shutdown_asked
+from rework.worker import Worker
 from rework.helper import (
     cpu_usage,
     delta_isoformat,
@@ -104,8 +104,9 @@ def test_task_input_output(engine):
 def test_basic_worker_operations(engine):
     mon = Monitor(engine)
     wid = mon.new_worker()
+    worker = Worker(engine.url, wid)
 
-    with running_status(engine, wid, None):
+    with worker.running_status():
         assert engine.execute(
             'select count(id) from rework.worker where running = true'
         ).scalar() == 1
@@ -226,13 +227,14 @@ def test_task_rawinput(engine):
 def test_worker_shutdown(engine):
     with workers(engine) as mon:
         wid = mon.wids[0]
-        assert not shutdown_asked(engine, wid)
+        worker = Worker(engine.url, wid)
+        assert not worker.shutdown_asked()
 
         with engine.begin() as cn:
             update('rework.worker').where(id=wid).values(
                 shutdown=True
             ).do(cn)
-        assert shutdown_asked(engine, wid)
+        assert worker.shutdown_asked()
         guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
               lambda r: r.scalar() == True)
 
@@ -273,7 +275,8 @@ def test_worker_max_runs(engine):
         t.join()
 
         assert t.output == 'aa'
-        assert not shutdown_asked(engine, wid)
+        worker = Worker(engine.url, wid)
+        assert not worker.shutdown_asked()
 
         t = api.schedule(engine, 'print_sleep_and_go_away', 'a')
         t.join()
@@ -317,7 +320,8 @@ def test_worker_max_mem(engine):
         t2.join()
         guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
               lambda r: r.scalar() == True)
-        assert shutdown_asked(engine, wid)
+        worker = Worker(engine.url, wid)
+        assert worker.shutdown_asked()
 
 
 def test_task_abortion(engine):

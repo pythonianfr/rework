@@ -3,6 +3,7 @@ import os
 from contextlib import contextmanager
 import traceback
 
+import pystuck
 from sqlalchemy import create_engine, select
 
 from sqlhelp import select, update
@@ -16,115 +17,113 @@ from rework.helper import (
 from rework.task import Task
 
 
-def running_sql(wid, running, debugport):
-    value = {
-        'running': running,
-        'debugport': debugport
-    }
-    if running:
-        value['pid'] = os.getpid()
-        value['started'] = utcnow()
-    return update('rework.worker').where(id=wid).values(**value)
+class Worker:
 
+    def __init__(self, dburi, worker_id, ppid=None,
+                 maxruns=0, maxmem=0,
+                 domain='default', debug_port=0):
+        self.wid = int(worker_id)
+        self.ppid = ppid
+        self.maxruns = maxruns
+        self.maxmem = maxmem
+        self.domain = domain
+        self.debugport = debug_port
+        self.engine = create_engine(dburi)
 
-def death_sql(wid, cause):
-    return update('rework.worker').where(id=wid).values(
-        deathinfo=cause,
-        running=False,
-        finished=utcnow()
-    )
+    def running_sql(self, running):
+        value = {
+            'running': running,
+            'debugport': self.debugport or None
+        }
+        if running:
+            value['pid'] = os.getpid()
+            value['started'] = utcnow()
+        return update('rework.worker').where(id=self.wid).values(**value)
 
+    def death_sql(self, cause):
+        return update('rework.worker').where(id=self.wid).values(
+            deathinfo=cause,
+            running=False,
+            finished=utcnow()
+        )
 
-def die_if_ancestor_died(engine, ppid, wid):
-    if not has_ancestor_pid(ppid):
-        # Our ancestor does not exist any more
-        # this is an ambiguous signal that we also must
-        # go to bed.
-        with engine.begin() as cn:
-            death_sql(wid, 'ancestor died').do(cn)
-        raise SystemExit('Worker {} exiting.'.format(os.getpid()))
+    def die_if_ancestor_died(self):
+        if not self.ppid:
+            return
+        if not has_ancestor_pid(self.ppid):
+            # Our ancestor does not exist any more
+            # this is an ambiguous signal that we also must
+            # go to bed.
+            with self.engine.begin() as cn:
+                self.death_sql('ancestor died').do(cn)
+            raise SystemExit('Worker {} exiting.'.format(os.getpid()))
 
-
-# Worker shutdown
-
-
-def ask_shutdown(engine, wid):
-    with engine.begin() as cn:
-        update('rework.worker').where(id=wid).values(
-            shutdown=True
-        ).do(cn)
-
-
-def shutdown_asked(engine, wid):
-    return select('shutdown').table('rework.worker').where(
-        id=wid
-    ).do(engine).scalar()
-
-
-def die_if_shutdown(engine, wid):
-    if shutdown_asked(engine, wid):
-        with engine.begin() as cn:
-            death_sql(wid, 'explicit shutdown').do(cn)
-        raise SystemExit('Worker {} exiting.'.format(os.getpid()))
-
-
-@contextmanager
-def running_status(engine, wid, debug_port):
-    with engine.begin() as cn:
-        running_sql(wid, True, debug_port or None).do(cn)
-    try:
-        yield
-    finally:
-        with engine.begin() as cn:
-            running_sql(wid, False, None).do(cn)
-
-
-def run_worker(dburi, worker_id, ppid, maxruns=0, maxmem=0,
-               domain='default', debug_port=0):
-    worker_id = int(worker_id)
-    if debug_port:
-        import pystuck
-        pystuck.run_server(port=debug_port)
-
-    engine = create_engine(dburi)
-
-    try:
-        with running_status(engine, worker_id, debug_port):
-            _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain)
-    except Exception:
-        with engine.begin() as cn:
-            update('rework.worker').where(id=worker_id).values(
-                traceback=traceback.format_exc()
+    def ask_shutdown(self):
+        with self.engine.begin() as cn:
+            update('rework.worker').where(id=self.wid).values(
+                shutdown=True
             ).do(cn)
-        raise
-    except SystemExit as exit:
-        raise
 
+    def shutdown_asked(self):
+        return select('shutdown').table('rework.worker').where(
+            id=self.wid
+        ).do(self.engine).scalar()
 
-def heartbeat(engine, worker_id, ppid, maxmem):
-    die_if_ancestor_died(engine, ppid, worker_id)
+    def die_if_shutdown(self):
+        if self.shutdown_asked():
+            with self.engine.begin() as cn:
+                self.death_sql('explicit shutdown').do(cn)
+            raise SystemExit('Worker {} exiting.'.format(os.getpid()))
 
-    mem = memory_usage(os.getpid())
-    if (maxmem and mem > maxmem):
-        ask_shutdown(engine, worker_id)
+    @contextmanager
+    def running_status(self):
+        with self.engine.begin() as cn:
+            self.running_sql(True).do(cn)
+        try:
+            yield
+        finally:
+            with self.engine.begin() as cn:
+                self.running_sql(False).do(cn)
 
-    die_if_shutdown(engine, worker_id)
+    def run(self):
+        if self.debugport:
+            pystuck.run_server(port=self.debugport)
 
+        try:
+            with self.running_status():
+                self.main_loop()
+        except Exception:
+            with self.engine.begin() as cn:
+                update('rework.worker').where(id=self.wid).values(
+                    traceback=traceback.format_exc()
+                ).do(cn)
+            raise
+        except SystemExit as exit:
+            raise
 
-def _main_loop(engine, worker_id, ppid, maxruns, maxmem, domain):
-    runs = 0
-    while True:
-        heartbeat(engine, worker_id, ppid, maxmem)
-        task = Task.fromqueue(engine, worker_id, domain)
-        while task:
-            task.run()
+    def heartbeat(self):
+        self.die_if_ancestor_died()
 
-            # run count
-            runs += 1
-            if maxruns and runs >= maxruns:
-                return
+        mem = memory_usage(os.getpid())
+        if (self.maxmem and mem > self.maxmem):
+            self.ask_shutdown()
 
-            heartbeat(engine, worker_id, ppid, maxmem)
-            task = Task.fromqueue(engine, worker_id, domain)
+        self.die_if_shutdown()
 
-        time.sleep(1)
+    def main_loop(self):
+        runs = 0
+        while True:
+            self.heartbeat()
+            task = Task.fromqueue(self.engine, self.wid, self.domain)
+            while task:
+                task.run()
+
+                # run count
+                runs += 1
+                if self.maxruns and runs >= self.maxruns:
+                    return
+
+                self.heartbeat()
+                task = Task.fromqueue(self.engine, self.wid, self.domain)
+
+            time.sleep(1)
