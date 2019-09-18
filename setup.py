@@ -14,6 +14,7 @@ setup(name='rework',
       long_description_content_type='text/markdown',
       url='https://bitbucket.org/pythonian/rework',
       packages=['rework'],
+      zip_safe=False,
       install_requires=[
           'psutil',
           'colorama',
