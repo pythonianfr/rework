@@ -2,6 +2,9 @@ import os
 import time
 import subprocess as sub
 import json
+from datetime import datetime
+import traceback as tb
+from pathlib import Path
 
 import tzlocal
 import pytz
@@ -83,11 +86,13 @@ class Monitor(object):
     __slots__ = ('engine', 'domain',
                  'minworkers', 'maxworkers',
                  'maxruns', 'maxmem', 'debugport',
-                 'workers', 'host', 'monid')
+                 'workers', 'host', 'monid',
+                 'debugfile')
 
     def __init__(self, engine, domain='default',
                  minworkers=None, maxworkers=2,
-                 maxruns=0, maxmem=0, debug=False):
+                 maxruns=0, maxmem=0, debug=False,
+                 debugfile=None):
         self.engine = engine
         self.domain = domain
         self.maxworkers = maxworkers
@@ -98,10 +103,20 @@ class Monitor(object):
         self.debugport = 6666 if debug else 0
         self.workers = {}
         self.host = host()
+        self.debugfile = None
+        self.monid = None
+        if debugfile:
+            self.debugfile = Path(debugfile).open('wb')
 
     @property
     def wids(self):
         return sorted(self.workers.keys())
+
+    def dump_to_debugfile(self, strdata):
+        if not self.debugfile:
+            return
+        assert isinstance(strdata, str)
+        self.debugfile.write(strdata.encode('utf-8') + b'\n')
 
     def spawn_worker(self, debug_port=0):
         wid = self.new_worker()
@@ -397,12 +412,28 @@ class Monitor(object):
             )
 
     def run(self):
+        self.dump_to_debugfile(
+            'monitor start at ' + datetime.now().isoformat()
+        )
         try:
             self.register()
+            self.dump_to_debugfile('monitor id ' + str(self.monid))
             self._run()
-        except:
+        except Exception as e:
+            self.dump_to_debugfile(
+                ''.join(
+                    tb.format_exception(
+                        e.__class__, e, e.__traceback__
+                    )
+                )
+            )
             self.killall(msg='monitor exit')
         finally:
+            self.dump_to_debugfile(
+                'monitor {} exit at {}'.format(
+                    self.monid, datetime.now().isoformat()
+                )
+            )
             self.unregister()
 
     def _run(self):
