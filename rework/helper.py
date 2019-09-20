@@ -20,7 +20,7 @@ def utcnow():
 def memory_usage(pid):
     try:
         process = psutil.Process(pid)
-    except NoSuchProcess:
+    except psutil.NoSuchProcess:
         return 0
     return int(process.memory_info().rss / float(2 ** 20))
 
@@ -28,7 +28,7 @@ def memory_usage(pid):
 def cpu_usage(pid):
     try:
         proc = psutil.Process(pid)
-    except NoSuchProcess:
+    except psutil.NoSuchProcess:
         return 0
     return _cpu_tree_usage(proc)
 
@@ -36,7 +36,7 @@ def cpu_usage(pid):
 def _cpu_tree_usage(proc):
     try:
         cpu = proc.cpu_percent(interval=0.02)
-    except NoSuchProcess:
+    except psutil.NoSuchProcess:
         return 0
     for proc in proc.children():
         cpu += _cpu_tree_usage(proc)

@@ -22,10 +22,10 @@ from rework.testutils import scrub, workers
 
 
 def test_helper():
-    with pytest.raises(NameError):
+    with pytest.raises(ValueError):
         cpu_usage(-1)
 
-    with pytest.raises(NameError):
+    with pytest.raises(ValueError):
         memory_usage(-1)
 
 
