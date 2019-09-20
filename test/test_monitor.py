@@ -10,8 +10,23 @@ from rework import api
 from rework.monitor import Monitor
 from rework.task import Task, TimeOut
 from rework.worker import running_status, shutdown_asked
-from rework.helper import guard, wait_true, parse_delta, delta_isoformat
+from rework.helper import (
+    cpu_usage,
+    delta_isoformat,
+    guard,
+    memory_usage,
+    parse_delta,
+    wait_true
+)
 from rework.testutils import scrub, workers
+
+
+def test_helper():
+    with pytest.raises(NameError):
+        cpu_usage(-1)
+
+    with pytest.raises(NameError):
+        memory_usage(-1)
 
 
 def test_basic_task_operations(engine):
