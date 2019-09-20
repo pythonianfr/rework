@@ -6,7 +6,7 @@ doc = Path(__file__).parent / 'README.md'
 
 
 setup(name='rework',
-      version='0.9.2',
+      version='0.9.3',
       author='Aurelien Campeas',
       author_email='aurelien.campeas@pythonian.fr',
       description='A database-oriented distributed task dispatcher',
