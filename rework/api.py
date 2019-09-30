@@ -1,6 +1,7 @@
 import sys
 from pickle import dumps
 from datetime import timedelta
+from contextlib import contextmanager
 import json
 
 from pathlib import Path
@@ -12,6 +13,7 @@ from sqlhelp import select, insert
 
 from rework.helper import host, delta_isoformat
 from rework.task import __task_registry__, Task
+from rework.monitor import Monitor
 
 
 def task(*args, **kw):
@@ -186,3 +188,49 @@ def freeze_operations(engine, domain=None, domain_map=None,
                 alreadyknown.append(value)
 
     return recorded, alreadyknown
+
+
+@contextmanager
+def workers(engine, domain='default',
+            minworkers=0, maxworkers=1,
+            maxruns=0, maxmem=0,
+            debug=False):
+    """context manager to set up a test monitor for a given domain
+
+    It can be configured with `domain`, `maxworkers`, `minworkers`, `maxruns`,
+    `maxmem` and `debug`.
+
+    Here's an example usage:
+
+    .. code-block:: python
+
+        with workers(engine, numworkers=2) as monitor:
+            t1 = api.schedule(engine, 'compute_sum', [1, 2, 3, 4, 5])
+            t2 = api.schedule(engine, 'compute_sum', 'abcd')
+
+            t1.join()
+            assert t1.output == 15
+            t2.join()
+            assert t2.traceback.endswith(
+                "TypeError: unsupported operand type(s) "
+                "for +: 'int' and 'str'"
+            )
+
+            assert len(monitor.wids) == 2
+
+    At the end of the block, the monitor-controlled workers are
+    cleaned up.
+
+    However the database entries are still there.
+
+    """
+    mon = Monitor(
+        engine, domain, minworkers, maxworkers, maxruns, maxmem, debug
+    )
+    mon.register()
+    mon.ensure_workers()
+    try:
+        yield mon
+    finally:
+        mon.killall()
+        mon.unregister()
