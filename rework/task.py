@@ -225,6 +225,20 @@ class Task(object):
         """
         return self._propvalue('traceback')
 
+
+    @property
+    def deathinfo(self):
+        """get the traceback of a failed task (if any)
+
+        """
+        with self.engine.begin() as cn:
+            return cn.execute(
+                'select deathinfo from rework.worker as worker '
+                'join rework.task as task on (worker.id = task.worker) '
+                'where task.id = %(taskid)s',
+                taskid=self.tid
+            ).scalar()
+
     @property
     def state(self):
         """provide a comprehensive synthetic task state

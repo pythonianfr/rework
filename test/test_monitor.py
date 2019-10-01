@@ -353,6 +353,7 @@ def test_task_abortion(engine):
         mon.preemptive_kill()
         t.join()
         assert t.state == 'aborted'
+        assert t.deathinfo.startswith('preemptive kill')
 
         # one dead worker
         guard(engine, 'select running from rework.worker where id = {}'.format(wid),
@@ -387,6 +388,7 @@ def test_worker_unplanned_death(engine):
         start = t._propvalue('queued')
         end = t._propvalue('finished')
         assert end > start
+        assert t.deathinfo == 'Unaccounted death (hard crash)'
 
 
 def test_task_error(engine):
