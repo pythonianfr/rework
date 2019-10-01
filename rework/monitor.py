@@ -378,11 +378,15 @@ class Monitor(object):
             deleted = cn.execute(sql, domain=self.domain).scalar()
             return deleted
 
+    def cleanup_stale_monitors(self):
+        with self.engine.begin() as cn:
+            cn.execute('delete from rework.monitor '
+                       'where domain = %(domain)s',
+                       domain=self.domain)
+
     def register(self):
         # register in db
         with self.engine.begin() as cn:
-            cn.execute('delete from rework.monitor where domain = %(domain)s',
-                       domain=self.domain)
             q = insert(
                 'rework.monitor'
             ).values(
@@ -416,6 +420,7 @@ class Monitor(object):
             'monitor start at ' + datetime.now().isoformat()
         )
         try:
+            self.cleanup_stale_monitors()
             self.register()
             self.dump_to_debugfile('monitor id ' + str(self.monid))
             self._run()
