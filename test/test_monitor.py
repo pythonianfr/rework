@@ -383,7 +383,7 @@ def test_worker_unplanned_death(engine):
         guard(engine, 'select deathinfo from rework.worker where id = {}'.format(wid),
               lambda r: r.scalar() == 'Unaccounted death (hard crash)')
 
-        assert t.state == 'done'
+        assert t.state == 'aborted'
 
         start = t._propvalue('queued')
         end = t._propvalue('finished')
@@ -396,7 +396,7 @@ def test_killed_task(engine):
         t = api.schedule(engine, 'infinite_loop')
         t.join('running')
 
-    assert t.state == 'done'
+    assert t.state == 'aborted'
 
 
 def test_task_error(engine):

@@ -420,7 +420,7 @@ def test_kill_worker(engine, cli):
 
         r = cli('list-tasks', url)
         assert (
-            '<X> infinite_loop done [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+            '<X> infinite_loop aborted [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
             '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
             '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
         ) == scrub(r.output)

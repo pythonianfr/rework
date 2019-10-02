@@ -52,7 +52,8 @@ def mark_dead_workers(cn, wids, message):
         ids=tuple(wids),
     ).values(
         finished=utcnow(),
-        status='done'
+        status='done',
+        abort=True
     ).do(cn)
 
 
