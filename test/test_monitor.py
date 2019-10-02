@@ -391,6 +391,14 @@ def test_worker_unplanned_death(engine):
         assert t.deathinfo == 'Unaccounted death (hard crash)'
 
 
+def test_killed_task(engine):
+    with workers(engine) as mon:
+        t = api.schedule(engine, 'infinite_loop')
+        t.join('running')
+
+    assert t.state == 'done'
+
+
 def test_task_error(engine):
     with workers(engine):
         t = api.schedule(engine, 'normal_exception')
