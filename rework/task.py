@@ -146,9 +146,10 @@ class Task(object):
             return q.do(cn).fetchall()
 
     def _propvalue(self, prop):
-        return select(prop).table('rework.task').where(
-            id=self.tid
-        ).do(self.engine).scalar()
+        with self.engine.begin() as cn:
+            return select(prop).table('rework.task').where(
+                id=self.tid
+            ).do(cn).scalar()
 
     @property
     def metadata(self):
