@@ -32,7 +32,7 @@ except AttributeError:
     DEVNULL = open(os.devnull, 'wb')
 
 
-def mark_dead_workers(cn, wids, message):
+def mark_dead_workers(cn, wids, message, traceback=None):
     if not wids:
         return
     # mark workers as dead
@@ -53,7 +53,8 @@ def mark_dead_workers(cn, wids, message):
     ).values(
         finished=utcnow(),
         status='done',
-        abort=True
+        abort=True,
+        traceback=traceback
     ).do(cn)
 
 
@@ -302,7 +303,7 @@ class Monitor(object):
         stats.new.extend(procs)
         return stats
 
-    def killall(self, msg='Forcefully killed by the monitor.'):
+    def killall(self, msg='Forcefully killed by the monitor.', traceback=None):
         mark = []
         for wid, proc in self.workers.items():
             if proc.poll() is None:  # else it's already dead
@@ -315,7 +316,7 @@ class Monitor(object):
                 proc.wait()
             mark.append(wid)
         with self.engine.begin() as cn:
-            mark_dead_workers(cn, mark, msg)
+            mark_dead_workers(cn, mark, msg, traceback)
         self.workers = {}
 
     def preemptive_kill(self):
@@ -425,15 +426,12 @@ class Monitor(object):
             self.register()
             self.dump_to_debugfile('monitor id ' + str(self.monid))
             self._run()
-        except Exception as e:
+        except Exception:
+            traceback = tb.format_exc()
             self.dump_to_debugfile(
-                ''.join(
-                    tb.format_exception(
-                        e.__class__, e, e.__traceback__
-                    )
-                )
+                traceback
             )
-            self.killall(msg='monitor exit')
+            self.killall(msg='monitor exit', traceback=traceback)
         finally:
             self.dump_to_debugfile(
                 'monitor {} exit at {}'.format(

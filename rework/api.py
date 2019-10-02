@@ -3,6 +3,7 @@ from pickle import dumps
 from datetime import timedelta
 from contextlib import contextmanager
 import json
+import traceback
 
 from pathlib import Path
 
@@ -231,6 +232,11 @@ def workers(engine, domain='default',
     mon.ensure_workers()
     try:
         yield mon
+    except:
+        mon.killall(
+            'Something killed the monitor',
+            traceback.format_exc()
+        )
     finally:
         mon.killall()
         mon.unregister()

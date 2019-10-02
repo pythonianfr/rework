@@ -397,6 +397,18 @@ def test_killed_task(engine):
         t.join('running')
 
     assert t.state == 'aborted'
+    assert t.traceback is None
+
+    try:
+        with workers(engine) as mon:
+            t = api.schedule(engine, 'infinite_loop')
+            t.join('running')
+            raise Exception('kill the monitor')
+    except:
+        pass
+
+    assert t.state == 'aborted'
+    assert 'kill the monitor' in t.traceback
 
 
 def test_task_error(engine):
