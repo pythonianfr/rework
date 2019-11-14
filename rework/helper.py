@@ -28,9 +28,9 @@ def memory_usage(pid):
 def cpu_usage(pid):
     try:
         proc = psutil.Process(pid)
+        return _cpu_tree_usage(proc)
     except psutil.NoSuchProcess:
         return 0
-    return _cpu_tree_usage(proc)
 
 
 def _cpu_tree_usage(proc):
