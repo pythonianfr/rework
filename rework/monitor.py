@@ -440,33 +440,24 @@ class Monitor(object):
             )
             self.unregister()
 
-    def step(self, workers=None):
-        if workers is None:
-            workers = []
+    def step(self):
         self.track_timeouts()
         self.preemptive_kill()
         dead = self.reap_dead_workers()
         if dead:
             print('reaped {} dead workers'.format(len(dead)))
-            workers = [
-                wid
-                for wid in workers
-                if wid not in dead
-            ]
         stats = self.ensure_workers()
-        if stats.new:
-            print('spawned {} active workers'.format(len(stats.new)))
-        if stats.shrink:
-            print('worker {} asked to shutdown'.format(stats.shrink[0]))
-        workers += stats.new
         self.dead_man_switch()
-        return workers
+        return stats
 
     def _run(self):
         deleted = self.cleanup_unstarted()
         if deleted:
             print('cleaned {} unstarted workers'.format(deleted))
-        workers = []
         while True:
-            workers = self.step(workers)
+            stats = self.step()
+            if stats.new:
+                print('spawned {} active workers'.format(len(stats.new)))
+            if stats.shrink:
+                print('worker {} asked to shutdown'.format(stats.shrink[0]))
             time.sleep(1)

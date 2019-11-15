@@ -84,19 +84,28 @@ def test_monitor_step(engine):
     api.schedule(engine, 'print_sleep_and_go_away', 21,
                  metadata={'user': 'Joe'})
 
-    workers = mon.step([])
-    assert len(workers) == 2
-    assert all(isinstance(w, int) for w in workers)
+    stats = mon.step()
+    assert len(stats.new) == 2
+    assert all(
+        isinstance(w, int)
+        for w in stats.new
+    )
 
     # simulate a hard crash
-    for wid, proc in mon.workers.items():
+    for _, proc in mon.workers.items():
         if proc.poll() is None:
             kill_process_tree(proc.pid)
 
-    workers2 = mon.step(workers)
-    assert workers2 != workers
-    assert len(workers2) == 2
-    assert all(isinstance(w, int) for w in workers2)
+    dead = mon.reap_dead_workers()
+    assert dead == stats.new
+
+    stats2 = mon.step()
+    assert stats2.new != stats.new
+    assert len(stats2.new) == 2
+    assert all(
+        isinstance(w, int)
+        for w in stats2.new
+    )
 
     mon.killall()
 
