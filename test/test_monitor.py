@@ -14,6 +14,7 @@ from rework.helper import (
     cpu_usage,
     delta_isoformat,
     guard,
+    kill_process_tree,
     memory_usage,
     parse_delta,
     wait_true
@@ -76,6 +77,24 @@ def test_basic_task_operations(engine):
     with pytest.raises(Exception) as err:
         api.schedule(engine, 'no_such_task')
     assert err.value.args[0] == 'No operation was found for these parameters'
+
+
+def test_monitor_step(engine):
+    mon = Monitor(engine)
+    api.schedule(engine, 'print_sleep_and_go_away', 21,
+                 metadata={'user': 'Joe'})
+
+    workers = mon.step([])
+    assert len(workers) == 2
+    assert all(isinstance(w, int) for w in workers)
+
+    # simulate a hard crash
+    for wid, proc in mon.workers.items():
+        if proc.poll() is None:
+            kill_process_tree(proc.pid)
+
+    with pytest.raises(TypeError):
+        workers2 = mon.step(workers)
 
 
 def test_task_input_output(engine):
