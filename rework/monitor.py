@@ -449,8 +449,8 @@ class Monitor(object):
         if dead:
             print('reaped {} dead workers'.format(len(dead)))
             workers = [
-                (wid, proc)
-                for wid, proc in workers
+                wid
+                for wid in workers
                 if wid not in dead
             ]
         stats = self.ensure_workers()

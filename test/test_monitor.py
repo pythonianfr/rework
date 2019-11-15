@@ -93,8 +93,12 @@ def test_monitor_step(engine):
         if proc.poll() is None:
             kill_process_tree(proc.pid)
 
-    with pytest.raises(TypeError):
-        workers2 = mon.step(workers)
+    workers2 = mon.step(workers)
+    assert workers2 != workers
+    assert len(workers2) == 2
+    assert all(isinstance(w, int) for w in workers2)
+
+    mon.killall()
 
 
 def test_task_input_output(engine):
