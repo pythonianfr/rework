@@ -1,10 +1,12 @@
 import os
 import time
 import subprocess as sub
+import signal
 import json
 from datetime import datetime
 import traceback as tb
 from pathlib import Path
+import sys
 
 import tzlocal
 import pytz
@@ -109,6 +111,11 @@ class Monitor(object):
         self.monid = None
         if debugfile:
             self.debugfile = Path(debugfile).open('wb')
+        signal.signal(signal.SIGTERM, self.sigterm)
+
+    def sigterm(self, signum, stack):
+        self.killall(f'Got a TERMINATE/{signum} signal while at {stack}')
+        sys.exit(0)
 
     @property
     def wids(self):
