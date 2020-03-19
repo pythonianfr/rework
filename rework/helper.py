@@ -43,7 +43,7 @@ def _cpu_tree_usage(proc):
     return cpu
 
 
-def wait_true(func, timeout=6):
+def wait_true(func, timeout=6, sleeptime=.1):
     outcome = []
 
     def loop():
@@ -55,7 +55,7 @@ def wait_true(func, timeout=6):
             if output:
                 outcome.append(output)
                 return
-            time.sleep(.1)
+            time.sleep(sleeptime)
 
     th = Thread(target=loop)
     th.daemon = True

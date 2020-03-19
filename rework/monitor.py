@@ -16,12 +16,12 @@ from sqlhelp import select, insert, update
 
 from rework.helper import (
     cpu_usage,
-    guard,
     host,
     kill_process_tree,
     memory_usage,
     parse_delta,
-    utcnow
+    utcnow,
+    wait_true
 )
 from rework.task import Task
 
@@ -91,7 +91,8 @@ class Monitor(object):
                  'minworkers', 'maxworkers',
                  'maxruns', 'maxmem', 'debugport',
                  'workers', 'host', 'monid',
-                 'start_timeout', 'debugfile')
+                 'start_timeout', 'debugfile',
+                 'pending_start')
 
     def __init__(self, engine, domain='default',
                  minworkers=None, maxworkers=2,
@@ -112,6 +113,7 @@ class Monitor(object):
         self.monid = None
         if debugfile:
             self.debugfile = Path(debugfile).open('wb')
+        self.pending_start = {}
         signal.signal(signal.SIGTERM, self.sigterm)
 
     def sigterm(self, signum, stack):
@@ -264,6 +266,43 @@ class Monitor(object):
                 if (now - start_time) > delta:
                     Task.byid(self.engine, tid).abort()
 
+    def track_starting(self):
+        if not self.pending_start:
+            return {}
+        sql = (
+            'select worker.id '
+            'from rework.worker '
+            'where worker.running = true and '
+            'worker.id in %(wids)s'
+        )
+        # remove started workers
+        with self.engine.begin() as cn:
+            for wid, in cn.execute(sql, wids=tuple(self.pending_start)):
+                self.pending_start.pop(wid, None)
+
+        # kill after timeout
+        now = datetime.now()
+        for wid, start in self.pending_start.copy().items():
+            delta = (now - start).microseconds / 100000.
+            if delta > self.start_timeout:
+                with self.engine.begin() as cn:
+                    update('rework.worker').where(id=wid).values(
+                        kill=True,
+                        deathinfo='timeout while starting'
+                    ).do(cn)
+                self.pending_start.pop(wid, None)
+
+        # signal the outcome
+        if not self.pending_start:
+            print('no more pending starts')
+        else:
+            pending = {
+                wid: str(dt)
+                for wid, dt in self.pending_start.items()
+            }
+            print(f'workers yet to start : {pending}')
+        return self.pending_start
+
     def ensure_workers(self):
         # rid self.workers of dead things
         stats = self._cleanup_workers()
@@ -281,10 +320,11 @@ class Monitor(object):
             numworkers = self.num_workers
             busycount = len(self.busy_workers(cn))
             waiting = self.queued_tasks(cn)
+            pending_start = len(self.pending_start)
 
         idle = numworkers - busycount
         assert idle >= 0
-        needed_workers = clip(waiting - idle,
+        needed_workers = clip(waiting - idle - pending_start,
                               self.minworkers - numworkers,
                               self.maxworkers - numworkers)
 
@@ -292,23 +332,17 @@ class Monitor(object):
         if not needed_workers:
             return stats
 
-        procs = []
         debug_ports = []
         for offset in range(needed_workers):
             debug_ports.append(self.grab_debug_port(offset))
 
+        procs = {}
         for debug_port in debug_ports:
-            procs.append(self.spawn_worker(debug_port=debug_port))
+            procs[self.spawn_worker(debug_port=debug_port)] = datetime.now()
 
-        # wait til they are up and running
-        if procs:
-            guard(self.engine,
-                  "select count(id) from rework.worker where running = true "
-                  "and id in ({})".format(','.join(repr(wid) for wid in procs)),
-                  lambda c: c.scalar() == len(procs),
-                  timeout=self.start_timeout + self.maxworkers * 2)
+        self.pending_start.update(procs)
 
-        stats.new.extend(procs)
+        stats.new.extend(list(procs.keys()))
         return stats
 
     def killall(self, msg='Forcefully killed by the monitor.', traceback=None):
@@ -331,8 +365,7 @@ class Monitor(object):
         if not self.wids:
             return
         q = select('id' ).table('rework.worker').where(
-            'kill = true',
-            'running = true'
+            'kill = true'
         ).where(
             'id in %(ids)s', ids=tuple(self.wids)
         )
@@ -448,8 +481,27 @@ class Monitor(object):
             )
             self.unregister()
 
+    def wait_all_started(self, stop=False):
+        """helper for the tests -- in real life this is toxic to the monitor
+        as one single failure/slowness to start up will kill it and
+        all its workers
+
+        """
+        try:
+            wait_true(
+                lambda: len(self.track_starting()) == 0,
+                timeout=self.start_timeout,
+                sleeptime=.2
+            )
+        except AssertionError:
+            if stop:
+                raise
+            # give it another chance
+            self.wait_all_started(stop=True)
+
     def step(self):
         self.track_timeouts()
+        self.track_starting()
         self.preemptive_kill()
         dead = self.reap_dead_workers()
         if dead:

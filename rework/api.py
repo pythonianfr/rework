@@ -238,6 +238,7 @@ def workers(engine, domain='default',
             'Something killed the monitor',
             traceback.format_exc()
         )
+        raise
     finally:
         mon.killall()
         mon.unregister()

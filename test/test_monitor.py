@@ -85,6 +85,8 @@ def test_monitor_step(engine):
                  metadata={'user': 'Joe'})
 
     stats = mon.step()
+    mon.wait_all_started()
+
     assert len(stats.new) == 2
     assert all(
         isinstance(w, int)
@@ -97,7 +99,7 @@ def test_monitor_step(engine):
             kill_process_tree(proc.pid)
 
     dead = mon.reap_dead_workers()
-    assert dead == stats.new
+    assert sorted(dead) == sorted(stats.new)
 
     stats2 = mon.step()
     assert stats2.new != stats.new
@@ -146,6 +148,35 @@ def test_basic_worker_operations(engine):
     assert engine.execute(
         'select count(id) from rework.worker where running = true'
     ).scalar() == 0
+
+
+def test_failed_pending_start(engine):
+    from rework.api import workers
+
+    with workers(engine, maxworkers=2, minworkers=2, start_timeout=0) as mon:
+        stat1 = mon.step()
+        pending = mon.pending_start.copy()
+        assert len(pending) == 2
+        assert len(mon.wids) == 2
+
+        time.sleep(.1)
+        stat2 = mon.step()
+        assert len(mon.pending_start) == 2
+        assert len(mon.wids) == 2
+
+        assert mon.pending_start != pending
+        out = [
+            (run, kill, info[:15])
+            for run, kill, info in engine.execute(
+                    'select running, kill, deathinfo from rework.worker '
+                    'where id in %(wids)s',
+                    wids=tuple(pending.keys())
+            )
+        ]
+        assert out == [
+            (False, True, 'preemptive kill'),
+            (False, True, 'preemptive kill')
+        ]
 
 
 def test_basic_worker_task_execution(engine):

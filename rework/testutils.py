@@ -6,7 +6,8 @@ from rework import api
 @contextmanager
 def workers(engine, numworkers=1, minworkers=None,
             maxruns=0, maxmem=0,
-            domain='default', debug=False):
+            domain='default', debug=False,
+            start_timeout=30):
     with engine.begin() as cn:
         cn.execute('delete from rework.task')
         cn.execute('delete from rework.worker')
@@ -14,8 +15,10 @@ def workers(engine, numworkers=1, minworkers=None,
             engine, domain,
             minworkers, numworkers,
             maxruns, maxmem,
-            debug
+            debug,
+            start_timeout=start_timeout
     ) as mon:
+        mon.wait_all_started()
         yield mon
 
 

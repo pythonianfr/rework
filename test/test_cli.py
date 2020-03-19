@@ -229,6 +229,7 @@ def test_minworkers(engine, cli):
         t4 = api.schedule(engine, 'infinite_loop')
         t5 = api.schedule(engine, 'infinite_loop')
 
+        mon.track_starting()
         new = mon.ensure_workers().new
         assert len(new) == 1
         t4.join(target='running')
@@ -246,7 +247,8 @@ def test_minworkers(engine, cli):
         mon.preemptive_kill()
         t1.join(); t2.join()
 
-        mon.ensure_workers()
+        mon.step()
+        mon.wait_all_started()
         r = cli('list-workers', engine.url)
         assert scrub(r.output).count('running #<X>') == 3
         assert r.output.count('running (idle)') == 0
@@ -268,7 +270,8 @@ def test_minworkers(engine, cli):
         t5.abort()
         mon.preemptive_kill()
         t5.join()
-        mon.ensure_workers()
+        mon.step()
+        mon.wait_all_started()
         r = cli('list-workers', engine.url)
         assert scrub(r.output).count('running #<X>') == 0
         assert r.output.count('running (idle)') == 1
