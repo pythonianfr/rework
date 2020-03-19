@@ -195,7 +195,7 @@ def freeze_operations(engine, domain=None, domain_map=None,
 def workers(engine, domain='default',
             minworkers=0, maxworkers=1,
             maxruns=0, maxmem=0,
-            debug=False):
+            debug=False, start_timeout=30):
     """context manager to set up a test monitor for a given domain
 
     It can be configured with `domain`, `maxworkers`, `minworkers`, `maxruns`,
@@ -226,7 +226,8 @@ def workers(engine, domain='default',
 
     """
     mon = Monitor(
-        engine, domain, minworkers, maxworkers, maxruns, maxmem, debug
+        engine, domain, minworkers, maxworkers, maxruns, maxmem, debug,
+        start_timeout=start_timeout
     )
     mon.register()
     mon.ensure_workers()

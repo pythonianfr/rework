@@ -91,12 +91,12 @@ class Monitor(object):
                  'minworkers', 'maxworkers',
                  'maxruns', 'maxmem', 'debugport',
                  'workers', 'host', 'monid',
-                 'debugfile')
+                 'start_timeout', 'debugfile')
 
     def __init__(self, engine, domain='default',
                  minworkers=None, maxworkers=2,
                  maxruns=0, maxmem=0, debug=False,
-                 debugfile=None):
+                 start_timeout=30, debugfile=None):
         self.engine = engine
         self.domain = domain
         self.maxworkers = maxworkers
@@ -107,6 +107,7 @@ class Monitor(object):
         self.debugport = 6666 if debug else 0
         self.workers = {}
         self.host = host()
+        self.start_timeout = start_timeout
         self.debugfile = None
         self.monid = None
         if debugfile:
@@ -305,7 +306,7 @@ class Monitor(object):
                   "select count(id) from rework.worker where running = true "
                   "and id in ({})".format(','.join(repr(wid) for wid in procs)),
                   lambda c: c.scalar() == len(procs),
-                  timeout=20 + self.maxworkers * 2)
+                  timeout=self.start_timeout + self.maxworkers * 2)
 
         stats.new.extend(procs)
         return stats
