@@ -38,8 +38,8 @@ def _cpu_tree_usage(proc):
         cpu = proc.cpu_percent(interval=0.02)
     except psutil.NoSuchProcess:
         return 0
-    for proc in proc.children():
-        cpu += _cpu_tree_usage(proc)
+    for child in proc.children():
+        cpu += _cpu_tree_usage(child)
     return cpu
 
 
@@ -272,7 +272,7 @@ class PGLogHandler(logging.Handler):
         pass
 
 
-class PGLogWriter(object):
+class PGLogWriter:
     __slots__ = ('stream', 'handler', 'level', 'pending')
 
     def __init__(self, stream, handler):
@@ -294,7 +294,7 @@ class PGLogWriter(object):
 
     def flush(self, force=False):
         message = ''.join(msg for msg in self.pending)
-        if not message or not '\n' in message and not force:
+        if not message or '\n' not in message and not force:
             return
 
         self.pending = []
