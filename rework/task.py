@@ -18,7 +18,7 @@ class TimeOut(Exception):
     pass
 
 
-class Task(object):
+class Task:
     """A task object represents an execution of an operation within a worker.
 
     The only official way to get a task is as a return value of an
@@ -51,7 +51,7 @@ class Task(object):
                    "limit 1")
             tid_operation = cn.execute(sql, domain=domain).fetchone()
             if tid_operation is None:
-                return
+                return None
 
             tid, opid = tid_operation
             update(
@@ -71,7 +71,7 @@ class Task(object):
             sql = "select operation from rework.task where id = %(tid)s"
             operation = cn.execute(sql, tid=tid).scalar()
             if operation is None:
-                return
+                return None
 
             return cls(engine, tid, operation)
 
@@ -185,6 +185,7 @@ class Task(object):
                 return loads(val)
             except:
                 raise TypeError('cannot unpickle the raw bytes')
+        return None
 
     @property
     def raw_input(self):
@@ -195,6 +196,7 @@ class Task(object):
         val = self._propvalue('input')
         if val is not None:
             return bytes(val)
+        return None
 
     @property
     def output(self):
@@ -208,6 +210,7 @@ class Task(object):
                 return loads(out)
             except:
                 raise TypeError('cannot unpickle the raw bytes')
+        return None
 
     @property
     def raw_output(self):
@@ -218,6 +221,7 @@ class Task(object):
         val = self._propvalue('output')
         if val is not None:
             return bytes(val)
+        return None
 
     @property
     def traceback(self):
@@ -352,4 +356,3 @@ class Task(object):
             ).values(
                 kill=True
             ).do(cn)
-
