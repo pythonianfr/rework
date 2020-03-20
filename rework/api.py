@@ -7,7 +7,6 @@ import traceback
 
 from pathlib import Path
 
-from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from sqlhelp import select, insert
