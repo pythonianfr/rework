@@ -4,13 +4,12 @@ from contextlib import contextmanager
 import traceback
 
 import pystuck
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine
 
 from sqlhelp import select, update
 
 from rework.helper import (
     has_ancestor_pid,
-    kill,
     memory_usage,
     utcnow
 )
