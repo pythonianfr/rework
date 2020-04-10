@@ -283,7 +283,7 @@ class Monitor(object):
         # kill after timeout
         now = datetime.now()
         for wid, start in self.pending_start.copy().items():
-            delta = (now - start).microseconds / 100000.
+            delta = (now - start).total_seconds()
             if delta > self.start_timeout:
                 with self.engine.begin() as cn:
                     update('rework.worker').where(id=wid).values(
