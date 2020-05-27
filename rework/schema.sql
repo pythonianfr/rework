@@ -46,7 +46,7 @@ create index ix_{ns}_operation_host on {ns}.operation (host);
 create index ix_{ns}_operation_name on {ns}.operation (name);
 
 
-create type "{ns}.status" as enum ('queued', 'running', 'done');
+create type {ns}.status as enum ('queued', 'running', 'done');
 
 create table {ns}.task (
   id serial primary key,
@@ -58,7 +58,7 @@ create table {ns}.task (
   output bytea,
   traceback text,
   worker int,
-  status "{ns}.status",
+  status {ns}.status,
   abort bool not null default false,
   metadata jsonb,
   constraint task_operation_fkey foreign key (operation)
