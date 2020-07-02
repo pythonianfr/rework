@@ -96,7 +96,7 @@ class Task:
             ).do(cn)
 
     @contextmanager
-    def capturelogs(self, sync=False, level=logging.NOTSET, std=False):
+    def capturelogs(self, sync=True, level=logging.NOTSET, std=False):
         """within this context, all logs at the given level will be captured
         and be retrievable through the `Task.log(...)` api call
 
