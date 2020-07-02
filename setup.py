@@ -6,7 +6,7 @@ doc = Path(__file__).parent / 'README.md'
 
 
 setup(name='rework',
-      version='0.10.1',
+      version='0.11.0',
       author='Aurelien Campeas',
       author_email='aurelien.campeas@pythonian.fr',
       description='A database-oriented distributed task dispatcher',
@@ -43,7 +43,6 @@ setup(name='rework',
           'Intended Audience :: Developers',
           'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
           'Operating System :: OS Independent',
-          'Programming Language :: Python :: 2',
           'Programming Language :: Python :: 3',
           'Topic :: Database',
           'Topic :: System :: Distributed Computing',
