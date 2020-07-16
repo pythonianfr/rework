@@ -10,7 +10,7 @@ from pkg_resources import iter_entry_points
 from sqlalchemy import create_engine
 from sqlhelp import update
 
-from rework import api
+from rework import api, schema
 from rework.helper import (
     cleanup_tasks,
     cleanup_workers,
