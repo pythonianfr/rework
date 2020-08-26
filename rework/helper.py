@@ -178,7 +178,7 @@ def parse_delta(td):
 # configuration lookup
 
 def get_cfg_path():
-    if 'REWORKCFGPATH' is os.environ:
+    if 'REWORKCFGPATH' in os.environ:
         cfgpath = Path(os.environ['REWORKCFGPATH'])
         if cfgpath.exists():
             return cfgpath
