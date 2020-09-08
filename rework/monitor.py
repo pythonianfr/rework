@@ -375,7 +375,7 @@ class Monitor(object):
                 wid = row.id
                 proc = self.workers.pop(wid)
                 if not kill_process_tree(proc.pid):
-                    print('could not kill {}'.format(proc.pid))
+                    print(f'could not kill {proc.pid}')
                     continue
 
                 mark_dead_workers(
@@ -395,7 +395,7 @@ class Monitor(object):
             try:
                 cmd = ' '.join(psutil.Process(pid).cmdline())
                 if 'new-worker' not in cmd and str(self.engine.url) not in cmd:
-                    print('pid {} was probably recycled'.format(pid))
+                    print(f'pid {pid} was probably recycled')
                     deadlist.append(wid)
             except psutil.NoSuchProcess:
                 deadlist.append(wid)
@@ -505,7 +505,7 @@ class Monitor(object):
         self.preemptive_kill()
         dead = self.reap_dead_workers()
         if dead:
-            print('reaped {} dead workers'.format(len(dead)))
+            print(f'reaped {len(dead)} dead workers')
         stats = self.ensure_workers()
         self.dead_man_switch()
         return stats
@@ -513,11 +513,11 @@ class Monitor(object):
     def _run(self):
         deleted = self.cleanup_unstarted()
         if deleted:
-            print('cleaned {} unstarted workers'.format(deleted))
+            print(f'cleaned {deleted} unstarted workers')
         while True:
             stats = self.step()
             if stats.new:
-                print('spawned {} active workers'.format(len(stats.new)))
+                print(f'spawned {len(stats.new)} active workers')
             if stats.shrink:
-                print('worker {} asked to shutdown'.format(stats.shrink[0]))
+                print(f'worker {stats.shrink[0]} asked to shutdown')
             time.sleep(1)
