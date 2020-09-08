@@ -55,7 +55,7 @@ class Worker:
             # go to bed.
             with self.engine.begin() as cn:
                 self.death_sql('ancestor died').do(cn)
-            raise SystemExit('Worker {} exiting.'.format(os.getpid()))
+            raise SystemExit(f'Worker {os.getpid()} exiting.')
 
     def ask_shutdown(self):
         with self.engine.begin() as cn:
@@ -72,7 +72,7 @@ class Worker:
         if self.shutdown_asked():
             with self.engine.begin() as cn:
                 self.death_sql('explicit shutdown').do(cn)
-            raise SystemExit('Worker {} exiting.'.format(os.getpid()))
+            raise SystemExit(f'Worker {os.getpid()} exiting.')
 
     @contextmanager
     def running_status(self):

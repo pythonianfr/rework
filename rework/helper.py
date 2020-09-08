@@ -114,7 +114,7 @@ def cleanup_tasks(engine, finished):
 
 def kill(pid, timeout=3):
     def on_terminate(proc):
-        print('process {} terminated with exit code {}'.format(proc, proc.returncode))
+        print(f'process {proc} terminated with exit code {proc.returncode}')
 
     # TERM then KILL
     try:
@@ -147,7 +147,7 @@ def kill_process_tree(pid, timeout=3):
     try:
         procs = psutil.Process(pid).children()
     except psutil.NoSuchProcess:
-        print('process {} is already dead'.format(pid))
+        print(f'process {pid} is already dead')
         return True
     for proc in procs:
         kill_process_tree(proc.pid, timeout)
@@ -158,16 +158,14 @@ def kill_process_tree(pid, timeout=3):
 # timedelta (de)serialisation
 
 def delta_isoformat(td):
-    return 'P{}DT0H0M{}S'.format(
-        td.days, td.seconds
-    )
+    return f'P{td.days}DT0H0M{td.seconds}S'
 
 
 _DELTA = re.compile('P(.*)DT(.*)H(.*)M(.*)S')
 def parse_delta(td):
     match = _DELTA.match(td)
     if not match:
-        raise Exception('unparseable time delta `{}`'.format(td))
+        raise Exception(f'unparseable time delta `{td}`')
     days, hours, minutes, seconds = match.groups()
     return timedelta(
         days=int(days), hours=int(hours),

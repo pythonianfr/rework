@@ -36,7 +36,7 @@ class Task:
         self.operation = operation
 
     def __repr__(self):
-        return 'Task({}, {})'.format(self.operation, self.state)
+        return f'Task({self.operation}, {self.state})'
 
     @classmethod
     def fromqueue(cls, engine, wid, domain='default'):

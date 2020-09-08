@@ -32,11 +32,11 @@ def scrub(anstr, subst='X'):
         else:
             if digit:
                 digit = False
-                out.append('<{}>'.format(subst))
+                out.append(f'<{subst}>')
             out.append(char)
     # trailing digits ...
     if digit:
-        out.append('<{}>'.format(subst))
+        out.append(f'<{subst}>')
     return ''.join(out).strip()
 
 
