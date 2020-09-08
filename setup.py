@@ -23,7 +23,7 @@ setup(name='rework',
           'psycopg2-binary',
           'pystuck',
           'click',
-          'tzlocal == 1.5.1',
+          'tzlocal',
           'inireader'
       ],
       package_data={'rework': [
