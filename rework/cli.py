@@ -57,9 +57,7 @@ def register_operations(dburi, module, domain=None, asdomain=None):
     engine = create_engine(find_dburi(dburi))
     ok, ko = api.freeze_operations(engine, domain)
 
-    print('registered {} new operation ({} already known)'.format(
-        len(ok), len(ko)
-    ))
+    print(f'registered {len(ok)} new operation ({len(ko)} already known)')
 
 
 @rework.command(name='new-worker')
@@ -102,8 +100,8 @@ def list_operations(dburi):
     engine = create_engine(find_dburi(dburi))
     sql = 'select id, host, name, path from rework.operation'
     for oid, hostid, opname, modpath in engine.execute(sql):
-        print(Fore.WHITE + '{}'.format(oid), end=' ')
-        print(Fore.GREEN + 'host({}) `{}` path({})'.format(hostid, opname, modpath))
+        print(Fore.WHITE + f'{oid}', end=' ')
+        print(Fore.GREEN + f'host({hostid}) `{opname}` path({modpath})')
     print(Style.RESET_ALL)
 
 
@@ -127,14 +125,16 @@ def list_workers(dburi):
             sql = "select id from rework.task where status = 'running' and worker = %(worker)s"
             tid = engine.execute(sql, worker=wid).scalar()
             if tid:
-                activity = '#{}'.format(tid)
+                activity = f'#{tid}'
         print(wid,
-              Fore.GREEN + '{}@{}'.format(pid or '<nopid>', host),
-              '{} Mb'.format(mem),
-              color + ('[running {}]'.format(activity) if running else '[dead]' if dead else '[unstarted]'),
+              Fore.GREEN + f'{pid or "<nopid>"}@{host}',
+              f'{mem} Mb',
+              color + (
+                  f'[running {activity}]' if running else '[dead]' if dead else '[unstarted]'
+              ),
               end=' ')
         if debugport:
-            print(Fore.RED + 'debugport = {}'.format(debugport), end=' ')
+            print(Fore.RED + f'debugport = {debugport}', end=' ')
 
         print(Fore.WHITE + '[{}]'.format(
             created.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
@@ -238,7 +238,7 @@ def list_tasks(dburi, tracebacks=False, logcount=False):
         if logcount:
             sql = 'select count(*) from rework.log where task = %(tid)s'
             count = engine.execute(sql, {'tid': task.tid}).scalar()
-            print(Style.RESET_ALL + '{} log lines'.format(count), end=' ')
+            print(Style.RESET_ALL + f'{count} log lines', end=' ')
         finished = task._propvalue('finished')
         started = task._propvalue('started')
         print(Fore.WHITE + '[{}]'.format(
@@ -323,11 +323,11 @@ def vacuum(dburi, workers=False, tasks=False, finished=None):
         finished = utcnow()
     if workers:
         count = cleanup_workers(engine, finished)
-        print('deleted {} workers'.format(count))
+        print(f'deleted {count} workers')
 
     if tasks:
         count = cleanup_tasks(engine, finished)
-        print('deleted {} tasks'.format(count))
+        print(f'deleted {count} tasks')
 
 
 for ep in iter_entry_points('rework.subcommands'):
