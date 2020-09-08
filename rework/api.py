@@ -4,11 +4,10 @@ from datetime import timedelta
 from contextlib import contextmanager
 import json
 import traceback
-
 from pathlib import Path
 
+from apscheduler.triggers import cron
 from sqlalchemy.exc import IntegrityError
-
 from sqlhelp import select, insert
 
 from rework.helper import host, delta_isoformat
@@ -63,6 +62,41 @@ def task(*args, **kw):
         assert isinstance(timeout, timedelta), msg
 
     return register_task
+
+
+def prepare(engine,
+            opname,
+            rule='* * * * *',
+            domain='default',
+            inputdata=None,
+            host=None,
+            metadata=None):
+    if metadata:
+        assert isinstance(metadata, dict)
+
+    # validate the rules
+    cron.CronTrigger.from_crontab(rule)
+
+    if inputdata is not None:
+        rawinputdata = dumps(inputdata, protocol=2)
+    else:
+        rawinputdata = None
+
+    q = select('id').table('rework.operation').where(
+        name=opname
+    )
+    with engine.begin() as cn:
+        opid = q.do(cn).scalar()
+        q = insert('rework.sched').values(
+            operation=opid,
+            domain=domain,
+            inputdata=rawinputdata,
+            host=host,
+            metadata=metadata,
+            rule=str(rule)
+        )
+        sid = q.do(cn).scalar()
+    return sid
 
 
 def schedule(engine,

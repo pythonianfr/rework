@@ -8,7 +8,7 @@ from colorama import init, Fore, Style
 from pkg_resources import iter_entry_points
 
 from sqlalchemy import create_engine
-from sqlhelp import update
+from sqlhelp import update, select
 
 from rework import api, schema
 from rework.helper import (
@@ -300,6 +300,26 @@ def abort_task(dburi, taskid):
     engine = create_engine(find_dburi(dburi))
     task = Task.byid(engine, taskid)
     task.abort()
+
+
+@rework.command(name='list-scheduled')
+@click.argument('dburi')
+def list_sceduled(dburi):
+    init()
+    engine = create_engine(find_dburi(dburi))
+    sql = (
+        'select id, operation, domain, inputdata, host, metadata, rule '
+        'from rework.sched'
+    )
+    for sid, op, dom, indata, host, meta, rule in engine.execute(sql):
+        q = select('name').table('rework.operation').where(id=op)
+        opname = q.do(engine).scalar()
+        print(Fore.WHITE + f'{sid}', end=' ')
+        print(Fore.GREEN +
+              f'`{host or "no host"}` `{opname}` {dom} `{host or "no host"}` '
+              f'`{meta or "no meta"}` "{rule}"'
+        )
+    print(Style.RESET_ALL)
 
 
 @rework.command('vacuum')

@@ -506,3 +506,18 @@ def test_vacuum(engine, cli):
 
     ntasks = engine.execute('select count(*) from rework.task').scalar()
     assert ntasks == 0
+
+
+def test_scheduler(engine, cli):
+    r = cli('list-scheduled', engine.url)
+    assert len(r.output.strip()) == 0
+
+    sid = api.prepare(
+        engine,
+        'print_sleep_and_go_away'
+    )
+
+    r = cli('list-scheduled', engine.url)
+    assert r.output.strip() == (
+        f'{sid} `no host` `print_sleep_and_go_away` default `no host` `no meta` "* * * * *"'
+    )

@@ -24,7 +24,8 @@ setup(name='rework',
           'pystuck',
           'click',
           'tzlocal',
-          'inireader'
+          'inireader',
+          'apscheduler'
       ],
       package_data={'rework': [
           'schema.sql'

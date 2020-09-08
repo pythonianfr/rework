@@ -85,3 +85,19 @@ create table {ns}.log (
 );
 
 create index ix_{ns}_rework_log_task on rework.log (task);
+
+
+create table {ns}.sched (
+  id serial primary key,
+  operation int not null,
+  domain text not null,
+  inputdata bytea,
+  host text,
+  metadata jsonb,
+  rule text not null,
+  constraint sched_operation_fkey foreign key (operation)
+    references {ns}.operation (id)
+    on delete cascade
+);
+
+create index ix_{ns}_sched_operation on {ns}.sched (operation);
