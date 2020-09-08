@@ -25,18 +25,7 @@ from rework.monitor import Monitor
 TZ = tzlocal.get_localzone()
 
 
-class DeprecatingGroup(click.Group):
-
-    def get_command(self, ctx, cmd_name):
-        if cmd_name == 'deploy':
-            print(
-                '`deploy` is deprecated, please use `monitor` instead'
-            )
-            cmd_name = 'monitor'
-        return super(DeprecatingGroup, self).get_command(ctx, cmd_name)
-
-
-@click.command(cls=DeprecatingGroup)
+@click.group()
 def rework():
     pass
 
