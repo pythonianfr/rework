@@ -103,7 +103,7 @@ def list_operations(dburi):
     sql = 'select id, host, name, path from rework.operation'
     for oid, hostid, opname, modpath in engine.execute(sql):
         print(Fore.WHITE + '{}'.format(oid), end=' ')
-        print(Fore.GREEN + 'host({}) `{}` path({})'.format(oid, hostid, opname, modpath))
+        print(Fore.GREEN + 'host({}) `{}` path({})'.format(hostid, opname, modpath))
     print(Style.RESET_ALL)
 
 
