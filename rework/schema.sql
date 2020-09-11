@@ -84,4 +84,4 @@ create table {ns}.log (
     on delete cascade
 );
 
-create index ix_rework_log_task on rework.log (task);
+create index ix_{ns}_rework_log_task on rework.log (task);
