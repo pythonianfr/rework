@@ -6,11 +6,14 @@ import json
 import traceback
 from pathlib import Path
 
-from apscheduler.triggers import cron
 from sqlalchemy.exc import IntegrityError
 from sqlhelp import select, insert
 
-from rework.helper import host, delta_isoformat
+from rework.helper import (
+    BetterCronTrigger,
+    delta_isoformat,
+    host
+)
 from rework.task import __task_registry__, Task
 from rework.monitor import Monitor
 
@@ -66,7 +69,7 @@ def task(*args, **kw):
 
 def prepare(engine,
             opname,
-            rule='* * * * *',
+            rule='* * * * * *',
             domain='default',
             inputdata=None,
             host=None,
@@ -75,7 +78,7 @@ def prepare(engine,
         assert isinstance(metadata, dict)
 
     # validate the rules
-    cron.CronTrigger.from_crontab(rule)
+    BetterCronTrigger.from_extended_crontab(rule)
 
     if inputdata is not None:
         rawinputdata = dumps(inputdata, protocol=2)

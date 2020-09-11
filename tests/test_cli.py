@@ -519,5 +519,5 @@ def test_scheduler(engine, cli):
 
     r = cli('list-scheduled', engine.url)
     assert r.output.strip() == (
-        f'{sid} `no host` `print_sleep_and_go_away` default `no host` `no meta` "* * * * *"'
+        f'{sid} `no host` `print_sleep_and_go_away` default `no host` `no meta` "* * * * * *"'
     )

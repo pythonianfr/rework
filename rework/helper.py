@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import re
 
+from apscheduler.triggers.cron import CronTrigger
 import pytz
 import psutil
 from sqlalchemy.engine import url
@@ -302,3 +303,28 @@ class PGLogWriter:
                         self.stream, self.level, '', -1, part, (), ()
                     )
                 )
+
+
+# cron handling
+
+
+class BetterCronTrigger(CronTrigger):
+
+    @classmethod
+    def from_extended_crontab(cls, expr, timezone=None):
+        """Create a :class:`~CronTrigger` from an extended standard crontab expression.
+
+        See https://en.wikipedia.org/wiki/Cron for more information on
+        the format accepted here.  We add an initial field there for
+        seconds
+        """
+        values = expr.split()
+        if len(values) != 6:
+            raise ValueError(
+                f'Wrong number of fields; got {len(values)}, expected 6'
+            )
+
+        return cls(
+            second=values[0], minute=values[1], hour=values[2], day=values[3],
+            month=values[4], day_of_week=values[5], timezone=timezone
+        )
