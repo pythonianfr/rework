@@ -68,7 +68,7 @@ def clip(val, low, high):
     return val
 
 
-class monstats(object):
+class monstats:
     __slots__ = ('new', 'deleted', 'shrink')
 
     def __init__(self):
@@ -86,7 +86,7 @@ class monstats(object):
     __repr__ = __str__
 
 
-class Monitor(object):
+class Monitor:
     __slots__ = ('engine', 'domain',
                  'minworkers', 'maxworkers',
                  'maxruns', 'maxmem', 'debugport',
