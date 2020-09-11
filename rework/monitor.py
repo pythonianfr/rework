@@ -7,14 +7,16 @@ from datetime import datetime
 import traceback as tb
 from pathlib import Path
 import sys
+import pickle
 
 import tzlocal
 import pytz
 import psutil
-
+from apscheduler.schedulers.background import BackgroundScheduler
 from sqlhelp import select, insert, update
 
 from rework.helper import (
+    BetterCronTrigger,
     cpu_usage,
     host,
     kill_process_tree,
@@ -23,6 +25,7 @@ from rework.helper import (
     utcnow,
     wait_true
 )
+from rework import api
 from rework.task import Task
 
 
@@ -86,13 +89,59 @@ class monstats:
     __repr__ = __str__
 
 
+class scheduler:
+    __slots__ = ('engine', 'domain', 'sched', 'defs')
+
+    def __init__(self, engine, domain):
+        self.engine = engine
+        self.domain = domain
+        self.sched = BackgroundScheduler()
+        self.sched.start()  # start empty
+        self.defs = []
+
+    def __repr__(self):
+        return f'{self.defs}'
+
+    def stop(self):
+        self.sched.shutdown()
+
+    def loop(self):
+        defs = self.definitions
+        if defs != self.defs:
+            # reload everything
+            self.stop()
+            self.sched = BackgroundScheduler()
+            for operation, domain, inputdata, host, meta, rule in defs:
+                self.sched.add_job(
+                    lambda: api.schedule(
+                        self.engine, operation,
+                        pickle.loads(inputdata) if inputdata else None,
+                        hostid=host, domain=domain,
+                        metadata=meta
+                    ),
+                    trigger=BetterCronTrigger.from_extended_crontab(rule)
+                )
+                self.defs = defs
+            self.sched.start()
+
+    @property
+    def definitions(self):
+        q = select(
+            'op.name', 's.domain', 's.inputdata', 's.host', 's.metadata', 's.rule'
+        ).table('rework.sched as s', 'rework.operation as op'
+        ).join('rework.sched as s2 on (s2.operation = op.id)'
+        ).where('s.domain = %(domain)s', domain=self.domain)
+
+        return q.do(self.engine).fetchall()
+
+
 class Monitor:
     __slots__ = ('engine', 'domain',
                  'minworkers', 'maxworkers',
                  'maxruns', 'maxmem', 'debugport',
                  'workers', 'host', 'monid',
                  'start_timeout', 'debugfile',
-                 'pending_start')
+                 'pending_start', 'scheduler')
 
     def __init__(self, engine, domain='default',
                  minworkers=None, maxworkers=2,
@@ -114,6 +163,7 @@ class Monitor:
         if debugfile:
             self.debugfile = Path(debugfile).open('wb')
         self.pending_start = {}
+        self.scheduler = scheduler(engine, domain)
         signal.signal(signal.SIGTERM, self.sigterm)
 
     def sigterm(self, signum, stack):
@@ -449,7 +499,7 @@ class Monitor:
             update('rework.monitor').where(id=self.monid).values(
                 lastseen=utcnow().astimezone(TZ)
             ).do(cn)
-
+
     def unregister(self):
         assert self.monid
         with self.engine.begin() as cn:
@@ -479,6 +529,7 @@ class Monitor:
                     self.monid, datetime.now().isoformat()
                 )
             )
+            self.scheduler.stop()
             self.unregister()
 
     def wait_all_started(self, stop=False):
@@ -507,6 +558,7 @@ class Monitor:
         if dead:
             print(f'reaped {len(dead)} dead workers')
         stats = self.ensure_workers()
+        self.scheduler.loop()
         self.dead_man_switch()
         return stats
 

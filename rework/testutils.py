@@ -20,6 +20,7 @@ def workers(engine, numworkers=1, minworkers=None,
     ) as mon:
         mon.wait_all_started()
         yield mon
+        mon.scheduler.stop()
 
 
 def scrub(anstr, subst='X'):

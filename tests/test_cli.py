@@ -7,6 +7,7 @@ from sqlhelp import insert
 from rework import api
 from rework.testutils import scrub, workers
 from rework.helper import guard, wait_true
+from rework.task import Task
 
 
 def test_list_operations(engine, cli):
@@ -514,10 +515,60 @@ def test_scheduler(engine, cli):
 
     sid = api.prepare(
         engine,
-        'print_sleep_and_go_away'
+        'print_sleep_and_go_away',
+        inputdata='HELLO'
     )
 
     r = cli('list-scheduled', engine.url)
     assert r.output.strip() == (
         f'{sid} `no host` `print_sleep_and_go_away` default `no host` `no meta` "* * * * * *"'
     )
+
+    with workers(engine) as mon:
+        mon.wait_all_started()
+        mon.step()
+        # from this we have a task
+        wait_true(lambda: engine.execute('select id from rework.task').scalar())
+        tid = engine.execute('select id from rework.task').scalar()
+        t = Task.byid(engine, tid)
+        wait_true(lambda: t.status == 'done')
+        r = cli('list-tasks', engine.url)
+
+    assert scrub(r.output)[:140].strip() == (
+        '<X> print_sleep_and_go_away done '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+    )
+
+    s2 = api.prepare(
+        engine,
+        'run_in_non_default_domain',
+        domain='nondefault'
+    )
+
+    r = cli('list-scheduled', engine.url)
+    assert r.output.strip() == (
+        f'{sid} `no host` `print_sleep_and_go_away` default `no host` '
+        '`no meta` "* * * * * *"\n'
+        f'{s2} `no host` `run_in_non_default_domain` nondefault `no host` '
+        '`no meta` "* * * * * *"'
+    )
+
+    with workers(engine, domain='nondefault') as mon:
+        mon.wait_all_started()
+        mon.step()
+        wait_true(lambda: engine.execute('select id from rework.task').scalar())
+        tid = engine.execute('select id from rework.task').scalar()
+        t = Task.byid(engine, tid)
+        wait_true(lambda: t.status == 'done')
+        r = cli('list-tasks', engine.url)
+
+    assert scrub(r.output)[:140].strip() == (
+        '<X> run_in_non_default_domain done '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+    )
+    with engine.begin() as cn:
+        cn.execute('delete from rework.sched')
