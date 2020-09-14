@@ -160,9 +160,6 @@ def freeze_operations(engine, domain=None, domain_map=None,
         funcmod = func.__module__
         module = sys.modules[funcmod]
         modpath = module.__file__
-        # python2
-        if modpath.endswith('pyc'):
-            modpath = modpath[:-1]
         modpath = str(Path(modpath).resolve())
         values.append({
             'host': hostid,
