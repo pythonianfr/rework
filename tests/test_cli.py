@@ -18,6 +18,7 @@ def test_list_operations(engine, cli):
 <X> host(<X>.<X>.<X>.<X>) `print_sleep_and_go_away` path(.../tests/tasks.py)
 <X> host(<X>.<X>.<X>.<X>) `run_in_non_default_domain` path(.../tests/tasks.py)
 <X> host(<X>.<X>.<X>.<X>) `raw_input` path(.../tests/tasks.py)
+<X> host(<X>.<X>.<X>.<X>) `fancy_inputs` path(.../tests/tasks.py)
 <X> host(<X>.<X>.<X>.<X>) `infinite_loop` path(.../tests/tasks.py)
 <X> host(<X>.<X>.<X>.<X>) `infinite_loop_timeout` path(.../tests/tasks.py)
 <X> host(<X>.<X>.<X>.<X>) `infinite_loop_long_timeout` path(.../tests/tasks.py)

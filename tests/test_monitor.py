@@ -43,6 +43,7 @@ def test_basic_task_operations(engine):
     assert [
         ('allocate_and_leak_mbytes', 'tasks.py'),
         ('capture_logs', 'tasks.py'),
+        ('fancy_inputs', 'tasks.py'),
         ('flush_captured_stdout', 'tasks.py'),
         ('infinite_loop', 'tasks.py'),
         ('infinite_loop_long_timeout', 'tasks.py'),

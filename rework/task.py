@@ -12,6 +12,7 @@ from rework.helper import PGLogHandler, PGLogWriter, utcnow
 
 
 __task_registry__ = {}
+__task_inputs__ = {}
 
 
 class TimeOut(Exception):

@@ -14,7 +14,11 @@ from rework.helper import (
     delta_isoformat,
     host
 )
-from rework.task import __task_registry__, Task
+from rework.task import (
+    __task_inputs__,
+    __task_registry__,
+    Task
+)
 from rework.monitor import Monitor
 
 
@@ -36,22 +40,38 @@ def task(*args, **kw):
         def mytask(task):
             pass
 
+        @api.task(inputs={'myfile': file, 'foo': int, 'bar': str})
+
     If you want to specify either a non-default domain or a timeout
     parameter, the second notation (with keywords) must be used.
 
     All operation functions must take a single `task` parameter.
 
     """
-    msg = "Use either @task or @task(domain='domain')"
+    msg = "Use either @task or @task(domain='domain', timeout=..., inputs=...)"
     if args:
         assert callable(args[0]), msg
     else:
-        assert 'domain' in kw or 'timeout' in kw, msg
+        assert 'domain' in kw or 'timeout' in kw or 'inputs' in kw, msg
     domain = 'default'
     timeout = None
+    inputs = None
 
     def register_task(func):
         __task_registry__[(domain, func.__name__)] = (func, timeout)
+        if inputs is None:
+            return func
+
+        msg = 'inputs must be a dict'
+        assert isinstance(inputs, dict), msg
+        okvals = bytes, int, float, str
+        valmap = {bytes: 'bytes', int: 'int', float: 'float', str: 'str'}
+        saveinputs = {}
+        for key, val in inputs.items():
+            assert val in okvals, 'input types must belong to {vals}'
+            saveinputs[key] = valmap[val]
+
+        __task_inputs__[(domain, func.__name__)] = saveinputs
         return func
 
     if args and callable(args[0]):
@@ -59,7 +79,8 @@ def task(*args, **kw):
 
     domain = kw.pop('domain', domain)
     timeout = kw.pop('timeout', None)
-    assert domain or timeout
+    inputs = kw.pop('inputs', None)
+    assert domain or timeout or inputs
     if timeout is not None:
         msg = 'timeout must be a timedelta object'
         assert isinstance(timeout, timedelta), msg
@@ -198,13 +219,19 @@ def freeze_operations(engine, domain=None, domain_map=None,
         module = sys.modules[funcmod]
         modpath = module.__file__
         modpath = str(Path(modpath).resolve())
-        values.append({
+        val = {
             'host': hostid,
             'name': fname,
             'path': modpath,
             'domain': fdomain,
-            'timeout': timeout
-        })
+            'timeout': timeout,
+        }
+        # inputs
+        if (fdomain, fname) in __task_inputs__:
+            val['inputs'] = json.dumps(
+                __task_inputs__[(fdomain, fname)]
+            )
+        values.append(val)
 
     recorded = []
     alreadyknown = []

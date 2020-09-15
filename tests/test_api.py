@@ -20,8 +20,9 @@ def test_task_decorator(cleanup):
         def nope(task):
             pass
 
-    assert werr.value.args[0] == "Use either @task or @task(domain='domain')"
-
+    assert werr.value.args[0] == (
+        "Use either @task or @task(domain='domain', timeout=..., inputs=...)"
+    )
 
 
 def reset_ops(engine):
@@ -43,6 +44,10 @@ def register_tasks():
     def hammy(task):
         pass
 
+    @api.task(inputs={'myfile': bytes, 'foo': int})
+    def yummy(task):
+        pass
+
 
 def test_freeze_ops(engine, cleanup):
     reset_ops(engine)
@@ -50,9 +55,14 @@ def test_freeze_ops(engine, cleanup):
     api.freeze_operations(engine)
 
     res = engine.execute(
-        'select name, domain from rework.operation order by domain, name'
+        'select name, domain, inputs from rework.operation order by domain, name'
     ).fetchall()
-    assert res == [('cheesy', 'cheese'), ('foo', 'default'), ('hammy', 'ham')]
+    assert res == [
+        ('cheesy', 'cheese', None),
+        ('foo', 'default', None),
+        ('yummy', 'default', {'foo': 'int', 'myfile': 'bytes'}),
+        ('hammy', 'ham', None)
+    ]
 
     reset_ops(engine)
     register_tasks()
@@ -62,7 +72,11 @@ def test_freeze_ops(engine, cleanup):
     res = engine.execute(
         'select name, domain from rework.operation order by domain, name'
     ).fetchall()
-    assert res == [('foo', 'default'), ('hammy', 'ham')]
+    assert res == [
+        ('foo', 'default'),
+        ('yummy', 'default'),
+        ('hammy', 'ham')
+    ]
 
 
 def test_schedule_domain(engine, cleanup):

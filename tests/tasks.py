@@ -27,6 +27,17 @@ def raw_input(task):
                      raw=True)
 
 
+@api.task(inputs={'myfile': bytes, 'foo': int, 'bar': str})
+def fancy_inputs(task):
+    inputs = task.input
+    msg = (
+        f'file length: {len(inputs["myfile"])},'
+        f'foo: {inputs["foo"]},'
+        f'bar: {inputs["bar"]}'
+    )
+    task.save_output(msg)
+
+
 @api.task
 def infinite_loop(task):
     while True:
