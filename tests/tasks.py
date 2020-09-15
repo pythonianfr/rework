@@ -2,7 +2,7 @@ import time
 import logging
 from datetime import timedelta
 
-from rework import api
+from rework import api, input
 
 
 @api.task
@@ -27,7 +27,10 @@ def raw_input(task):
                      raw=True)
 
 
-@api.task(inputs={'myfile': bytes, 'foo': int, 'bar': str})
+@api.task(inputs=(
+    input.file('myfile'),
+    input.number('foo'),
+    input.string('bar')))
 def fancy_inputs(task):
     inputs = task.input
     msg = (

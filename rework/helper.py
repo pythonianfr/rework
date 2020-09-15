@@ -6,6 +6,7 @@ import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 import re
+import json
 
 from apscheduler.triggers.cron import CronTrigger
 import pytz
@@ -328,3 +329,13 @@ class BetterCronTrigger(CronTrigger):
             second=values[0], minute=values[1], hour=values[2], day=values[3],
             month=values[4], day_of_week=values[5], timezone=timezone
         )
+
+
+# json input serializer
+
+class InputEncoder(json.JSONEncoder):
+
+    def default(self, o):
+        if getattr(o, '__json_encode__'):
+            return o.__json_encode__()
+        return super().default(o)

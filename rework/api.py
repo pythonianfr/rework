@@ -12,7 +12,8 @@ from sqlhelp import select, insert
 from rework.helper import (
     BetterCronTrigger,
     delta_isoformat,
-    host
+    host,
+    InputEncoder
 )
 from rework.task import (
     __task_inputs__,
@@ -62,16 +63,10 @@ def task(*args, **kw):
         if inputs is None:
             return func
 
-        msg = 'inputs must be a dict'
-        assert isinstance(inputs, dict), msg
-        okvals = bytes, int, float, str
-        valmap = {bytes: 'bytes', int: 'int', float: 'float', str: 'str'}
-        saveinputs = {}
-        for key, val in inputs.items():
-            assert val in okvals, 'input types must belong to {vals}'
-            saveinputs[key] = valmap[val]
+        msg = 'inputs must be a tuple'
+        assert isinstance(inputs, tuple), msg
 
-        __task_inputs__[(domain, func.__name__)] = saveinputs
+        __task_inputs__[(domain, func.__name__)] = inputs
         return func
 
     if args and callable(args[0]):
@@ -228,7 +223,7 @@ def freeze_operations(engine, domain=None, domain_map=None,
         }
         # inputs
         if (fdomain, fname) in __task_inputs__:
-            val['inputs'] = json.dumps(
+            val['inputs'] = InputEncoder().encode(
                 __task_inputs__[(fdomain, fname)]
             )
         values.append(val)

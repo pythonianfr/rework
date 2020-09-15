@@ -1,7 +1,7 @@
 import pytest
 
 from rework.helper import host
-from rework import api
+from rework import api, input
 
 
 def test_task_decorator(cleanup):
@@ -44,7 +44,7 @@ def register_tasks():
     def hammy(task):
         pass
 
-    @api.task(inputs={'myfile': bytes, 'foo': int})
+    @api.task(inputs=(input.file('myfile', required=True), input.number('foo')))
     def yummy(task):
         pass
 
@@ -60,7 +60,10 @@ def test_freeze_ops(engine, cleanup):
     assert res == [
         ('cheesy', 'cheese', None),
         ('foo', 'default', None),
-        ('yummy', 'default', {'foo': 'int', 'myfile': 'bytes'}),
+        ('yummy', 'default', [
+            {'name': 'myfile', 'type': 'file', 'choices': None, 'required': True},
+            {'name': 'foo', 'type': 'number', 'choices': None, 'required': False}
+        ]),
         ('hammy', 'ham', None)
     ]
 
