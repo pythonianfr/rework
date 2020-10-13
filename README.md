@@ -69,7 +69,7 @@ def main(dburi):
     engine = create_engine(dburi)
 
     # record the decorated tasks
-    @api.freeze_operations(engine)
+    api.freeze_operations(engine)
 
     # now, schedule tasks
     t1 = api.schedule(engine, 'my_first_task', 'hello')
