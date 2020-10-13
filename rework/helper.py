@@ -406,6 +406,9 @@ def nary_pack(*bytestr):
 
 
 def pack_inputs(spec, args):
+    if args is None and not len(spec):
+        return
+
     raw = {}
     for field in spec:
         name = field['name']
@@ -426,6 +429,16 @@ def pack_inputs(spec, args):
             continue
         if ftype == 'number':
             raw[name] = str(val).encode('utf-8')
+
+    unknown_keys = set()
+    for key in args:
+        if key not in raw:
+            unknown_keys.add(key)
+
+    if unknown_keys:
+        raise ValueError(
+            f'unknown inputs: {",".join(unknown_keys)}'
+        )
 
     return nary_pack(*(
         [k.encode('utf-8') for k in raw] +

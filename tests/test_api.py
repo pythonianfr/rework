@@ -54,6 +54,11 @@ def register_tasks():
     def yummy(task):
         pass
 
+    @api.task(inputs=())
+    def noinput(task):
+        pass
+
+
 
 def test_freeze_ops(engine, cleanup):
     reset_ops(engine)
@@ -70,6 +75,7 @@ def test_freeze_ops(engine, cleanup):
     assert res == [
         ('cheesy', 'cheese', None),
         ('foo', 'default', None),
+        ('noinput', 'default', []),
         ('yummy', 'default', [
             {'choices': None, 'name': 'myfile.txt', 'required': True, 'type': 'file'},
             {'choices': None, 'name': 'weight', 'required': False, 'type': 'number'},
@@ -90,6 +96,7 @@ def test_freeze_ops(engine, cleanup):
     ).fetchall()
     assert res == [
         ('foo', 'default'),
+        ('noinput', 'default'),
         ('yummy', 'default'),
         ('hammy', 'ham')
     ]
@@ -108,6 +115,23 @@ def test_with_inputs(engine, cleanup):
     }
     t = api.schedule(engine, 'yummy', args)
     assert t.input == args
+
+
+def test_with_noinput(engine, cleanup):
+    reset_ops(engine)
+    register_tasks()
+    api.freeze_operations(engine)
+
+    args = {}
+    t = api.schedule(engine, 'noinput', args)
+    assert t.input == {}
+
+    args = {'foo': 42}
+    with pytest.raises(ValueError):
+        t = api.schedule(engine, 'noinput', args)
+
+    t = api.schedule(engine, 'noinput')
+    assert t.input is None
 
 
 def test_schedule_domain(engine, cleanup):
