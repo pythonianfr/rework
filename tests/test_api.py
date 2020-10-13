@@ -1,6 +1,11 @@
 import pytest
 
-from rework.helper import host
+from rework.helper import (
+    host,
+    filterinput,
+    inputspec,
+    pack_inputs
+)
 from rework import api, input
 
 
@@ -44,7 +49,13 @@ def register_tasks():
     def hammy(task):
         pass
 
-    @api.task(inputs=(input.file('myfile', required=True), input.number('foo')))
+    @api.task(inputs=(
+        input.file('myfile.txt', required=True),
+        input.number('weight'),
+        input.string('name'),
+        input.string('option', choices=('foo', 'bar')),
+        input.string('ignoreme'))
+    )
     def yummy(task):
         pass
 
@@ -54,15 +65,22 @@ def test_freeze_ops(engine, cleanup):
     register_tasks()
     api.freeze_operations(engine)
 
-    res = engine.execute(
-        'select name, domain, inputs from rework.operation order by domain, name'
-    ).fetchall()
+    res = [
+        tuple(row)
+        for row in engine.execute(
+                'select name, domain, inputs from rework.operation '
+                'order by domain, name'
+        ).fetchall()
+    ]
     assert res == [
         ('cheesy', 'cheese', None),
         ('foo', 'default', None),
         ('yummy', 'default', [
-            {'name': 'myfile', 'type': 'file', 'choices': None, 'required': True},
-            {'name': 'foo', 'type': 'number', 'choices': None, 'required': False}
+            {'choices': None, 'name': 'myfile.txt', 'required': True, 'type': 'file'},
+            {'choices': None, 'name': 'weight', 'required': False, 'type': 'number'},
+            {'choices': None, 'name': 'name', 'required': False, 'type': 'string'},
+            {'choices': ['foo', 'bar'], 'name': 'option', 'required': False, 'type': 'string'},
+            {'choices': None, 'name': 'ignoreme', 'required': False, 'type': 'string'}
         ]),
         ('hammy', 'ham', None)
     ]
@@ -80,6 +98,25 @@ def test_freeze_ops(engine, cleanup):
         ('yummy', 'default'),
         ('hammy', 'ham')
     ]
+
+
+def test_with_inputs(engine, cleanup):
+    reset_ops(engine)
+    register_tasks()
+    api.freeze_operations(engine)
+
+    args = {
+        'myfile.txt': b'some file',
+        'name': 'Babar',
+        'weight': 65,
+        'option': 'foo'
+    }
+    specs = inputspec(engine)
+    spec = filterinput(specs, 'yummy')
+    rawinput = pack_inputs(spec, args)
+
+    t = api.schedule(engine, 'yummy', rawinputdata=rawinput)
+    assert t.input == args
 
 
 def test_schedule_domain(engine, cleanup):

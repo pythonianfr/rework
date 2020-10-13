@@ -1,4 +1,5 @@
 import os
+import io
 from threading import Thread
 import socket
 import time
@@ -7,11 +8,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import re
 import json
+import struct
 
 from apscheduler.triggers.cron import CronTrigger
 import pytz
 import psutil
 from sqlalchemy.engine import url
+from sqlhelp import select
 from inireader import reader
 
 
@@ -339,3 +342,135 @@ class InputEncoder(json.JSONEncoder):
         if getattr(o, '__json_encode__'):
             return o.__json_encode__()
         return super().default(o)
+
+
+# inputs spec reader
+
+def inputspec(engine):
+    q = select(
+        'id', 'host', 'name', 'domain', 'inputs'
+    ).table('rework.operation'
+    ).where('inputs is not null'
+    ).order('domain, name')
+
+    out = []
+    for row in q.do(engine).fetchall():
+        inputs = row.inputs
+        for field in inputs:
+            if field['choices'] is None:
+                field['choices'] = []
+        out.append(
+            (row.id,
+             row.name,
+             row.domain,
+             row.host,
+             inputs
+            )
+        )
+    return out
+
+
+def filterinput(specs, operation, domain=None, hostid=None):
+    out = []
+    for sid, opname, dom, host, spec in specs:
+        if opname == operation:
+            if domain and domain != dom:
+                continue
+            if hostid and hostid != host:
+                continue
+            out.append(spec)
+
+    if not len(out):
+        raise Exception('No operation was found for these parameters')
+
+    if len(out) > 1:
+        raise ValueError('Ambiguous operation selection')
+
+    return out[0]
+
+
+# binary serializer
+
+def nary_pack(*bytestr):
+    sizes = [
+        struct.pack('!L', len(b))
+        for b in bytestr
+    ]
+    sizes_size = struct.pack('!L', len(sizes))
+    stream = io.BytesIO()
+    stream.write(sizes_size)
+    stream.write(b''.join(sizes))
+    for bstr in bytestr:
+        stream.write(bstr)
+    return stream.getvalue()
+
+
+def pack_inputs(spec, args):
+    raw = {}
+    for field in spec:
+        name = field['name']
+        val = args.get(name)
+        if val is None:
+            assert not field['required']
+            continue
+        ftype = field['type']
+        if ftype == 'file':
+            assert isinstance(val, bytes)
+            raw[name] = val
+            continue
+        if ftype == 'string':
+            choices = field['choices']
+            if choices:
+                assert val in choices
+            raw[name] = val.encode('utf-8')
+            continue
+        if ftype == 'number':
+            raw[name] = str(val).encode('utf-8')
+
+    return nary_pack(*(
+        [k.encode('utf-8') for k in raw] +
+        list(raw.values()))
+    )
+
+
+def nary_unpack(packedbytes):
+    [sizes_size] = struct.unpack(
+        '!L', packedbytes[:4]
+    )
+    payloadoffset = 4 + sizes_size * 4
+    sizes = struct.unpack(
+        f'!{"L"*sizes_size}',
+        packedbytes[4: payloadoffset]
+    )
+    fmt = ''.join('%ss' % size for size in sizes)
+    return struct.unpack(fmt, packedbytes[payloadoffset:])
+
+
+def unpack_inputs(spec, packedbytes):
+    byteslist = nary_unpack(packedbytes)
+    middle = len(byteslist) // 2
+    keys = [
+        k.decode('utf-8')
+        for k in byteslist[:middle]
+    ]
+    values = byteslist[middle:]
+    output = dict(zip(keys, values))
+
+    for field in spec:
+        name = field['name']
+        val = output.get(name)
+        if val is None:
+            continue
+        ftype = field['type']
+        if ftype == 'number':
+            try:
+                val = int(val)
+            except ValueError:
+                val = float(val)
+            output[name] = val
+            continue
+        if ftype == 'string':
+            output[name] = val.decode('utf-8')
+
+    return output
+

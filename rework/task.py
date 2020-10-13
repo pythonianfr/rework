@@ -8,8 +8,12 @@ import logging
 
 from sqlhelp import select, update
 
-from rework.helper import PGLogHandler, PGLogWriter, utcnow
-
+from rework.helper import (
+    PGLogHandler,
+    PGLogWriter,
+    unpack_inputs,
+    utcnow
+)
 
 __task_registry__ = {}
 __task_inputs__ = {}
@@ -175,6 +179,17 @@ class Task:
         return self._propvalue('worker')
 
     @property
+    def inputspec(self):
+        with self.engine.begin() as cn:
+            return select('inputs').table(
+                'rework.operation as op'
+            ).join(
+                'rework.task as t on (t.operation = op.id)'
+            ).where(
+                't.id = %(tid)s', tid=self.tid
+            ).do(cn).scalar()
+
+    @property
     def input(self):
         """provide the task input python object that was supplied to
         `api.schedule(...)` if any
@@ -185,7 +200,10 @@ class Task:
             try:
                 return loads(val)
             except:
-                raise TypeError('cannot unpickle the raw bytes')
+                try:
+                    return unpack_inputs(self.inputspec, val)
+                except:
+                    raise TypeError('cannot decifer the raw bytes')
         return None
 
     @property
