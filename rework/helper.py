@@ -381,7 +381,7 @@ def filterinput(specs, operation, domain=None, hostid=None):
             out.append(spec)
 
     if not len(out):
-        raise Exception('No operation was found for these parameters')
+        return None
 
     if len(out) > 1:
         raise ValueError('Ambiguous operation selection')

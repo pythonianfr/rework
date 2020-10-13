@@ -12,8 +12,11 @@ from sqlhelp import select, insert
 from rework.helper import (
     BetterCronTrigger,
     delta_isoformat,
+    filterinput,
     host,
-    InputEncoder
+    InputEncoder,
+    inputspec,
+    pack_inputs
 )
 from rework.task import (
     __task_inputs__,
@@ -149,7 +152,11 @@ def schedule(engine,
         assert isinstance(metadata, dict)
 
     if inputdata is not None:
-        rawinputdata = dumps(inputdata, protocol=2)
+        spec = filterinput(inputspec(engine), opname, domain, hostid)
+        if spec:
+            rawinputdata = pack_inputs(spec, inputdata)
+        else:
+            rawinputdata = dumps(inputdata, protocol=2)
 
     q = select('id').table('rework.operation').where(
         name=opname

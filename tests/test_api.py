@@ -1,11 +1,6 @@
 import pytest
 
-from rework.helper import (
-    host,
-    filterinput,
-    inputspec,
-    pack_inputs
-)
+from rework.helper import host
 from rework import api, input
 
 
@@ -111,11 +106,7 @@ def test_with_inputs(engine, cleanup):
         'weight': 65,
         'option': 'foo'
     }
-    specs = inputspec(engine)
-    spec = filterinput(specs, 'yummy')
-    rawinput = pack_inputs(spec, args)
-
-    t = api.schedule(engine, 'yummy', rawinputdata=rawinput)
+    t = api.schedule(engine, 'yummy', args)
     assert t.input == args
 
 
