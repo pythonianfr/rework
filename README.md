@@ -101,6 +101,39 @@ Then, the script will quickly terminate, as both tasks have been
 executed.
 
 
+## Specifying inputs
+
+Having a formal declaration of the task input can help validate them
+and also, in [rework_ui][reworkui] it will provide an interactive web
+form allowing subsequent launch of the task.
+
+```python
+from rework import api, input
+
+@api.task(inputs=(
+    input.file('myfile.txt', required=True),
+    input.string('name', required=True),
+    input.string('option', choices=('foo', 'bar')),
+    input.number('weight'))
+)
+def compute_things(task):
+    inp = task.input
+    assert 'name' in inp
+    ...
+```
+
+... and then, later:
+
+```python
+api.schedule(
+    engine, 'compute_things',
+    {'myfile.txt': b'file contents',
+    'name': 'Babar',
+    'weight': 65}
+)
+```
+
+
 # API
 
 The `api` module exposes most if what is needed. The `task` module
