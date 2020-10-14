@@ -33,3 +33,10 @@ class file(_base):
     def __init__(self, name, required=False):
         self.name = name
         self.required = required
+
+
+class datetime(_base):
+
+    def __init__(self, name, required=False):
+        self.name = name
+        self.required = required

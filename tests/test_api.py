@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime as dt
 
 from rework.helper import host
 from rework import api, input
@@ -47,6 +48,7 @@ def register_tasks():
     @api.task(inputs=(
         input.file('myfile.txt', required=True),
         input.number('weight'),
+        input.datetime('birthdate'),
         input.string('name'),
         input.string('option', choices=('foo', 'bar')),
         input.string('ignoreme'))
@@ -79,6 +81,7 @@ def test_freeze_ops(engine, cleanup):
         ('yummy', 'default', [
             {'choices': None, 'name': 'myfile.txt', 'required': True, 'type': 'file'},
             {'choices': None, 'name': 'weight', 'required': False, 'type': 'number'},
+            {'choices': None, 'name': 'birthdate', 'required': False, 'type': 'datetime'},
             {'choices': None, 'name': 'name', 'required': False, 'type': 'string'},
             {'choices': ['foo', 'bar'], 'name': 'option', 'required': False, 'type': 'string'},
             {'choices': None, 'name': 'ignoreme', 'required': False, 'type': 'string'}
@@ -111,6 +114,7 @@ def test_with_inputs(engine, cleanup):
         'myfile.txt': b'some file',
         'name': 'Babar',
         'weight': 65,
+        'birthdate': dt(1973, 5, 20, 9),
         'option': 'foo'
     }
     t = api.schedule(engine, 'yummy', args)

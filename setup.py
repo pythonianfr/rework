@@ -26,7 +26,8 @@ setup(name='rework',
           'tzlocal',
           'inireader',
           'apscheduler',
-          'zstd'
+          'zstd',
+          'dateutil'
       ],
       package_data={'rework': [
           'schema.sql'
