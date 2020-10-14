@@ -116,6 +116,19 @@ def test_with_inputs(engine, cleanup):
     t = api.schedule(engine, 'yummy', args)
     assert t.input == args
 
+    with pytest.raises(ValueError) as err:
+        api.schedule(engine, 'yummy', {'no-such-thing': 42})
+    assert err.value.args[0] == 'missing required input: `myfile.txt`'
+
+    with pytest.raises(ValueError) as err:
+        api.schedule(
+            engine, 'yummy',
+            {'no-such-thing': 42,
+             'myfile.txt': b'something'
+            }
+        )
+    assert err.value.args[0] == 'unknown inputs: no-such-thing'
+
 
 def test_with_noinput(engine, cleanup):
     reset_ops(engine)

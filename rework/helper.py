@@ -417,7 +417,10 @@ def pack_inputs(spec, args):
         name = field['name']
         val = args.get(name)
         if val is None:
-            assert not field['required']
+            if field['required']:
+                raise ValueError(
+                    f'missing required input: `{name}`'
+                )
             continue
         ftype = field['type']
         if ftype == 'file':
@@ -433,10 +436,8 @@ def pack_inputs(spec, args):
         if ftype == 'number':
             raw[name] = str(val).encode('utf-8')
 
-    unknown_keys = set()
-    for key in args:
-        if key not in raw:
-            unknown_keys.add(key)
+    spec_keys = {field['name'] for field in spec}
+    unknown_keys = set(args) - spec_keys
 
     if unknown_keys:
         raise ValueError(
