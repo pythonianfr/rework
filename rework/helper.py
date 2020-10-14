@@ -11,6 +11,7 @@ import json
 import struct
 
 from apscheduler.triggers.cron import CronTrigger
+import zstd
 import pytz
 import psutil
 from sqlalchemy.engine import url
@@ -402,7 +403,9 @@ def nary_pack(*bytestr):
     stream.write(b''.join(sizes))
     for bstr in bytestr:
         stream.write(bstr)
-    return stream.getvalue()
+    return zstd.compress(
+        stream.getvalue()
+    )
 
 
 def pack_inputs(spec, args):
@@ -447,6 +450,7 @@ def pack_inputs(spec, args):
 
 
 def nary_unpack(packedbytes):
+    packedbytes = zstd.decompress(packedbytes.tobytes())
     [sizes_size] = struct.unpack(
         '!L', packedbytes[:4]
     )
