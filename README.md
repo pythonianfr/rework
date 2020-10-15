@@ -165,6 +165,24 @@ def my_task(task):
     pass
 ```
 
+It is also possible to specify a non-default `domain`:
+
+```python
+@task(domain='scrapers')
+def my_scraper(task):
+    pass
+```
+
+A `timeout` parameter is also available:
+
+```python
+from datetime import timedelta
+
+@task(timeout=timedelta(seconds=30)
+def my_time_limited_task(task):
+    pass
+```
+
 To make the tasks available for use, they must be recorded within
 the database referential. We use `freeze_operations` for this:
 
