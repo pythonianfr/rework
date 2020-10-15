@@ -323,7 +323,7 @@ $ rework list-workers postgres://babar:password@localhost:5432/jobstore
 2 4889748@192.168.1.2 30 Mb [running]
 ```
 
-[1]: https://bitbucket.org/pythonian/rework/src/default/test/test_monitor.py?fileviewer=file-view-default
+[1]: https://hg.sr.ht/~pythonian/rework/browse/tests/test_monitor.py?rev=tip
 
 
 ## Extensions
@@ -345,4 +345,4 @@ For instance, the [rework_ui][reworkui] python package provides such a
 `view` subcommand to launch a monitoring webapp for a given rework job
 store.
 
-[reworkui]: https://bitbucket.org/pythonian/rework_ui
+[reworkui]: https://hg.sr.ht/~pythonian/rework_ui
