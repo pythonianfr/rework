@@ -27,8 +27,8 @@ is for you. It is mature, probably well-tested, and largely used.
 ### Setting up a database
 
 You need a postgresql database. Rework will install its tables into
-its own namespace schema, so you can use either a dedicated database
-or an exising one, with little risk of conflict.
+its own `rework` namespace schema, so you can use either a dedicated
+database or an exising one, with little risk of conflict.
 
 If you don't already have a database, create a fresh one with:
 
