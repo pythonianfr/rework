@@ -126,14 +126,21 @@ def compute_things(task):
 ... and then, later:
 
 ```python
-api.schedule(
+task = api.schedule(
     engine, 'compute_things',
     {'myfile.txt': b'file contents',
-     'birthdate': datetime(1973, 5, 20),
+     'birthdate': datetime(1973, 5, 20, 9),
      'name': 'Babar',
      'weight': 65
     }
 )
+
+assert task.input == {
+    'myfile.txt': b'file contents',
+    'birthdate': datetime(1973, 5, 20, 9),
+    'name': 'Babar',
+    'weight': 65
+}
 ```
 
 
