@@ -198,6 +198,9 @@ The `schedule` function wants these mandatory parameters:
 
 It also accepts two more options:
 
+* domain: a domain identifier (for cases when the same service is
+  available under several domains and you want to force one)
+
 * hostid: an host identifier (e.g. '192.168.1.1')
 
 * metadata: a json-serializable dictionary (e.g. {'user': 'Babar'})
