@@ -114,7 +114,8 @@ from rework import api, input
     input.file('myfile.txt', required=True),
     input.string('name', required=True),
     input.string('option', choices=('foo', 'bar')),
-    input.number('weight'))
+    input.number('weight'),
+    input.datetime('birthdate'))
 )
 def compute_things(task):
     inp = task.input
@@ -128,8 +129,10 @@ def compute_things(task):
 api.schedule(
     engine, 'compute_things',
     {'myfile.txt': b'file contents',
-    'name': 'Babar',
-    'weight': 65}
+     'birthdate': datetime(1973, 5, 20),
+     'name': 'Babar',
+     'weight': 65
+    }
 )
 ```
 
