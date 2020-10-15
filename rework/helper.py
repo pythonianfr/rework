@@ -17,7 +17,7 @@ import psutil
 from sqlalchemy.engine import url
 from sqlhelp import select
 from inireader import reader
-from dateutil.parser import isoparse
+from dateutil.parser import isoparse, parse as defaultparse
 
 
 def utcnow():
@@ -438,7 +438,11 @@ def pack_inputs(spec, args):
             raw[name] = str(val).encode('utf-8')
             continue
         if ftype == 'datetime':
-            raw[name] = val.isoformat().encode('utf-8')
+            if isinstance(val, str):
+                val = val.encode('utf-8')
+            else:
+                val = val.isoformat().encode('utf-8')
+            raw[name] = val
 
     spec_keys = {field['name'] for field in spec}
     unknown_keys = set(args) - spec_keys
@@ -468,6 +472,13 @@ def nary_unpack(packedbytes):
     return struct.unpack(fmt, packedbytes[payloadoffset:])
 
 
+def parsedatetime(strdt):
+    try:
+        return isoparse(strdt)
+    except ValueError:
+        return defaultparse(strdt)
+
+
 def unpack_inputs(spec, packedbytes):
     byteslist = nary_unpack(packedbytes)
     middle = len(byteslist) // 2
@@ -495,7 +506,7 @@ def unpack_inputs(spec, packedbytes):
             output[name] = val.decode('utf-8')
             continue
         if ftype == 'datetime':
-            output[name] = isoparse(val.decode('utf-8'))
+            output[name] = parsedatetime(val.decode('utf-8'))
 
     return output
 

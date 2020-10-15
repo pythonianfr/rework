@@ -133,6 +133,22 @@ def test_with_inputs(engine, cleanup):
         )
     assert err.value.args[0] == 'unknown inputs: no-such-thing'
 
+    args2 = {
+        'myfile.txt': b'some file',
+        'name': 'Babar',
+        'weight': 65,
+        'birthdate': '1973-5-20',
+        'option': 'foo'
+    }
+    t = api.schedule(engine, 'yummy', args2)
+    assert t.input == {
+        'birthdate': dt(1973, 5, 20, 0, 0),
+        'myfile.txt': b'some file',
+        'name': 'Babar',
+        'option': 'foo',
+        'weight': 65
+    }
+
 
 def test_with_noinput(engine, cleanup):
     reset_ops(engine)
