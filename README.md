@@ -1,11 +1,10 @@
-REWORK
-========
+# REWORK
 
 This is a python task scheduling and execution tool, which needs only
 python and Postgres to work (using sqlalchemy).
 
 
-# Principles
+## Principles
 
 Rework might interest people who:
 
@@ -23,9 +22,9 @@ mind depending on RabbitMQ and the Celery API and feature set, Celery
 is for you. It is mature, probably well-tested, and largely used.
 
 
-# Basic usage
+## Basic usage
 
-## Setting up a database
+### Setting up a database
 
 You need a postgresql database. Rework will install its tables into
 its own namespace schema, so you can use either a dedicated database
@@ -44,7 +43,7 @@ rework init-db postgres://babar:password@localhost:5432/jobstore
 ```
 
 
-## Declaring and scheduling a task
+### Declaring and scheduling a task
 
 All the features are covered in the [test suite][1], which can
 henceforth be regarded as a reasonnable source of
@@ -101,7 +100,7 @@ Then, the script will quickly terminate, as both tasks have been
 executed.
 
 
-## Specifying inputs
+### Specifying inputs
 
 Having a formal declaration of the task input can help validate them
 and also, in [rework_ui][reworkui] it will provide an interactive web
@@ -144,13 +143,13 @@ assert task.input == {
 ```
 
 
-# API
+## API
 
 The `api` module exposes most if what is needed. The `task` module
 and task objects provide the rest.
 
 
-## `api` module
+### `api` module
 
 Three functions are provided: the `task` decorator, the
 `freeze_operations` and `schedule` functions.
@@ -224,7 +223,7 @@ It also accepts two more options:
 * metadata: a json-serializable dictionary (e.g. {'user': 'Babar'})
 
 
-## Task objects
+### Task objects
 
 Task objects can be obtained from the `schedule` api call (as seen in the
 previous example) or through the `task` module.
@@ -257,9 +256,9 @@ The task object provides:
   given log id)
 
 
-# Command line
+## Command line
 
-## Operations
+### Operations
 
 If you read the previous chapter, you already know the `init-db` and
 `monitor` commands.
@@ -326,7 +325,7 @@ $ rework list-workers postgres://babar:password@localhost:5432/jobstore
 [1]: https://hg.sr.ht/~pythonian/rework/browse/tests/test_monitor.py?rev=tip
 
 
-## Extensions
+### Extensions
 
 It is possible to augment the `rework` command with new subcommands (or
 augment, modify existing commands).
