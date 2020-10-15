@@ -1,7 +1,7 @@
 # REWORK
 
 This is a python task scheduling and execution tool, which needs only
-python and Postgres to work (using sqlalchemy).
+python and Postgres to work.
 
 
 ## Principles
