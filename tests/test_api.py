@@ -1,7 +1,12 @@
 import pytest
 from datetime import datetime as dt
 
-from rework.helper import host
+from rework.helper import (
+    filterinput,
+    inputspec,
+    host,
+    unpack_inputs
+)
 from rework import api, input
 
 
@@ -147,6 +152,58 @@ def test_with_inputs(engine, cleanup):
         'name': 'Babar',
         'option': 'foo',
         'weight': 65
+    }
+
+
+def test_prepare_with_inputs(engine, cleanup):
+    reset_ops(engine)
+    register_tasks()
+    api.freeze_operations(engine)
+
+    args = {
+        'myfile.txt': b'some file',
+        'name': 'Babar',
+        'weight': 65,
+        'birthdate': dt(1973, 5, 20, 9),
+        'option': 'foo'
+    }
+    api.prepare(engine, 'yummy', inputdata=args, metadata={'user': 'Babar'})
+
+    with pytest.raises(ValueError) as err:
+        api.prepare(engine, 'yummy', inputdata={'no-such-thing': 42})
+    assert err.value.args[0] == 'missing required input: `myfile.txt`'
+
+    with pytest.raises(ValueError) as err:
+        api.prepare(
+            engine, 'yummy',
+            inputdata={'no-such-thing': 42,
+             'myfile.txt': b'something'
+            }
+        )
+    assert err.value.args[0] == 'unknown inputs: no-such-thing'
+
+    args2 = {
+        'myfile.txt': b'some file',
+        'name': 'Babar',
+        'weight': 65,
+        'birthdate': '1973-5-20',
+        'option': 'foo'
+    }
+    api.prepare(engine, 'yummy', inputdata=args2)
+
+    inputdata = engine.execute(
+        'select inputdata from rework.sched order by id asc limit 1'
+    ).scalar()
+
+    specs = inputspec(engine)
+    spec = filterinput(specs, 'yummy')
+    unpacked = unpack_inputs(spec, inputdata)
+    assert unpacked == {
+        'myfile.txt': b'some file',
+        'weight': 65,
+        'birthdate': dt(1973, 5, 20, 9, 0),
+        'name': 'Babar',
+        'option': 'foo'
     }
 
 

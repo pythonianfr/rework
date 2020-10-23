@@ -99,10 +99,13 @@ def prepare(engine,
     # validate the rules
     BetterCronTrigger.from_extended_crontab(rule)
 
-    if inputdata is not None:
-        rawinputdata = dumps(inputdata, protocol=2)
-    else:
-        rawinputdata = None
+    spec = filterinput(inputspec(engine), opname, domain, host)
+    rawinputdata = None
+    if inputdata:
+        if spec is not None:
+            rawinputdata = pack_inputs(spec, inputdata)
+        else:
+            rawinputdata = dumps(inputdata, protocol=2)
 
     q = select('id').table('rework.operation').where(
         name=opname
@@ -114,7 +117,7 @@ def prepare(engine,
             domain=domain,
             inputdata=rawinputdata,
             host=host,
-            metadata=metadata,
+            metadata=json.dumps(metadata),
             rule=str(rule)
         )
         sid = q.do(cn).scalar()
