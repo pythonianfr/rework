@@ -30,7 +30,7 @@ def test_helper():
         memory_usage(-1)
 
 
-def test_basic_task_operations(engine):
+def test_basic_task_operations(engine, cleanup):
     api.schedule(engine, 'print_sleep_and_go_away', 21,
                  metadata={'user': 'Joe'})
 
@@ -80,7 +80,7 @@ def test_basic_task_operations(engine):
     assert err.value.args[0] == 'No operation was found for these parameters'
 
 
-def test_monitor_step(engine):
+def test_monitor_step(engine, cleanup):
     mon = Monitor(engine)
     api.schedule(engine, 'print_sleep_and_go_away', 21,
                  metadata={'user': 'Joe'})
@@ -113,7 +113,7 @@ def test_monitor_step(engine):
     mon.killall()
 
 
-def test_task_input_output(engine):
+def test_task_input_output(engine, cleanup):
     with workers(engine) as mon:
         t = api.schedule(engine, 'raw_input', rawinputdata=b'Hello Babar')
         t.join()
@@ -136,7 +136,7 @@ def test_task_input_output(engine):
         assert t.raw_output is None
 
 
-def test_basic_worker_operations(engine):
+def test_basic_worker_operations(engine, cleanup):
     mon = Monitor(engine)
     wid = mon.new_worker()
     worker = Worker(engine.url, wid)
@@ -151,7 +151,7 @@ def test_basic_worker_operations(engine):
     ).scalar() == 0
 
 
-def test_failed_pending_start(engine):
+def test_failed_pending_start(engine, cleanup):
     from rework.api import workers
 
     with workers(engine, maxworkers=2, minworkers=2, start_timeout=0) as mon:
@@ -180,7 +180,7 @@ def test_failed_pending_start(engine):
         ]
 
 
-def test_basic_worker_task_execution(engine):
+def test_basic_worker_task_execution(engine, cleanup):
     t = api.schedule(engine, 'print_sleep_and_go_away', 21)
     assert t.state == 'queued'
 
@@ -206,7 +206,7 @@ def test_basic_worker_task_execution(engine):
           lambda res: res.scalar() == 0)
 
 
-def test_monitor_base(engine):
+def test_monitor_base(engine, cleanup):
     with workers(engine) as mon:
         assert engine.execute(
             'select count(id) from rework.monitor where id = {}'.format(mon.monid)
@@ -228,7 +228,7 @@ def test_monitor_base(engine):
           lambda r: r.scalar() == 0)
 
 
-def test_domain(engine):
+def test_domain(engine, cleanup):
     with workers(engine, maxruns=1) as mon:
         wid = mon.wids[0]
         t1 = api.schedule(engine, 'run_in_non_default_domain')
@@ -252,9 +252,7 @@ def test_domain(engine):
         assert t2.status == 'queued'
 
 
-def test_worker_two_runs_nondfefault_domain(engine):
-    with engine.begin() as cn:
-        cn.execute('delete from rework.worker')
+def test_worker_two_runs_nondfefault_domain(engine, cleanup):
     with workers(engine, maxruns=2, domain='nondefault') as mon:
         t1 = api.schedule(engine, 'run_in_non_default_domain')
         t2 = api.schedule(engine, 'run_in_non_default_domain')
@@ -281,14 +279,14 @@ def test_domain_map(engine, cleanup):
         assert t1.status == 'done'
 
 
-def test_task_rawinput(engine):
+def test_task_rawinput(engine, cleanup):
     with workers(engine):
         t = api.schedule(engine, 'raw_input', rawinputdata=b'Babar')
         t.join()
         assert t.raw_output == b'Babar and Celeste'
 
 
-def test_worker_shutdown(engine):
+def test_worker_shutdown(engine, cleanup):
     with workers(engine) as mon:
         wid = mon.wids[0]
         worker = Worker(engine.url, wid)
@@ -310,7 +308,7 @@ def test_worker_shutdown(engine):
         ).scalar()
 
 
-def test_worker_kill(engine):
+def test_worker_kill(engine, cleanup):
     with workers(engine) as mon:
         wid = mon.wids[0]
 
@@ -331,7 +329,7 @@ def test_worker_kill(engine):
         ).scalar().startswith('preemptive kill')
 
 
-def test_worker_max_runs(engine):
+def test_worker_max_runs(engine, cleanup):
     with workers(engine, maxruns=2) as mon:
         wid = mon.wids[0]
 
@@ -366,7 +364,7 @@ def test_worker_max_runs(engine):
         assert end is None
 
 
-def test_worker_max_mem(engine):
+def test_worker_max_mem(engine, cleanup):
     with workers(engine, maxmem=100) as mon:
         wid = mon.wids[0]
 
@@ -388,7 +386,7 @@ def test_worker_max_mem(engine):
         assert worker.shutdown_asked()
 
 
-def test_task_abortion(engine):
+def test_task_abortion(engine, cleanup):
     with workers(engine) as mon:
         wid = mon.wids[0]
 
@@ -435,7 +433,7 @@ def test_task_abortion(engine):
         assert finished > started > queued
 
 
-def test_worker_unplanned_death(engine):
+def test_worker_unplanned_death(engine, cleanup):
     with workers(engine) as mon:
         wid = mon.wids[0]
 
@@ -455,7 +453,7 @@ def test_worker_unplanned_death(engine):
         assert t.deathinfo == 'Unaccounted death (hard crash)'
 
 
-def test_killed_task(engine):
+def test_killed_task(engine, cleanup):
     with workers(engine) as mon:
         t = api.schedule(engine, 'infinite_loop')
         t.join('running')
@@ -475,7 +473,7 @@ def test_killed_task(engine):
     assert 'kill the monitor' in t.traceback
 
 
-def test_task_error(engine):
+def test_task_error(engine, cleanup):
     with workers(engine):
         t = api.schedule(engine, 'normal_exception')
         t.join()
@@ -487,10 +485,7 @@ def test_task_error(engine):
         assert end > start
 
 
-def test_task_logging_capture(engine):
-    with engine.begin() as cn:
-        cn.execute('delete from rework.task')
-
+def test_task_logging_capture(engine, cleanup):
     with workers(engine, 2):
         t1 = api.schedule(engine, 'capture_logs')
         t2 = api.schedule(engine, 'capture_logs')
@@ -519,10 +514,7 @@ def test_task_logging_capture(engine):
         assert 2 == len(t3.logs(fromid=logids[0]))
 
 
-def test_logging_stress_test(engine):
-    with engine.begin() as cn:
-        cn.execute('delete from rework.log')
-
+def test_logging_stress_test(engine, cleanup):
     with workers(engine):
         t = api.schedule(engine, 'log_swarm')
 
@@ -542,7 +534,7 @@ def test_logging_stress_test(engine):
         assert len(list(t.logs(fromid=245))) == 4 + offsets[0]
 
 
-def test_process_lock(engine):
+def test_process_lock(engine, cleanup):
     with workers(engine):
         t = api.schedule(engine, 'stderr_swarm')
 
@@ -555,7 +547,7 @@ def test_process_lock(engine):
         assert t.state == 'done'
 
 
-def test_captured_stdout(engine):
+def test_captured_stdout(engine, cleanup):
     with workers(engine):
         t = api.schedule(engine, 'flush_captured_stdout')
         t.join()
@@ -575,11 +567,7 @@ def test_captured_stdout(engine):
         ]
 
 
-def test_cleanup_unstarted(engine):
-    with engine.begin() as cn:
-        cn.execute('delete from rework.task')
-        cn.execute('delete from rework.worker')
-
+def test_cleanup_unstarted(engine, cleanup):
     mon = Monitor(engine, 'default', None, 1, 1, 0, False)
     mon.register()
     mon.ensure_workers()
@@ -607,10 +595,7 @@ def test_cleanup_unstarted(engine):
     assert deleted == 0
 
 
-def test_more_unstarted(engine):
-    with engine.begin() as cn:
-        cn.execute('delete from rework.task')
-        cn.execute('delete from rework.worker')
+def test_more_unstarted(engine, cleanup):
     with workers(engine) as mon:
         nworkers = engine.execute('select count(*) from rework.worker').scalar()
         assert nworkers == 1
@@ -639,7 +624,7 @@ def test_more_unstarted(engine):
         assert engine.execute('select count(*) from rework.task').scalar() == 2
 
 
-def test_timeout(engine):
+def test_timeout(engine, cleanup):
     # first, a small unittest on utility functions
     d1 = datetime(2018, 1, 1)
     d2 = datetime(2018, 3, 3, 12, 45, 30)

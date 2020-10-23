@@ -47,10 +47,17 @@ def cli():
 @pytest.fixture
 def cleanup():
     tasks = api.__task_registry__.copy()
+    inputs = api.__task_inputs__.copy()
     yield
     api.__task_registry__.clear()
     api.__task_registry__.update(tasks)
+    api.__task_inputs__.clear()
+    api.__task_inputs__.update(inputs)
     if ENGINE:
         with ENGINE.begin() as cn:
+            cn.execute('delete from rework.sched')
+            cn.execute('delete from rework.task')
             cn.execute('delete from rework.operation')
+            cn.execute('delete from rework.worker')
+            cn.execute('delete from rework.log')
         api.freeze_operations(ENGINE)

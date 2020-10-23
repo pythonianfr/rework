@@ -115,7 +115,7 @@ class scheduler:
                 self.sched.add_job(
                     lambda: api.schedule(
                         self.engine, operation,
-                        pickle.loads(inputdata) if inputdata else None,
+                        rawinputdata=inputdata if inputdata else None,
                         hostid=host, domain=domain,
                         metadata=meta
                     ),

@@ -10,7 +10,7 @@ from rework.helper import guard, wait_true
 from rework.task import Task
 
 
-def test_list_operations(engine, cli):
+def test_list_operations(engine, cli, cleanup):
     with workers(engine):
         r = cli('list-operations', engine.url)
 
@@ -32,7 +32,7 @@ def test_list_operations(engine, cli):
 """.strip() == scrub(r.output).strip().replace(os.getcwd(), '...')
 
 
-def test_register_operations(engine, cli):
+def test_register_operations(engine, cli, cleanup):
     r = cli('list-operations', engine.url)
     assert 'boring_task' not in r.output
     assert 'scrap_sites' not in r.output
@@ -105,7 +105,7 @@ def test_register_operations(engine, cli):
     from . import tasks
 
 
-def test_list_monitors(engine, cli):
+def test_list_monitors(engine, cli, cleanup):
     with workers(engine):
         r = cli('list-monitors', engine.url)
 
@@ -116,7 +116,7 @@ def test_list_monitors(engine, cli):
         ) == scrub(r.output)
 
 
-def test_list_workers(engine, cli):
+def test_list_workers(engine, cli, cleanup):
     with workers(engine):
         r = cli('list-workers', engine.url)
         assert (
@@ -145,7 +145,7 @@ def test_list_workers(engine, cli):
     )== scrub(r.output)
 
 
-def test_debug_port(engine, cli):
+def test_debug_port(engine, cli, cleanup):
     with workers(engine, numworkers=3, debug=True) as mon:
         r = cli('list-workers', engine.url)
         assert '6666' in r.output
@@ -190,7 +190,7 @@ def test_debug_port(engine, cli):
         assert '6668' in r.output
 
 
-def test_minworkers(engine, cli):
+def test_minworkers(engine, cli, cleanup):
     with workers(engine, minworkers=1, numworkers=4) as mon:
         r = cli('list-workers', engine.url)
         assert r.output.count('running (idle)') == 1
@@ -279,9 +279,7 @@ def test_minworkers(engine, cli):
         assert r.output.count('running (idle)') == 1
 
 
-def test_shrink_minworkers(engine, cli):
-    with engine.begin() as cn:
-        cn.execute('delete from rework.worker')
+def test_shrink_minworkers(engine, cli, cleanup):
     with workers(engine, minworkers=0, numworkers=4) as mon:
         r = cli('list-workers', engine.url)
         assert r.output.count('running (idle)') == 0
@@ -353,7 +351,7 @@ def test_shrink_minworkers(engine, cli):
               lambda r: r.scalar() == 0)
 
 
-def test_abort_task(engine, cli):
+def test_abort_task(engine, cli, cleanup):
     url = engine.url
     with workers(engine) as mon:
         r = cli('list-workers', url)
@@ -401,10 +399,8 @@ def test_abort_task(engine, cli):
         ) == scrub(r.output)
 
 
-def test_kill_worker(engine, cli):
+def test_kill_worker(engine, cli, cleanup):
     url = engine.url
-    with engine.begin() as cn:
-        cn.execute('delete from rework.worker')
 
     with workers(engine) as mon:
         t = api.schedule(engine, 'infinite_loop')
@@ -431,10 +427,8 @@ def test_kill_worker(engine, cli):
         ) == scrub(r.output)
 
 
-def test_debug_worker(engine, cli):
+def test_debug_worker(engine, cli, cleanup):
     url = engine.url
-    with engine.begin() as cn:
-        cn.execute('delete from rework.worker')
 
     with workers(engine, debug=True):
         r = cli('list-workers', url)
@@ -445,7 +439,7 @@ def test_debug_worker(engine, cli):
         )== scrub(r.output)
 
 
-def test_shutdown_worker(engine, cli):
+def test_shutdown_worker(engine, cli, cleanup):
     url = engine.url
     with workers(engine) as mon:
         cli('shutdown-worker', url, mon.wids[0])
@@ -457,7 +451,7 @@ def test_shutdown_worker(engine, cli):
         assert 'explicit shutdown' in scrub(r.output)
 
 
-def test_task_logs(engine, cli):
+def test_task_logs(engine, cli, cleanup):
     with workers(engine):
         t = api.schedule(engine, 'capture_logs')
         t.join()
@@ -470,15 +464,12 @@ def test_task_logs(engine, cli):
         ) == scrub(r.output)
 
 
-def test_vacuum(engine, cli):
+def test_vacuum(engine, cli, cleanup):
     r = cli('vacuum', engine.url, '--workers', '--tasks')
     assert r.output == 'vacuum deletes workers or tasks, not both at the same time\n'
 
     r = cli('vacuum', engine.url)
     assert r.output == 'to cleanup old workers or tasks please use --workers or --tasks\n'
-
-    with engine.begin() as cn:
-        cn.execute('delete from rework.worker')
 
     def run_stuff():
         with workers(engine, numworkers=2):
@@ -510,7 +501,7 @@ def test_vacuum(engine, cli):
     assert ntasks == 0
 
 
-def test_scheduler(engine, cli):
+def test_scheduler(engine, cli, cleanup):
     r = cli('list-scheduled', engine.url)
     assert len(r.output.strip()) == 0
 
@@ -571,5 +562,40 @@ def test_scheduler(engine, cli):
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
     )
-    with engine.begin() as cn:
-        cn.execute('delete from rework.sched')
+
+
+def test_scheduler_with_inputs(engine, cli, cleanup):
+    r = cli('list-scheduled', engine.url)
+    assert len(r.output.strip()) == 0
+
+    sid = api.prepare(
+        engine,
+        'fancy_inputs',
+        inputdata={
+            'myfile': b'file contents',
+            'foo': 42,
+            'bar': 'Hello'
+        }
+    )
+
+    r = cli('list-scheduled', engine.url)
+    assert r.output.strip() == (
+        f'{sid} `no host` `fancy_inputs` default `no host` `no meta` "* * * * * *"'
+    )
+
+    with workers(engine) as mon:
+        mon.wait_all_started()
+        mon.step()
+        # from this we have a task
+        wait_true(lambda: engine.execute('select id from rework.task').scalar())
+        tid = engine.execute('select id from rework.task').scalar()
+        t = Task.byid(engine, tid)
+        wait_true(lambda: t.status == 'done')
+        r = cli('list-tasks', engine.url)
+
+    assert scrub(r.output).strip() == (
+        '<X> fancy_inputs done '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+    )

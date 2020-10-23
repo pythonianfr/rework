@@ -154,11 +154,12 @@ def schedule(engine,
     if metadata:
         assert isinstance(metadata, dict)
 
-    spec = filterinput(inputspec(engine), opname, domain, hostid)
-    if spec is not None:
-        rawinputdata = pack_inputs(spec, inputdata)
-    elif inputdata is not None:
-        rawinputdata = dumps(inputdata, protocol=2)
+    if rawinputdata is None:
+        spec = filterinput(inputspec(engine), opname, domain, hostid)
+        if spec is not None:
+            rawinputdata = pack_inputs(spec, inputdata)
+        elif inputdata is not None:
+            rawinputdata = dumps(inputdata, protocol=2)
 
     q = select('id').table('rework.operation').where(
         name=opname
