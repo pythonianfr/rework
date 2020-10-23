@@ -129,7 +129,7 @@ class scheduler:
         q = select(
             'op.name', 's.domain', 's.inputdata', 's.host', 's.metadata', 's.rule'
         ).table('rework.sched as s', 'rework.operation as op'
-        ).join('rework.sched as s2 on (s2.operation = op.id)'
+        ).where('s.operation = op.id'
         ).where('s.domain = %(domain)s', domain=self.domain)
 
         return q.do(self.engine).fetchall()
