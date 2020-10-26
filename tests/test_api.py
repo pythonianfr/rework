@@ -110,6 +110,17 @@ def test_freeze_ops(engine, cleanup):
     ]
 
 
+def test_prepare(engine, cleanup):
+    register_tasks()
+    api.freeze_operations(engine, domain='default')
+
+    api.prepare(engine, 'foo', ' 0 0 8 * * *')
+    api.prepare(engine, 'foo', ' 0 0 8 * * *')
+
+    res = engine.execute('select count(*) from rework.sched').scalar()
+    assert res == 2
+
+
 def test_with_inputs(engine, cleanup):
     reset_ops(engine)
     register_tasks()
