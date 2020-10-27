@@ -189,7 +189,10 @@ def schedule(engine,
                 )
             raise ValueError('Ambiguous operation selection')
         if not len(opids):
-            raise Exception('No operation was found for these parameters')
+            raise Exception(
+                f'No operation was found for these parameters: '
+                f'operation=`{opname}` domain=`{domain}` host=`{host()}`'
+            )
         opid = opids[0][0]
         q = insert(
             'rework.task'

@@ -77,7 +77,10 @@ def test_basic_task_operations(engine, cleanup):
 
     with pytest.raises(Exception) as err:
         api.schedule(engine, 'no_such_task')
-    assert err.value.args[0] == 'No operation was found for these parameters'
+    assert scrub(err.value.args[0]) == (
+        'No operation was found for these parameters: '
+        'operation=`no_such_task` domain=`None` host=`<X>.<X>.<X>.<X>`'
+    )
 
 
 def test_monitor_step(engine, cleanup):
