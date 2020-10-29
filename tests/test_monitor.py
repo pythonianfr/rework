@@ -655,3 +655,26 @@ def test_timeout(engine, cleanup):
         assert t1.state == 'aborted'
         assert t2.state == 'aborted'
         assert t3.state == 'running'
+
+
+def test_scheduler(engine, cleanup):
+    sid = api.prepare(
+        engine,
+        'run_in_non_default_domain',
+        rule='* * * * * *',
+        domain='nondefault'
+    )
+
+    res = engine.execute(
+        'select id, domain, inputdata, host, metadata, rule '
+        'from rework.sched where sched.id=%(sid)s',
+        sid=sid
+    ).fetchall()
+    assert res == [(sid, 'nondefault', None, None, None, '* * * * * *')]
+
+    with workers(engine, domain='nondefault') as mon:
+        mon.step()
+        assert str(mon.scheduler) == (
+            "<scheduler for nondefault ->\n"
+            "[('run_in_non_default_domain', 'nondefault', None, None, None, '* * * * * *')]>"
+        )

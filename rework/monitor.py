@@ -100,7 +100,7 @@ class scheduler:
         self.defs = []
 
     def __repr__(self):
-        return f'{self.defs}'
+        return f'<scheduler for {self.domain} ->\n{self.defs}>'
 
     def stop(self):
         self.sched.shutdown()
@@ -110,6 +110,7 @@ class scheduler:
         if defs != self.defs:
             # reload everything
             self.stop()
+            print(f'scheduler: reloading definitions for {self.domain}')
             self.sched = BackgroundScheduler()
             for operation, domain, inputdata, host, meta, rule in defs:
                 self.sched.add_job(
@@ -121,7 +122,8 @@ class scheduler:
                     ),
                     trigger=BetterCronTrigger.from_extended_crontab(rule)
                 )
-                self.defs = defs
+            self.defs = defs
+            print(f'scheduler: starting with definitions:\n{self.defs}')
             self.sched.start()
 
     @property
