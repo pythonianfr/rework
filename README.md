@@ -267,7 +267,7 @@ previous example) or through the `task` module.
 ```python
 from task import Task
 
-task = task.by_id(42)
+task = task.byid(engine, 42)
 ```
 
 The task object provides:
