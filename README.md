@@ -314,6 +314,7 @@ Commands:
   init-db
   kill-worker
   list-operations
+  list-scheduled
   list-tasks
   list-workers
   log-task
