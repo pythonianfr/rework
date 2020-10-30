@@ -143,6 +143,33 @@ assert task.input == {
 ```
 
 
+### Scheduling
+
+While the base api provides a `schedule` call that schedules a task
+for immediate execution, there is also a `prepare` call that allows to
+define the exact moment the task ought to be executed, using a
+`crontab` like notation.
+
+Example:
+
+```python
+api.prepare(
+    engine,
+    'compute_things',
+    {'myfile.txt': b'file contents',
+     'birthdate': datetime(1973, 5, 20, 9),
+     'name': 'Babar',
+     'weight': 65
+    },
+    rule='0 0 8,12 * * *'
+)
+```
+
+This would schedule the task every day at 8:00 and 12:00. The extended
+crontab notation also features a field for seconds (in first
+position).
+
+
 ## API
 
 The `api` module exposes most if what is needed. The `task` module
@@ -152,7 +179,7 @@ and task objects provide the rest.
 ### `api` module
 
 Three functions are provided: the `task` decorator, the
-`freeze_operations` and `schedule` functions.
+`freeze_operations`, `schedule` and `prepare` functions.
 
 Defining tasks is done using the `task` decorator:
 
@@ -201,7 +228,11 @@ from rework.api import schedule
 
 engine = create_engine('postgres://babar:password@localhost:5432/jobstore')
 
+# immediate executionn
 task = api.schedule(engine, 'my_task', 42)
+
+# execution every five minutes
+api.prepare(engine, 'my_task', 42, rule='0 */5 * * * *')
 ```
 
 The `schedule` function wants these mandatory parameters:
@@ -221,6 +252,9 @@ It also accepts two more options:
 * hostid: an host identifier (e.g. '192.168.1.1')
 
 * metadata: a json-serializable dictionary (e.g. {'user': 'Babar'})
+
+The `prepare` function takes the same parameters as `schedule` plus a
+`rule` option using `crontab` notation with seconds in first position.
 
 
 ### Task objects
