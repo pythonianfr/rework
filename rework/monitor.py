@@ -105,6 +105,19 @@ class scheduler:
     def stop(self):
         self.sched.shutdown()
 
+    def schedule(self, opname, domain, inputdata, host, meta, rule):
+        self.sched.add_job(
+            lambda: api.schedule(
+                self.engine,
+                opname,
+                rawinputdata=inputdata if inputdata else None,
+                hostid=host,
+                domain=domain,
+                metadata=meta
+            ),
+            trigger=BetterCronTrigger.from_extended_crontab(rule)
+        )
+
     def loop(self):
         defs = self.definitions
         if defs != self.defs:
@@ -113,15 +126,7 @@ class scheduler:
             print(f'scheduler: reloading definitions for {self.domain}')
             self.sched = BackgroundScheduler()
             for operation, domain, inputdata, host, meta, rule in defs:
-                self.sched.add_job(
-                    lambda: api.schedule(
-                        self.engine, operation,
-                        rawinputdata=inputdata if inputdata else None,
-                        hostid=host, domain=domain,
-                        metadata=meta
-                    ),
-                    trigger=BetterCronTrigger.from_extended_crontab(rule)
-                )
+                self.schedule(operation, domain, inputdata, host, meta, rule)
             self.defs = defs
             print(f'scheduler: starting with definitions:\n{self.defs}')
             self.sched.start()
