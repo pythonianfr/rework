@@ -237,21 +237,23 @@ api.prepare(engine, 'my_task', 42, rule='0 */5 * * * *')
 
 The `schedule` function wants these mandatory parameters:
 
-* engine: sqlalchemy engine
+* `engine`: sqlalchemy engine
 
-* task name: string
+* `operation`: string
 
-* task input: any python picklable object
+* `inputdata`: any python picklable object (if no input specification
+  is provided, else the input formalism provides ways for numbers,
+  strings, dates and files)
 
 
 It also accepts two more options:
 
-* domain: a domain identifier (for cases when the same service is
+* `domain`: a domain identifier (for cases when the same service is
   available under several domains and you want to force one)
 
-* hostid: an host identifier (e.g. '192.168.1.1')
+* `hostid`: an host identifier (e.g. '192.168.1.1')
 
-* metadata: a json-serializable dictionary (e.g. {'user': 'Babar'})
+* `metadata`: a json-serializable dictionary (e.g. {'user': 'Babar'})
 
 The `prepare` function takes the same parameters as `schedule` plus a
 `rule` option using `crontab` notation with seconds in first position.
