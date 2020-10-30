@@ -86,44 +86,6 @@ def task(*args, **kw):
     return register_task
 
 
-def prepare(engine,
-            opname,
-            rule='* * * * * *',
-            domain='default',
-            inputdata=None,
-            host=None,
-            metadata=None):
-    if metadata:
-        assert isinstance(metadata, dict)
-
-    # validate the rules
-    BetterCronTrigger.from_extended_crontab(rule)
-
-    spec = filterinput(inputspec(engine), opname, domain, host)
-    rawinputdata = None
-    if inputdata:
-        if spec is not None:
-            rawinputdata = pack_inputs(spec, inputdata)
-        else:
-            rawinputdata = dumps(inputdata, protocol=2)
-
-    q = select('id').table('rework.operation').where(
-        name=opname
-    )
-    with engine.begin() as cn:
-        opid = q.do(cn).scalar()
-        q = insert('rework.sched').values(
-            operation=opid,
-            domain=domain,
-            inputdata=rawinputdata,
-            host=host,
-            metadata=json.dumps(metadata),
-            rule=str(rule)
-        )
-        sid = q.do(cn).scalar()
-    return sid
-
-
 def schedule(engine,
              opname,
              inputdata=None,
@@ -205,6 +167,44 @@ def schedule(engine,
         tid = q.do(cn).scalar()
 
     return Task(engine, tid, opid)
+
+
+def prepare(engine,
+            opname,
+            rule='* * * * * *',
+            domain='default',
+            inputdata=None,
+            host=None,
+            metadata=None):
+    if metadata:
+        assert isinstance(metadata, dict)
+
+    # validate the rules
+    BetterCronTrigger.from_extended_crontab(rule)
+
+    spec = filterinput(inputspec(engine), opname, domain, host)
+    rawinputdata = None
+    if inputdata:
+        if spec is not None:
+            rawinputdata = pack_inputs(spec, inputdata)
+        else:
+            rawinputdata = dumps(inputdata, protocol=2)
+
+    q = select('id').table('rework.operation').where(
+        name=opname
+    )
+    with engine.begin() as cn:
+        opid = q.do(cn).scalar()
+        q = insert('rework.sched').values(
+            operation=opid,
+            domain=domain,
+            inputdata=rawinputdata,
+            host=host,
+            metadata=json.dumps(metadata),
+            rule=str(rule)
+        )
+        sid = q.do(cn).scalar()
+    return sid
 
 
 def freeze_operations(engine, domain=None, domain_map=None,
