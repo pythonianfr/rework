@@ -65,6 +65,10 @@ def register_tasks():
     def noinput(task):
         pass
 
+    @api.task(inputs=(input.moment('when'),))
+    def happy_days(task):
+        pass
+
 
 
 def test_freeze_ops(engine, cleanup):
@@ -82,6 +86,9 @@ def test_freeze_ops(engine, cleanup):
     assert res == [
         ('cheesy', 'cheese', None),
         ('foo', 'default', None),
+        ('happy_days', 'default', [
+            {'choices': None, 'name': 'when', 'required': False, 'type': 'moment'}
+        ]),
         ('noinput', 'default', []),
         ('yummy', 'default', [
             {'choices': None, 'name': 'myfile.txt', 'required': True, 'type': 'file'},
@@ -104,6 +111,7 @@ def test_freeze_ops(engine, cleanup):
     ).fetchall()
     assert res == [
         ('foo', 'default'),
+        ('happy_days', 'default'),
         ('noinput', 'default'),
         ('yummy', 'default'),
         ('hammy', 'ham')
@@ -175,6 +183,26 @@ def test_with_inputs(engine, cleanup):
         'option': 'foo',
         'weight': 65
     }
+
+
+def test_moment_input(engine, cleanup):
+    register_tasks()
+    api.freeze_operations(engine)
+    t = api.schedule(
+        engine,
+        'happy_days',
+        inputdata={'when': '(delta (today) #:days 1)'}
+    )
+    when = t.input['when']
+    assert when > dt.now()
+
+    t = api.schedule(
+        engine,
+        'happy_days',
+        inputdata={'when': '(date "2021-1-1 09:00")'}
+    )
+    when = t.input['when']
+    assert when == dt(2021, 1, 1, 9, 0)
 
 
 def test_prepare_with_inputs(engine, cleanup):
