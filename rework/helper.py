@@ -17,7 +17,6 @@ import psutil
 from sqlalchemy.engine import url
 from sqlhelp import select
 from inireader import reader
-from dateutil.parser import isoparse, parse as defaultparse
 
 from rework.input import inputio
 
@@ -439,7 +438,11 @@ def pack_inputs(spec, args):
 
 
 def nary_unpack(packedbytes):
-    packedbytes = zstd.decompress(packedbytes.tobytes())
+    try:
+        packedbytes = zstd.decompress(packedbytes.tobytes())
+    except zstd.Error:
+        raise TypeError('wrong input format')
+
     [sizes_size] = struct.unpack(
         '!L', packedbytes[:4]
     )
@@ -450,13 +453,6 @@ def nary_unpack(packedbytes):
     )
     fmt = ''.join('%ss' % size for size in sizes)
     return struct.unpack(fmt, packedbytes[payloadoffset:])
-
-
-def parsedatetime(strdt):
-    try:
-        return isoparse(strdt)
-    except ValueError:
-        return defaultparse(strdt)
 
 
 def unpack_inputs(spec, packedbytes):
@@ -470,23 +466,14 @@ def unpack_inputs(spec, packedbytes):
     output = dict(zip(keys, values))
 
     for field in spec:
-        name = field['name']
-        val = output.get(name)
+        inp = inputio.from_type(
+            field['type'], field['name'], field['required'], field['choices']
+        )
+        val = inp.binary_decode(output)
         if val is None:
             continue
-        ftype = field['type']
-        if ftype == 'number':
-            try:
-                val = int(val)
-            except ValueError:
-                val = float(val)
-            output[name] = val
-            continue
-        if ftype == 'string':
-            output[name] = val.decode('utf-8')
-            continue
-        if ftype == 'datetime':
-            output[name] = parsedatetime(val.decode('utf-8'))
+
+        output[inp.name] = val
 
     return output
 
