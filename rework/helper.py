@@ -19,6 +19,8 @@ from sqlhelp import select
 from inireader import reader
 from dateutil.parser import isoparse, parse as defaultparse
 
+from rework.input import inputio
+
 
 def utcnow():
     return datetime.utcnow().replace(tzinfo=pytz.utc)
@@ -415,34 +417,12 @@ def pack_inputs(spec, args):
 
     raw = {}
     for field in spec:
-        name = field['name']
-        val = args.get(name)
-        if val is None:
-            if field['required']:
-                raise ValueError(
-                    f'missing required input: `{name}`'
-                )
-            continue
-        ftype = field['type']
-        if ftype == 'file':
-            assert isinstance(val, bytes)
-            raw[name] = val
-            continue
-        if ftype == 'string':
-            choices = field['choices']
-            if choices:
-                assert val in choices
-            raw[name] = val.encode('utf-8')
-            continue
-        if ftype == 'number':
-            raw[name] = str(val).encode('utf-8')
-            continue
-        if ftype == 'datetime':
-            if isinstance(val, str):
-                val = val.encode('utf-8')
-            else:
-                val = val.isoformat().encode('utf-8')
-            raw[name] = val
+        inp = inputio.from_type(
+            field['type'], field['name'], field['required'], field['choices']
+        )
+        val = inp.binary_encode(args)
+        if val is not None:
+            raw[inp.name] = val
 
     spec_keys = {field['name'] for field in spec}
     unknown_keys = set(args) - spec_keys

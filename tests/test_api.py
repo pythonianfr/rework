@@ -143,7 +143,18 @@ def test_with_inputs(engine, cleanup):
     with pytest.raises(ValueError) as err:
         api.schedule(
             engine, 'yummy',
+            {
+                'myfile.txt': b'something',
+                'option': 'quux'
+            }
+        )
+    assert err.value.args[0] == "option -> value not in ['foo', 'bar']"
+
+    with pytest.raises(ValueError) as err:
+        api.schedule(
+            engine, 'yummy',
             {'no-such-thing': 42,
+             'option': 'foo',
              'myfile.txt': b'something'
             }
         )
@@ -187,8 +198,10 @@ def test_prepare_with_inputs(engine, cleanup):
     with pytest.raises(ValueError) as err:
         api.prepare(
             engine, 'yummy',
-            inputdata={'no-such-thing': 42,
-             'myfile.txt': b'something'
+            inputdata={
+                'no-such-thing': 42,
+                'option': 'foo',
+                'myfile.txt': b'something'
             }
         )
     assert err.value.args[0] == 'unknown inputs: no-such-thing'
