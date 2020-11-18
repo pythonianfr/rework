@@ -170,6 +170,45 @@ crontab notation also features a field for seconds (in first
 position).
 
 
+### Debugging
+
+If you need to debug some task, the standard advice is:
+
+* write your task content in plain functions and have them unit-tested
+  with e.g. `pytest`
+
+```python
+@api.task
+def my_fancy_task(task):
+    the_body_of_my_fancy_task(task.input)
+```
+
+* you can also you use print-based logging as shown there:
+
+```python
+@api.task
+def my_fancy_task(task):
+    with task.capturelogs(std=True):
+        print('starting')
+        # do stuff
+        print('done', result)
+```
+
+* finally, it may happen that a task is "stuck" because of a deadlock,
+  and in this case, starting the monitor with `--debug-port` will help:
+
+```bash
+$ pip install pystuck
+$ rework monitor postgres://babar:password@localhost:5432/jobstore --debug-port=666
+```
+
+Then launching `pystuck` (possibly from another machine) is done as such:
+
+```bash
+$ pystuck -h <host> -p 666
+```
+
+
 ## API
 
 The `api` module exposes most if what is needed. The `task` module
