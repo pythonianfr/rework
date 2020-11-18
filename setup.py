@@ -32,11 +32,15 @@ setup(name='rework',
       package_data={'rework': [
           'schema.sql'
       ]},
-      extras_require=[
-          'pytest',
-          'pytest_sa_pg',
-          'pystuck'
-      ],
+      extras_require={
+          'test': [
+              'pytest',
+              'pytest_sa_pg',
+          ],
+          'debug': [
+              'pystuck'
+          ]
+      },
       entry_points={
           'console_scripts': [
               'rework=rework.cli:rework'
