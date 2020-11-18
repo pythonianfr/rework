@@ -104,7 +104,7 @@ This being done, we can start writing our first task:
            print('I am done')
 
 
-   if __name__ == '__main__':
+   def main(uri):
        engine = create_engine(
            'postgres://babar:password@localhost/jobstore'
        )
@@ -118,6 +118,9 @@ This being done, we can start writing our first task:
 
        assert t1.output == 'hellohello'
        assert t2.output == 200
+
+  if __name__ == '__main__':
+      main('postgres://babar:password@localhost:5432/jobstore')
 
 
 Here we have defined a dummy task that will print a bunch of

@@ -1,8 +1,11 @@
 # REWORK
 
-This is a python task scheduling and execution tool, which needs only
-python and Postgres to work.
+`rework` is a distributed execution system for the execution of tasks
+that can belong to independant python environments and code bases,
+even hosted on different computers.
 
+The only constraint is that postgres must be accessible from all nodes
+of a given `rework` installation.
 
 ## Principles
 
