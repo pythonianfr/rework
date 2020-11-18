@@ -21,7 +21,6 @@ setup(name='rework',
           'sqlalchemy',
           'sqlhelp',
           'psycopg2-binary',
-          'pystuck',
           'click',
           'tzlocal',
           'inireader',
@@ -33,9 +32,10 @@ setup(name='rework',
       package_data={'rework': [
           'schema.sql'
       ]},
-      extra_require=[
+      extras_require=[
           'pytest',
-          'pytest_sa_pg'
+          'pytest_sa_pg',
+          'pystuck'
       ],
       entry_points={
           'console_scripts': [

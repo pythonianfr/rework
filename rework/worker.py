@@ -3,7 +3,6 @@ import os
 from contextlib import contextmanager
 import traceback
 
-import pystuck
 from sqlalchemy import create_engine
 
 from sqlhelp import select, update
@@ -86,6 +85,7 @@ class Worker:
 
     def run(self):
         if self.debugport:
+            import pystuck
             pystuck.run_server(port=self.debugport)
 
         try:

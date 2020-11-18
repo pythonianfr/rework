@@ -71,6 +71,13 @@ def register_operations(dburi, module, domain=None, asdomain=None):
 @click.option('--debug-port', type=int, default=0)
 def new_worker(**config):
     " spawn a new worker -- this is a purely *internal* command "
+    if 'debug_port' in config:
+        try:
+            import pystuck
+        except ImportError:
+            print('--debug-port is unsupported without `pystuck` ')
+            print('try "pip install pystuck" to make it work')
+            return
     worker = Worker(**config)
     worker.run()
 
