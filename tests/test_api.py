@@ -191,7 +191,7 @@ def test_moment_input(engine, cleanup):
     t = api.schedule(
         engine,
         'happy_days',
-        inputdata={'when': '(delta (today) #:days 1)'}
+        inputdata={'when': '(shifted (today) #:days 1)'}
     )
     when = t.input['when']
     assert when > dt.now()

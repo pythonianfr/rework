@@ -125,7 +125,7 @@ _MOMENT_ENV = lisp.Env({
     'monthend': lambda dt: dt.replace(day=last_day_of_month(dt)),
     'yearstart': lambda dt: dt.replace(day=1, month=1),
     'yearend': lambda dt: dt.replace(day=31, month=12),
-    'delta': lambda dt, **kw: dt + relativedelta(**kw),
+    'shifted': lambda dt, **kw: dt + relativedelta(**kw),
 })
 
 
