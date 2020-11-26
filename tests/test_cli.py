@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 from sqlhelp import insert
 from rework import api
-from rework.testutils import scrub, workers
+from rework.testutils import (
+    scrub,
+    tempdir,
+    workers
+)
 from rework.helper import guard, wait_true
 from rework.task import Task
 
@@ -598,4 +602,46 @@ def test_scheduler_with_inputs(engine, cli, cleanup):
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+    )
+
+
+def test_scheduler_export_import(engine, cli, cleanup):
+    r = cli('list-scheduled', engine.url)
+    assert len(r.output.strip()) == 0
+
+    sid = api.prepare(
+        engine,
+        'print_sleep_and_go_away',
+        inputdata='HELLO'
+    )
+    sid2 = api.prepare(
+        engine,
+        'fancy_inputs',
+        inputdata={
+            'myfile': b'file contents',
+            'foo': 42,
+            'bar': 'Hello'
+        }
+    )
+
+    r = cli('list-scheduled', engine.url)
+    assert r.output.strip() == (
+        f'{sid} `print_sleep_and_go_away` default `no host` `no meta` "* * * * * *"\n'
+        f'{sid2} `fancy_inputs` default `no host` `no meta` "* * * * * *"'
+    )
+
+    with tempdir() as path:
+        r0 = cli('export-scheduled', engine.url, path=str(path / 'rework.sched'))
+        assert r0.output.startswith('saved 2 entries into')
+
+        with engine.begin() as cn:
+            cn.execute('delete from rework.sched')
+
+        r1 = cli('import-scheduled', engine.url, path=str(path / 'rework.sched'))
+        assert r1.output.startswith('loaded 2 entries from')
+
+    r = cli('list-scheduled', engine.url)
+    assert scrub(r.output).strip() == (
+        f'<X> `print_sleep_and_go_away` default `no host` `no meta` "* * * * * *"\n'
+        f'<X> `fancy_inputs` default `no host` `no meta` "* * * * * *"'
     )

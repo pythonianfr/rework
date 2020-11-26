@@ -2,10 +2,12 @@ import imp
 from time import sleep
 import tzlocal
 from pathlib import Path
+import pickle
 
 import click
 from colorama import init, Fore, Style
 from pkg_resources import iter_entry_points
+import zstd
 
 from sqlalchemy import create_engine
 from sqlhelp import update, select
@@ -327,6 +329,56 @@ def list_scheduled(dburi):
               f'`{meta or "no meta"}` "{rule}"'
         )
     print(Style.RESET_ALL)
+
+
+@rework.command(name='export-scheduled')
+@click.argument('dburi')
+@click.option('--path', default='rework.sched')
+def export_scheduled(dburi, path):
+    engine = create_engine(find_dburi(dburi))
+    sql = (
+        'select op.name, s.domain, s.inputdata, s.host, s.metadata, s.rule '
+        'from rework.sched as s, rework.operation as op '
+        'where s.operation = op.id'
+    )
+    inputs = []
+    for row in engine.execute(sql):
+        inp = {}
+        for k, v in row.items():
+            if isinstance(v, memoryview):
+                v = v.tobytes()
+            inp[k] = v
+        inputs.append(inp)
+
+    Path(path).write_bytes(
+        zstd.compress(
+            pickle.dumps(inputs)
+        )
+    )
+    print(f'saved {len(inputs)} entries into {path}')
+
+
+@rework.command(name='import-scheduled')
+@click.argument('dburi')
+@click.option('--path', default='rework.sched')
+def import_scheduled(dburi, path):
+    engine = create_engine(find_dburi(dburi))
+    inputs = pickle.loads(
+        zstd.decompress(
+            Path(path).read_bytes()
+        )
+    )
+    for row in inputs:
+        api.prepare(
+            engine,
+            row['name'],
+            row['rule'],
+            row['domain'],
+            host=row['host'],
+            metadata=row['metadata'],
+            rawinputdata=row['inputdata']
+        )
+    print(f'loaded {len(inputs)} entries from {path}')
 
 
 @rework.command('vacuum')

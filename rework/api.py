@@ -175,7 +175,8 @@ def prepare(engine,
             domain='default',
             inputdata=None,
             host=None,
-            metadata=None):
+            metadata=None,
+            rawinputdata=None):
     if metadata:
         assert isinstance(metadata, dict)
 
@@ -183,8 +184,7 @@ def prepare(engine,
     BetterCronTrigger.from_extended_crontab(rule)
 
     spec = filterinput(inputspec(engine), opname, domain, host)
-    rawinputdata = None
-    if inputdata:
+    if rawinputdata is None and inputdata:
         if spec is not None:
             rawinputdata = pack_inputs(spec, inputdata)
         else:

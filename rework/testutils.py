@@ -1,4 +1,7 @@
 from contextlib import contextmanager
+from pathlib import Path
+import tempfile
+import shutil
 
 from rework import api
 
@@ -43,3 +46,12 @@ def scrub(anstr, subst='X'):
 
 def tasks(engine):
     return engine.execute('select * from rework.task').fetchall()
+
+
+@contextmanager
+def tempdir(suffix='', prefix='tmp'):
+    tmp = tempfile.mkdtemp(suffix=suffix, prefix=prefix)
+    try:
+        yield Path(tmp)
+    finally:
+        shutil.rmtree(tmp)
