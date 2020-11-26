@@ -513,7 +513,7 @@ def test_scheduler(engine, cli, cleanup):
 
     r = cli('list-scheduled', engine.url)
     assert r.output.strip() == (
-        f'{sid} `no host` `print_sleep_and_go_away` default `no host` `no meta` "* * * * * *"'
+        f'{sid} `print_sleep_and_go_away` default `no host` `no meta` "* * * * * *"'
     )
 
     with workers(engine) as mon:
@@ -541,9 +541,9 @@ def test_scheduler(engine, cli, cleanup):
 
     r = cli('list-scheduled', engine.url)
     assert r.output.strip() == (
-        f'{sid} `no host` `print_sleep_and_go_away` default `no host` '
+        f'{sid} `print_sleep_and_go_away` default `no host` '
         '`no meta` "* * * * * *"\n'
-        f'{s2} `no host` `run_in_non_default_domain` nondefault `no host` '
+        f'{s2} `run_in_non_default_domain` nondefault `no host` '
         '`no meta` "* * * * * *"'
     )
 
@@ -580,7 +580,7 @@ def test_scheduler_with_inputs(engine, cli, cleanup):
 
     r = cli('list-scheduled', engine.url)
     assert r.output.strip() == (
-        f'{sid} `no host` `fancy_inputs` default `no host` `no meta` "* * * * * *"'
+        f'{sid} `fancy_inputs` default `no host` `no meta` "* * * * * *"'
     )
 
     with workers(engine) as mon:

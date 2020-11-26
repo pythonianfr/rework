@@ -311,7 +311,7 @@ def abort_task(dburi, taskid):
 
 @rework.command(name='list-scheduled')
 @click.argument('dburi')
-def list_sceduled(dburi):
+def list_scheduled(dburi):
     init()
     engine = create_engine(find_dburi(dburi))
     sql = (
@@ -323,7 +323,7 @@ def list_sceduled(dburi):
         opname = q.do(engine).scalar()
         print(Fore.WHITE + f'{sid}', end=' ')
         print(Fore.GREEN +
-              f'`{host or "no host"}` `{opname}` {dom} `{host or "no host"}` '
+              f'`{opname}` {dom} `{host or "no host"}` '
               f'`{meta or "no meta"}` "{rule}"'
         )
     print(Style.RESET_ALL)
