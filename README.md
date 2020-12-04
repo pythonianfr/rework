@@ -366,7 +366,7 @@ Commands:
 ```
 
 Of those commands, `new-worker` is for purely internal purposes, and
-unless you know what you're doing, should should never use it.
+unless you know what you're doing, you should never use it.
 
 One can list the tasks:
 
