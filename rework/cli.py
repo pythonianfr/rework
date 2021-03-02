@@ -107,10 +107,10 @@ def monitor(dburi, **config):
 def list_operations(dburi):
     init()
     engine = create_engine(find_dburi(dburi))
-    sql = 'select id, host, name, path from rework.operation'
-    for oid, hostid, opname, modpath in engine.execute(sql):
+    sql = 'select id, name, domain, path, host from rework.operation'
+    for oid, opname, domain, modpath, hostid in engine.execute(sql):
         print(Fore.WHITE + f'{oid}', end=' ')
-        print(Fore.GREEN + f'host({hostid}) `{opname}` path({modpath})')
+        print(Fore.GREEN + f'`{opname}` {domain} path({modpath}) host({hostid})')
     print(Style.RESET_ALL)
 
 
