@@ -75,6 +75,7 @@ def unregister_operation(dburi, operation, domain=None, module=None, host=None,
     (module path, domain and host).
 
     """
+    init()
     engine = create_engine(find_dburi(dburi))
 
     sql = select(
@@ -96,13 +97,17 @@ def unregister_operation(dburi, operation, domain=None, module=None, host=None,
     if confirm and len(candidates):
         print('preparing de-registration of:')
         for oid, name, domain, path, host in candidates:
-            print(name, domain, path, host)
+            print(Fore.RED + 'delete', end=' ')
+            print(Fore.GREEN + name, end=' ')
+            print(Fore.WHITE + domain, path, host)
         if click.confirm('really remove those [y/n]?'):
             print('Ok, nothing has been done.')
 
     with engine.begin() as cn:
         for oid, name, domain, path, host in candidates:
-            print('delete', name, domain, path, host)
+            print(Fore.RED + 'delete', end=' ')
+            print(Fore.GREEN + name, end=' ')
+            print(Fore.WHITE + domain, path, host)
             cn.execute(
                 'delete from rework.operation '
                 'where id = %(oid)s',
