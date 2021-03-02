@@ -62,6 +62,54 @@ def register_operations(dburi, module, domain=None, asdomain=None):
     print(f'registered {len(ok)} new operation ({len(ko)} already known)')
 
 
+@rework.command(name='unregister-operation')
+@click.argument('dburi')
+@click.argument('operation')
+@click.option('--domain')
+@click.option('--module', help='part of the module path')
+@click.option('--host')
+@click.option('--confirm/--no-confirm', is_flag=True, default=True)
+def unregister_operation(dburi, operation, domain=None, module=None, host=None,
+                         confirm=True):
+    """unregister an operation (or several) using its name and other properties
+    (module path, domain and host).
+
+    """
+    engine = create_engine(find_dburi(dburi))
+
+    sql = select(
+        'id', 'name', 'domain', 'path', 'host'
+    ).table(
+        'rework.operation'
+    ).where(name=operation)
+    if module:
+        sql.where('path like %(module)s', module=module)
+    if domain:
+        sql.where(domain=domain)
+    if host:
+        sql.where(host=host)
+
+    candidates = sql.do(engine).fetchall()
+    if not len(candidates):
+        print('Nothing to unregister')
+
+    if confirm and len(candidates):
+        print('preparing de-registration of:')
+        for oid, name, domain, path, host in candidates:
+            print(name, domain, path, host)
+        if click.confirm('really remove those [y/n]?'):
+            print('Ok, nothing has been done.')
+
+    with engine.begin() as cn:
+        for oid, name, domain, path, host in candidates:
+            print('delete', name, domain, path, host)
+            cn.execute(
+                'delete from rework.operation '
+                'where id = %(oid)s',
+                oid=oid
+            )
+
+
 @rework.command(name='new-worker')
 @click.argument('dburi')
 @click.argument('worker_id', type=int)

@@ -109,6 +109,18 @@ def test_register_operations(engine, cli, cleanup):
     from . import tasks
 
 
+def test_unregister_operations(engine, cli, cleanup):
+    r0 = cli('list-operations', engine.url)
+
+    r = cli('unregister-operation', engine.url, 'no_such_op', '--no-confirm')
+    assert r.output.startswith('Nothing to unregister')
+
+    r = cli('unregister-operation', engine.url, 'raw_input', '--no-confirm')
+    assert r.output.startswith(
+        'delete raw_input default'
+    )
+
+
 def test_list_monitors(engine, cli, cleanup):
     with workers(engine):
         r = cli('list-monitors', engine.url)
