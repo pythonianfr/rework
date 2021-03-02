@@ -125,6 +125,9 @@ def test_prepare(engine, cleanup):
     api.prepare(engine, 'foo', ' 0 0 8 * * *')
     api.prepare(engine, 'foo', ' 0 0 8 * * *')
 
+    with pytest.raises(Exception):
+        api.prepare(engine, 'foo', '* * * * * *')
+
     res = engine.execute('select count(*) from rework.sched').scalar()
     assert res == 2
 
@@ -217,10 +220,23 @@ def test_prepare_with_inputs(engine, cleanup):
         'birthdate': dt(1973, 5, 20, 9),
         'option': 'foo'
     }
-    api.prepare(engine, 'yummy', inputdata=args, metadata={'user': 'Babar'})
+    api.prepare(
+        engine,
+        'yummy',
+        rule='* * * * * *',
+        _anyrule=True,
+        inputdata=args,
+        metadata={'user': 'Babar'}
+    )
 
     with pytest.raises(ValueError) as err:
-        api.prepare(engine, 'yummy', inputdata={'no-such-thing': 42})
+        api.prepare(
+            engine,
+            'yummy',
+            inputdata={'no-such-thing': 42},
+            rule='* * * * * *',
+            _anyrule=True
+        )
     assert err.value.args[0] == 'missing required input: `myfile.txt`'
 
     with pytest.raises(ValueError) as err:
@@ -230,7 +246,9 @@ def test_prepare_with_inputs(engine, cleanup):
                 'no-such-thing': 42,
                 'option': 'foo',
                 'myfile.txt': b'something'
-            }
+            },
+            rule='* * * * * *',
+            _anyrule=True
         )
     assert err.value.args[0] == 'unknown inputs: no-such-thing'
 
@@ -241,7 +259,10 @@ def test_prepare_with_inputs(engine, cleanup):
         'birthdate': '1973-5-20',
         'option': 'foo'
     }
-    api.prepare(engine, 'yummy', inputdata=args2)
+    api.prepare(
+        engine, 'yummy', inputdata=args2,
+        rule='* * * * * *', _anyrule=True
+    )
 
     inputdata = engine.execute(
         'select inputdata from rework.sched order by id asc limit 1'

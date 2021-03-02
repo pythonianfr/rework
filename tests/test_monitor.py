@@ -662,7 +662,8 @@ def test_scheduler(engine, cleanup):
         engine,
         'run_in_non_default_domain',
         rule='* * * * * *',
-        domain='nondefault'
+        domain='nondefault',
+        _anyrule=True
     )
 
     res = engine.execute(

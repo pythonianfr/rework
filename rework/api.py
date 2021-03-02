@@ -171,17 +171,20 @@ def schedule(engine,
 
 def prepare(engine,
             opname,
-            rule='* * * * * *',
+            rule=None,
             domain='default',
             inputdata=None,
             host=None,
             metadata=None,
-            rawinputdata=None):
+            rawinputdata=None,
+            _anyrule=False):
     if metadata:
         assert isinstance(metadata, dict)
 
     # validate the rules
     BetterCronTrigger.from_extended_crontab(rule)
+    if not _anyrule and rule.startswith('*'):
+        raise Exception('"every second" rule is forbidden')
 
     spec = filterinput(inputspec(engine), opname, domain, host)
     if rawinputdata is None and inputdata:

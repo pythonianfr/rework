@@ -512,7 +512,9 @@ def test_scheduler(engine, cli, cleanup):
     sid = api.prepare(
         engine,
         'print_sleep_and_go_away',
-        inputdata='HELLO'
+        inputdata='HELLO',
+        rule='* * * * * *',
+        _anyrule=True
     )
 
     r = cli('list-scheduled', engine.url)
@@ -540,7 +542,9 @@ def test_scheduler(engine, cli, cleanup):
     s2 = api.prepare(
         engine,
         'run_in_non_default_domain',
-        domain='nondefault'
+        domain='nondefault',
+        rule='* * * * * *',
+        _anyrule=True
     )
 
     r = cli('list-scheduled', engine.url)
@@ -575,6 +579,8 @@ def test_scheduler_with_inputs(engine, cli, cleanup):
     sid = api.prepare(
         engine,
         'fancy_inputs',
+        rule='* * * * * *',
+        _anyrule=True,
         inputdata={
             'myfile': b'file contents',
             'foo': 42,
@@ -612,7 +618,9 @@ def test_scheduler_export_import(engine, cli, cleanup):
     sid = api.prepare(
         engine,
         'print_sleep_and_go_away',
-        inputdata='HELLO'
+        inputdata='HELLO',
+        rule='* * * * * *',
+        _anyrule=True
     )
     sid2 = api.prepare(
         engine,
@@ -621,7 +629,9 @@ def test_scheduler_export_import(engine, cli, cleanup):
             'myfile': b'file contents',
             'foo': 42,
             'bar': 'Hello'
-        }
+        },
+        rule='* * * * * *',
+        _anyrule=True
     )
 
     r = cli('list-scheduled', engine.url)

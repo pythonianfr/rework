@@ -376,7 +376,8 @@ def import_scheduled(dburi, path):
             row['domain'],
             host=row['host'],
             metadata=row['metadata'],
-            rawinputdata=row['inputdata']
+            rawinputdata=row['inputdata'],
+            _anyrule=True
         )
     print(f'loaded {len(inputs)} entries from {path}')
 
