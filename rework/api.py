@@ -193,11 +193,26 @@ def prepare(engine,
         else:
             rawinputdata = dumps(inputdata, protocol=2)
 
-    q = select('id').table('rework.operation').where(
-        name=opname
-    )
     with engine.begin() as cn:
-        opid = q.do(cn).scalar()
+        opid = select('id').table('rework.operation').where(
+            name=opname
+        ).do(cn).scalar()
+
+        # check replacement if operation + domain + host + rule matches
+        q = select('id').table('rework.sched').where(
+            operation=opid,
+            domain=domain,
+            rule=rule
+        )
+        if host:
+            q.where(host=host)
+        sid = q.do(cn).scalar()
+
+        if sid is not None:
+            cn.execute(
+                'delete from rework.sched where id=%(sid)s',
+                sid=sid
+            )
         q = insert('rework.sched').values(
             operation=opid,
             domain=domain,

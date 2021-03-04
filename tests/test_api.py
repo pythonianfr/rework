@@ -129,7 +129,7 @@ def test_prepare(engine, cleanup):
         api.prepare(engine, 'foo', '* * * * * *')
 
     res = engine.execute('select count(*) from rework.sched').scalar()
-    assert res == 2
+    assert res == 1
 
 
 def test_with_inputs(engine, cleanup):
@@ -272,11 +272,11 @@ def test_prepare_with_inputs(engine, cleanup):
     spec = filterinput(specs, 'yummy')
     unpacked = unpack_inputs(spec, inputdata)
     assert unpacked == {
+        'birthdate': dt(1973, 5, 20, 0, 0),
         'myfile.txt': b'some file',
-        'weight': 65,
-        'birthdate': dt(1973, 5, 20, 9, 0),
         'name': 'Babar',
-        'option': 'foo'
+        'option': 'foo',
+        'weight': 65
     }
 
 
