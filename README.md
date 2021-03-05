@@ -351,18 +351,25 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  abort-task
-  monitor
-  init-db
-  kill-worker
+  abort-task            immediately abort the given task This will be done...
+  export-scheduled
+  import-scheduled
+  init-db               initialize the database schema for rework in its
+                        own...
+  kill-worker           ask to preemptively kill a given worker to its...
+  list-monitors
   list-operations
   list-scheduled
   list-tasks
   list-workers
   log-task
-  new-worker
-  shutdown-worker
-  vacuum
+  monitor               start a monitor controlling min/max workers
+  new-worker            spawn a new worker -- this is a purely *internal*...
+  register-operations   register operations from a python module containing...
+  shutdown-worker       ask a worker to shut down as soon as it becomes
+                        idle...
+  unregister-operation  unregister an operation (or several) using its name...
+  vacuum                delete non-runing workers or finished tasks
 ```
 
 Of those commands, `new-worker` is for purely internal purposes, and
