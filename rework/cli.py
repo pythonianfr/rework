@@ -126,7 +126,7 @@ def unregister_operation(dburi, operation, domain=None, module=None, host=None,
 @click.option('--debug-port', type=int, default=0)
 def new_worker(**config):
     " spawn a new worker -- this is a purely *internal* command "
-    if 'debug_port' in config:
+    if config.get('debug_port', 0):
         try:
             import pystuck
         except ImportError:
