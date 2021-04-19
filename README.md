@@ -117,8 +117,9 @@ from rework import api, input
     input.string('name', required=True),
     input.string('option', choices=('foo', 'bar')),
     input.number('weight'),
-    input.datetime('birthdate'))
-)
+    input.datetime('birthdate'),
+    input.moment('horizon')
+))
 def compute_things(task):
     inp = task.input
     assert 'name' in inp
@@ -133,15 +134,17 @@ task = api.schedule(
     {'myfile.txt': b'file contents',
      'birthdate': datetime(1973, 5, 20, 9),
      'name': 'Babar',
-     'weight': 65
-    }
+     'weight': 65,
+     'horizon': '(shifted (today) #:days 7)'
+     }
 )
 
 assert task.input == {
     'myfile.txt': b'file contents',
     'birthdate': datetime(1973, 5, 20, 9),
     'name': 'Babar',
-    'weight': 65
+    'weight': 65,
+    'horizon': datetime(2021, 1, 7)
 }
 ```
 
