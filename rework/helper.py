@@ -18,7 +18,7 @@ from sqlalchemy.engine import url
 from sqlhelp import select
 from inireader import reader
 
-from rework.input import inputio
+from rework.io import _iobase
 
 
 def utcnow():
@@ -416,7 +416,7 @@ def pack_inputs(spec, args):
 
     raw = {}
     for field in spec:
-        inp = inputio.from_type(
+        inp = _iobase.from_type(
             field['type'], field['name'], field['required'], field['choices']
         )
         val = inp.binary_encode(args)
@@ -466,7 +466,7 @@ def unpack_inputs(spec, packedbytes):
     output = dict(zip(keys, values))
 
     for field in spec:
-        inp = inputio.from_type(
+        inp = _iobase.from_type(
             field['type'], field['name'], field['required'], field['choices']
         )
         val = inp.binary_decode(output)
