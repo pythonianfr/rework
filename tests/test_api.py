@@ -27,7 +27,7 @@ def test_task_decorator(cleanup):
             pass
 
     assert werr.value.args[0] == (
-        "Use either @task or @task(domain='domain', timeout=..., inputs=...)"
+        "Use either @task or @task(domain='domain', timeout=..., inputs=..., outputs=...)"
     )
 
 
@@ -46,7 +46,7 @@ def register_tasks():
     def cheesy(task):
         pass
 
-    @api.task(domain='ham')
+    @api.task(domain='ham', outputs=(input.string('taste'),))
     def hammy(task):
         pass
 
@@ -99,6 +99,20 @@ def test_freeze_ops(engine, cleanup):
             {'choices': None, 'name': 'ignoreme', 'required': False, 'type': 'string'}
         ]),
         ('hammy', 'ham', None)
+    ]
+
+    res = [
+        tuple(row)
+        for row in engine.execute(
+                'select name, domain, outputs from rework.operation '
+                'where outputs is not null '
+                'order by domain, name'
+        ).fetchall()
+    ]
+    assert res == [
+        ('hammy', 'ham', [
+            {'choices': None, 'name': 'taste', 'required': False, 'type': 'string'}
+        ])
     ]
 
     reset_ops(engine)

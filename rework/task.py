@@ -17,6 +17,7 @@ from rework.helper import (
 
 __task_registry__ = {}
 __task_inputs__ = {}
+__task_outputs__ = {}
 
 
 class TimeOut(Exception):

@@ -20,6 +20,7 @@ from rework.helper import (
 )
 from rework.task import (
     __task_inputs__,
+    __task_outputs__,
     __task_registry__,
     Task
 )
@@ -46,30 +47,40 @@ def task(*args, **kw):
 
         @api.task(inputs={'myfile': file, 'foo': int, 'bar': str})
 
+        @api.task(outputs={'myfile': file, 'foo': int, 'bar': str})
+
     If you want to specify either a non-default domain or a timeout
     parameter, the second notation (with keywords) must be used.
 
     All operation functions must take a single `task` parameter.
 
     """
-    msg = "Use either @task or @task(domain='domain', timeout=..., inputs=...)"
+    msg = "Use either @task or @task(domain='domain', timeout=..., inputs=..., outputs=...)"
     if args:
         assert callable(args[0]), msg
     else:
-        assert 'domain' in kw or 'timeout' in kw or 'inputs' in kw, msg
+        assert 'domain' in kw or 'timeout' in kw or 'inputs' in kw or 'outputs' in kw, msg
     domain = 'default'
     timeout = None
     inputs = None
+    outputs = None
 
     def register_task(func):
         __task_registry__[(domain, func.__name__)] = (func, timeout)
-        if inputs is None:
+        if inputs is None and outputs is None:
             return func
 
-        msg = 'inputs must be a tuple'
-        assert isinstance(inputs, tuple), msg
+        if inputs:
+            msg = 'inputs must be a tuple'
+            assert isinstance(inputs, tuple), msg
+        if outputs:
+            msg = 'outputs must be a tuple'
+            assert isinstance(outputs, tuple), msg
 
-        __task_inputs__[(domain, func.__name__)] = inputs
+        if inputs is not None:
+            __task_inputs__[(domain, func.__name__)] = inputs
+        if outputs is not None:
+            __task_outputs__[(domain, func.__name__)] = outputs
         return func
 
     if args and callable(args[0]):
@@ -78,7 +89,8 @@ def task(*args, **kw):
     domain = kw.pop('domain', domain)
     timeout = kw.pop('timeout', None)
     inputs = kw.pop('inputs', None)
-    assert domain or timeout or inputs
+    outputs = kw.pop('outputs', None)
+    assert domain or timeout or inputs or outputs
     if timeout is not None:
         msg = 'timeout must be a timedelta object'
         assert isinstance(timeout, timedelta), msg
@@ -258,6 +270,11 @@ def freeze_operations(engine, domain=None, domain_map=None,
         if (fdomain, fname) in __task_inputs__:
             val['inputs'] = InputEncoder().encode(
                 __task_inputs__[(fdomain, fname)]
+            )
+        # outputs
+        if (fdomain, fname) in __task_outputs__:
+            val['outputs'] = InputEncoder().encode(
+                __task_outputs__[(fdomain, fname)]
             )
         values.append(val)
 

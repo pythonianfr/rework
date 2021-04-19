@@ -40,6 +40,7 @@ create table {ns}.operation (
   domain text not null default 'default',
   timeout text,
   inputs jsonb,
+  outputs jsonb,
   constraint unique_operation unique (host, name, path)
 );
 
