@@ -27,18 +27,23 @@ def raw_input(task):
                      raw=True)
 
 
-@api.task(inputs=(
-    io.file('myfile'),
-    io.number('foo'),
-    io.string('bar')))
-def fancy_inputs(task):
+@api.task(
+    inputs=(
+        io.file('myfile'),
+        io.number('foo'),
+        io.string('bar')),
+    outputs=(io.string('message'),)
+)
+def fancy_inputs_outputs(task):
     inputs = task.input
     msg = (
         f'file length: {len(inputs["myfile"])},'
         f'foo: {inputs["foo"]},'
         f'bar: {inputs["bar"]}'
     )
-    task.save_output(msg)
+    task.save_output(
+        {'message': msg}
+    )
 
 
 @api.task

@@ -43,7 +43,7 @@ def test_basic_task_operations(engine, cleanup):
     assert [
         ('allocate_and_leak_mbytes', 'tasks.py'),
         ('capture_logs', 'tasks.py'),
-        ('fancy_inputs', 'tasks.py'),
+        ('fancy_inputs_outputs', 'tasks.py'),
         ('flush_captured_stdout', 'tasks.py'),
         ('infinite_loop', 'tasks.py'),
         ('infinite_loop_long_timeout', 'tasks.py'),
@@ -679,3 +679,22 @@ def test_scheduler(engine, cleanup):
             "<scheduler for nondefault ->\n"
             "[('run_in_non_default_domain', 'nondefault', None, None, None, '* * * * * *')]>"
         )
+
+
+def test_with_outputs(engine, cleanup):
+    with workers(engine):
+        t = api.schedule(
+            engine,
+            'fancy_inputs_outputs',
+            {
+                'myfile': b'hello world',
+                'foo': 42,
+                'bar': 'Babar'
+            }
+        )
+        t.join()
+
+    assert t.output == {
+        'message': 'file length: 11,foo: 42,bar: Babar'
+    }
+
