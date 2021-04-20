@@ -698,3 +698,19 @@ def test_with_outputs(engine, cleanup):
         'message': 'file length: 11,foo: 42,bar: Babar'
     }
 
+    with workers(engine):
+        t = api.schedule(
+            engine,
+            'fancy_inputs_outputs',
+            {
+                'myfile': b'hello world',
+                'foo': 42,
+                'bar': 'Celeste'
+            }
+        )
+        t.join()
+
+    assert t.output == {
+        'blogentry': 'file length: 11,foo: 42,bar: Celeste'
+    }
+

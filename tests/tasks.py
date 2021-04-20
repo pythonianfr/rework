@@ -41,9 +41,14 @@ def fancy_inputs_outputs(task):
         f'foo: {inputs["foo"]},'
         f'bar: {inputs["bar"]}'
     )
-    task.save_output(
-        {'message': msg}
-    )
+    if inputs['bar'] == 'Celeste':
+        task.save_output(
+            {'blogentry': msg}
+        )
+    else:
+        task.save_output(
+            {'message': msg}
+        )
 
 
 @api.task
