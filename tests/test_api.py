@@ -7,7 +7,7 @@ from rework.helper import (
     host,
     unpack_inputs
 )
-from rework import api, input
+from rework import api, io
 
 
 def test_task_decorator(cleanup):
@@ -46,17 +46,17 @@ def register_tasks():
     def cheesy(task):
         pass
 
-    @api.task(domain='ham', outputs=(input.string('taste'),))
+    @api.task(domain='ham', outputs=(io.string('taste'),))
     def hammy(task):
         pass
 
     @api.task(inputs=(
-        input.file('myfile.txt', required=True),
-        input.number('weight'),
-        input.datetime('birthdate'),
-        input.string('name'),
-        input.string('option', choices=('foo', 'bar')),
-        input.string('ignoreme'))
+        io.file('myfile.txt', required=True),
+        io.number('weight'),
+        io.datetime('birthdate'),
+        io.string('name'),
+        io.string('option', choices=('foo', 'bar')),
+        io.string('ignoreme'))
     )
     def yummy(task):
         pass
@@ -65,7 +65,7 @@ def register_tasks():
     def noinput(task):
         pass
 
-    @api.task(inputs=(input.moment('when'),))
+    @api.task(inputs=(io.moment('when'),))
     def happy_days(task):
         pass
 
