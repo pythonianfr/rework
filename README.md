@@ -148,6 +148,35 @@ assert task.input == {
 }
 ```
 
+### Specifying outputs
+
+As for the inputs, and for the same reasons, we can provide a spec for
+the outputs.
+
+```python
+from rework import api, io
+
+@api.task(outputs=(
+    io.string('name'),
+    io.datetime('birthdate')
+))
+def compute_things(task):
+    ...
+    task.save_output({
+        'name': 'Babar',
+        'birthdate': datetime(1931, 1, 1)
+    })
+```
+
+And this will of course be fetched from the other side:
+
+```python
+t = api.schedule(engine, 'compute_things')
+assert t.output == {
+    'name': 'Babar',
+    'birthdate': datetime(1931, 1, 1)
+}
+```
 
 ### Scheduling
 
