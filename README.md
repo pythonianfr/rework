@@ -110,15 +110,15 @@ and also, in [rework_ui][reworkui] it will provide an interactive web
 form allowing subsequent launch of the task.
 
 ```python
-from rework import api, input
+from rework import api, io
 
 @api.task(inputs=(
-    input.file('myfile.txt', required=True),
-    input.string('name', required=True),
-    input.string('option', choices=('foo', 'bar')),
-    input.number('weight'),
-    input.datetime('birthdate'),
-    input.moment('horizon')
+    io.file('myfile.txt', required=True),
+    io.string('name', required=True),
+    io.string('option', choices=('foo', 'bar')),
+    io.number('weight'),
+    io.datetime('birthdate'),
+    io.moment('horizon')
 ))
 def compute_things(task):
     inp = task.input
