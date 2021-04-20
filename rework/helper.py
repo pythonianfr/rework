@@ -349,17 +349,18 @@ class InputEncoder(json.JSONEncoder):
 
 # inputs spec reader
 
-def inputspec(engine):
+def iospec(engine, attr='inputs'):
+    assert attr in ('inputs', 'outputs')
     q = select(
-        'id', 'host', 'name', 'domain', 'inputs'
+        'id', 'host', 'name', 'domain', attr
     ).table('rework.operation'
-    ).where('inputs is not null'
+    ).where(f'{attr} is not null'
     ).order('domain, name')
 
     out = []
     for row in q.do(engine).fetchall():
-        inputs = row.inputs
-        for field in inputs:
+        ioobj = row[attr]
+        for field in ioobj:
             if field['choices'] is None:
                 field['choices'] = []
         out.append(
@@ -367,13 +368,13 @@ def inputspec(engine):
              row.name,
              row.domain,
              row.host,
-             inputs
+             ioobj
             )
         )
     return out
 
 
-def filterinput(specs, operation, domain=None, hostid=None):
+def filterio(specs, operation, domain=None, hostid=None):
     out = []
     for sid, opname, dom, host, spec in specs:
         if opname == operation:
@@ -410,7 +411,7 @@ def nary_pack(*bytestr):
     )
 
 
-def pack_inputs(spec, args):
+def pack_io(spec, args):
     if args is None and not len(spec):
         return
 
@@ -455,7 +456,7 @@ def nary_unpack(packedbytes):
     return struct.unpack(fmt, packedbytes[payloadoffset:])
 
 
-def unpack_inputs(spec, packedbytes):
+def unpack_io(spec, packedbytes):
     byteslist = nary_unpack(packedbytes)
     middle = len(byteslist) // 2
     keys = [

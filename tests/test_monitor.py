@@ -710,7 +710,6 @@ def test_with_outputs(engine, cleanup):
         )
         t.join()
 
-    assert t.output == {
-        'blogentry': 'file length: 11,foo: 42,bar: Celeste'
-    }
-
+    assert t.traceback.strip().endswith(
+        'ValueError: unknown inputs: blogentry'
+    )

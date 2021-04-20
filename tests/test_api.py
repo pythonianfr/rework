@@ -2,10 +2,10 @@ import pytest
 from datetime import datetime as dt
 
 from rework.helper import (
-    filterinput,
-    inputspec,
+    filterio,
+    iospec,
     host,
-    unpack_inputs
+    unpack_io
 )
 from rework import api, io
 
@@ -294,9 +294,9 @@ def test_prepare_with_inputs(engine, cleanup):
         sid=sid
     ).scalar()
 
-    specs = inputspec(engine)
-    spec = filterinput(specs, 'yummy')
-    unpacked = unpack_inputs(spec, inputdata)
+    specs = iospec(engine)
+    spec = filterio(specs, 'yummy')
+    unpacked = unpack_io(spec, inputdata)
     assert unpacked == {
         'birthdate': dt(1973, 5, 20, 0, 0),
         'myfile.txt': b'some file',

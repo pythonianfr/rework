@@ -12,11 +12,11 @@ from sqlhelp import select, insert
 from rework.helper import (
     BetterCronTrigger,
     delta_isoformat,
-    filterinput,
+    filterio,
     host,
     InputEncoder,
-    inputspec,
-    pack_inputs
+    iospec,
+    pack_io
 )
 from rework.task import (
     __task_inputs__,
@@ -129,9 +129,9 @@ def schedule(engine,
         assert isinstance(metadata, dict)
 
     if rawinputdata is None:
-        spec = filterinput(inputspec(engine), opname, domain, hostid)
+        spec = filterio(iospec(engine), opname, domain, hostid)
         if spec is not None:
-            rawinputdata = pack_inputs(spec, inputdata)
+            rawinputdata = pack_io(spec, inputdata)
         elif inputdata is not None:
             rawinputdata = dumps(inputdata, protocol=2)
 
@@ -198,10 +198,10 @@ def prepare(engine,
     if not _anyrule and rule.startswith('*'):
         raise Exception('"every second" rule is forbidden')
 
-    spec = filterinput(inputspec(engine), opname, domain, host)
+    spec = filterio(iospec(engine), opname, domain, host)
     if rawinputdata is None and inputdata is not None:
         if spec is not None:
-            rawinputdata = pack_inputs(spec, inputdata)
+            rawinputdata = pack_io(spec, inputdata)
         else:
             rawinputdata = dumps(inputdata, protocol=2)
 

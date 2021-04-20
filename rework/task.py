@@ -9,9 +9,10 @@ import logging
 from sqlhelp import select, update
 
 from rework.helper import (
+    pack_io,
     PGLogHandler,
     PGLogWriter,
-    unpack_inputs,
+    unpack_io,
     utcnow
 )
 
@@ -85,13 +86,20 @@ class Task:
         """saves the output of a task run for later use by other
         components. This is to be used from *within* an operation.
 
-        The `data` parameter can be any picklable python object.
+        The `data` parameter can be any picklable or output-spec
+        compliant python object.
 
         The `raw` parameter, combined with a bytestring as input data,
         allows to bypass the pickling protocol.
+
         """
         if not raw:
-            data = dumps(data, protocol=2)
+            spec = self.outputspec
+            if spec is not None:
+                data = pack_io(spec, data)
+            else:
+                data = dumps(data, protocol=2)
+
         with self.engine.begin() as cn:
             update(
                 'rework.task'
@@ -181,8 +189,15 @@ class Task:
 
     @property
     def inputspec(self):
+        return self._iospec('inputs')
+
+    @property
+    def outputspec(self):
+        return self._iospec('outputs')
+
+    def _iospec(self, attr):
         with self.engine.begin() as cn:
-            return select('inputs').table(
+            return select(attr).table(
                 'rework.operation as op'
             ).join(
                 'rework.task as t on (t.operation = op.id)'
@@ -202,7 +217,7 @@ class Task:
                 return loads(val)
             except:
                 try:
-                    return unpack_inputs(self.inputspec, val)
+                    return unpack_io(self.inputspec, val)
                 except:
                     raise TypeError('cannot decifer the raw bytes')
         return None
@@ -229,7 +244,7 @@ class Task:
             try:
                 return loads(out)
             except:
-                raise TypeError('cannot unpickle the raw bytes')
+                return unpack_io(self.outputspec, out)
         return None
 
     @property
