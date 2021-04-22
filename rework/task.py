@@ -25,6 +25,18 @@ class TimeOut(Exception):
     pass
 
 
+def _task_state(status, aborted, traceback):
+    if status != 'done':
+        if aborted:
+            return 'aborting'
+        return status
+    if aborted:
+        return 'aborted'
+    if traceback:
+        return 'failed'
+    return 'done'
+
+
 class Task:
     """A task object represents an execution of an operation within a worker.
 
@@ -287,17 +299,11 @@ class Task:
         `aborting`, `aborted`
 
         """
-        status = self.status
-        aborted = self.aborted
-        if status != 'done':
-            if aborted:
-                return 'aborting'
-            return status
-        if aborted:
-            return 'aborted'
-        if self.traceback:
-            return 'failed'
-        return 'done'
+        return _task_state(
+            self.status,
+            self.aborted,
+            self.traceback
+        )
 
     def run(self):
         with self.engine.begin() as cn:
