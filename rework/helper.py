@@ -359,16 +359,12 @@ def iospec(engine, attr='inputs'):
 
     out = []
     for row in q.do(engine).fetchall():
-        ioobj = row[attr]
-        for field in ioobj:
-            if field['choices'] is None:
-                field['choices'] = []
         out.append(
             (row.id,
              row.name,
              row.domain,
              row.host,
-             ioobj
+             row[attr]
             )
         )
     return out
