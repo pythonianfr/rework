@@ -585,6 +585,10 @@ def test_scheduler(engine, cli, cleanup):
 
 
 def test_scheduler_with_inputs(engine, cli, cleanup):
+    # note: shouldn't be needed as per the "cleanup" fixture ...
+    with engine.begin() as cn:
+        cn.execute('delete from rework.task')
+
     r = cli('list-scheduled', engine.url)
     assert len(r.output.strip()) == 0
 
