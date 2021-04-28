@@ -5,7 +5,8 @@ from rework.helper import (
     filterio,
     iospec,
     host,
-    unpack_io
+    unpack_io,
+    unpack_iofiles_length
 )
 from rework import api, io
 
@@ -310,6 +311,11 @@ def test_prepare_with_inputs(engine, cleanup):
         'birthdate': dt(1973, 5, 20, 0, 0),
         'name': 'Babar',
         'option': 'foo'
+    }
+
+    unpacked_files_length = unpack_iofiles_length(spec, inputdata)
+    assert unpacked_files_length == {
+        'myfile.txt': 9
     }
 
 
