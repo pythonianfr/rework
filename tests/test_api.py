@@ -6,6 +6,7 @@ from rework.helper import (
     iospec,
     host,
     unpack_io,
+    unpack_iofile,
     unpack_iofiles_length
 )
 from rework import api, io
@@ -317,6 +318,9 @@ def test_prepare_with_inputs(engine, cleanup):
     assert unpacked_files_length == {
         'myfile.txt': 9
     }
+
+    unpacked_file = unpack_iofile(spec, inputdata, 'myfile.txt')
+    assert unpacked_file == b'some file'
 
 
 def test_with_noinput(engine, cleanup):

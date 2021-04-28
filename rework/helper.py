@@ -506,3 +506,19 @@ def unpack_iofiles_length(spec, packedbytes):
 
     return output
 
+
+def unpack_iofile(spec, packedbytes, name):
+    output = _raw_unpack_io(spec, packedbytes)
+
+    for field in spec:
+        fname = field['name']
+        if fname != name:
+            output.pop(fname, None)
+            continue
+
+        assert field['type'] == 'file'
+
+        inp = _iobase.from_type(
+            'file', fname, field['required'], field['choices']
+        )
+        return inp.binary_decode(output)
