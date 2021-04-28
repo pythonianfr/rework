@@ -304,6 +304,13 @@ def test_prepare_with_inputs(engine, cleanup):
         'option': 'foo',
         'weight': 65
     }
+    unpacked = unpack_io(spec, inputdata, nofiles=True)
+    assert unpacked == {
+        'weight': 65,
+        'birthdate': dt(1973, 5, 20, 0, 0),
+        'name': 'Babar',
+        'option': 'foo'
+    }
 
 
 def test_with_noinput(engine, cleanup):

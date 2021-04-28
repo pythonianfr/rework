@@ -452,7 +452,9 @@ def nary_unpack(packedbytes):
     return struct.unpack(fmt, packedbytes[payloadoffset:])
 
 
-def unpack_io(spec, packedbytes):
+def unpack_io(spec,
+              packedbytes,
+              nofiles=False):
     byteslist = nary_unpack(packedbytes)
     middle = len(byteslist) // 2
     keys = [
@@ -463,8 +465,13 @@ def unpack_io(spec, packedbytes):
     output = dict(zip(keys, values))
 
     for field in spec:
+        fname = field['name']
+        if nofiles:
+            if field['type'] == 'file':
+                output.pop(fname, None)
+                continue
         inp = _iobase.from_type(
-            field['type'], field['name'], field['required'], field['choices']
+            field['type'], fname, field['required'], field['choices']
         )
         val = inp.binary_decode(output)
         if val is None:
