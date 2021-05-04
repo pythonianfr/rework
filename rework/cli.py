@@ -94,14 +94,15 @@ def unregister_operation(dburi, operation, domain=None, module=None, host=None,
     if not len(candidates):
         print('Nothing to unregister')
 
-    if confirm and len(candidates):
+    if confirm:
         print('preparing de-registration of:')
         for oid, name, domain, path, host in candidates:
             print(Fore.RED + 'delete', end=' ')
             print(Fore.GREEN + name, end=' ')
             print(Fore.WHITE + domain, path, host)
-        if click.confirm('really remove those [y/n]?'):
+        if not click.confirm('really remove those [y/n]?'):
             print('Ok, nothing has been done.')
+            return
 
     with engine.begin() as cn:
         for oid, name, domain, path, host in candidates:
