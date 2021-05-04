@@ -244,6 +244,29 @@ $ pystuck -h <host> -p 666
 ```
 
 
+### Organize tasks in code
+
+A common pattern is to have a `project/tasks.py` module.
+
+One can manage the tasks using the `register-operations` and
+`unregister-operation` commands.
+
+```bash
+$ rework register-operations <dburi> /path/to/project/tasks.py
+```
+
+and also
+
+```bash
+``` rework unregister-operation <dburi> <opname>
+delete <opname> <domain> /path/to/project/tasks.py <hostid>
+really remove those [y/n]? [y/N]: y
+```
+
+This pair of operations can be used also whenever a task input or
+output specifications have changed.
+
+
 ## API
 
 The `api` module exposes most if what is needed. The `task` module
