@@ -198,12 +198,14 @@ def prepare(engine,
             name=opname
         ).do(cn).scalar()
 
-        # check replacement if operation + domain + host + rule matches
+        # check replacement if operation + domain + host + rule + inputs match
         q = select('id').table('rework.sched').where(
             operation=opid,
             domain=domain,
             rule=rule
         )
+        if rawinputdata:
+            q.where(inputdata=rawinputdata)
         if host:
             q.where(host=host)
         sid = q.do(cn).scalar()

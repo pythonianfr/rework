@@ -228,6 +228,17 @@ def test_prepare_with_inputs(engine, cleanup):
         inputdata=args,
         metadata={'user': 'Babar'}
     )
+    # second insert should be a no-op
+    api.prepare(
+        engine,
+        'yummy',
+        rule='* * * * * *',
+        _anyrule=True,
+        inputdata=args,
+        metadata={'user': 'Babar'}
+    )
+    res = engine.execute('select count(*) from rework.sched').scalar()
+    assert res == 1
 
     with pytest.raises(ValueError) as err:
         api.prepare(
@@ -259,13 +270,14 @@ def test_prepare_with_inputs(engine, cleanup):
         'birthdate': '1973-5-20',
         'option': 'foo'
     }
-    api.prepare(
+    sid = api.prepare(
         engine, 'yummy', inputdata=args2,
         rule='* * * * * *', _anyrule=True
     )
 
     inputdata = engine.execute(
-        'select inputdata from rework.sched order by id asc limit 1'
+        'select inputdata from rework.sched where id = %(sid)s',
+        sid=sid
     ).scalar()
 
     specs = inputspec(engine)
