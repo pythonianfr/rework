@@ -187,7 +187,7 @@ def prepare(engine,
         raise Exception('"every second" rule is forbidden')
 
     spec = filterinput(inputspec(engine), opname, domain, host)
-    if rawinputdata is None and inputdata:
+    if rawinputdata is None and inputdata is not None:
         if spec is not None:
             rawinputdata = pack_inputs(spec, inputdata)
         else:
