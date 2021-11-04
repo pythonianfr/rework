@@ -137,8 +137,8 @@ def test_list_workers(engine, cli, cleanup):
         r = cli('list-workers', engine.url)
         assert (
             '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running (idle)] '
-            '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
         )== scrub(r.output)
 
     with engine.begin() as cn:
@@ -152,12 +152,11 @@ def test_list_workers(engine, cli, cleanup):
     r = cli('list-workers', engine.url)
     assert (
         '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] '
-        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-        '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-        '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-        'Forcefully killed by the monitor. \n'
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] Forcefully killed by the monitor. \n'
         '<X> <nopid>@<X> <X> Mb [unstarted] '
-        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
     )== scrub(r.output)
 
 
@@ -373,8 +372,8 @@ def test_abort_task(engine, cli, cleanup):
         r = cli('list-workers', url)
         assert (
             '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running (idle)] '
-            '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
         )== scrub(r.output)
 
         t = api.schedule(engine, 'infinite_loop')
@@ -382,15 +381,16 @@ def test_abort_task(engine, cli, cleanup):
 
         r = cli('list-workers', url)
         assert (
-            '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running #<X>]'
-            ' [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+            '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running #<X>] '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
         ) == scrub(r.output)
 
         r = cli('list-tasks', url)
         assert (
-            '<X> infinite_loop running [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
-            ' → [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+            '<X> infinite_loop running '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
         )== scrub(r.output)
 
         r = cli('abort-task', url, t.tid)
@@ -400,18 +400,19 @@ def test_abort_task(engine, cli, cleanup):
         r = cli('list-workers', url)
         assert (
             '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] '
-            '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] '
             'preemptive kill at '
             '<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X>'
         ) == scrub(r.output)
 
         r = cli('list-tasks', url)
         assert (
-            '<X> infinite_loop aborted [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+            '<X> infinite_loop aborted '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
         ) == scrub(r.output)
 
 
@@ -428,30 +429,31 @@ def test_kill_worker(engine, cli, cleanup):
         r = cli('list-workers', url)
         assert (
             '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [dead] '
-            '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] '
             'preemptive kill at '
             '<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X>'
         ) == scrub(r.output)
 
         r = cli('list-tasks', url)
         assert (
-            '<X> infinite_loop aborted [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+            '<X> infinite_loop aborted '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
         ) == scrub(r.output)
 
 
 def test_debug_worker(engine, cli, cleanup):
     url = engine.url
-
     with workers(engine, debug=True):
         r = cli('list-workers', url)
         assert (
-            '<X> <X>@<X>.<X>.<X>.<X> <X> Mb [running (idle)] debugport = <X> '
-            '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] '
-            '→ [<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+            '<X> <X>@<X>.<X>.<X>.<X> <X> '
+            'Mb [running (idle)] debugport = <X> '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
         )== scrub(r.output)
 
 
@@ -544,11 +546,11 @@ def test_scheduler(engine, cli, cleanup):
         wait_true(lambda: t.status == 'done')
         r = cli('list-tasks', engine.url)
 
-    assert scrub(r.output)[:140].strip() == (
+    assert scrub(r.output).strip() == (
         '<X> print_sleep_and_go_away done '
-        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
-        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
-        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
     )
 
     s2 = api.prepare(
@@ -578,9 +580,9 @@ def test_scheduler(engine, cli, cleanup):
 
     assert scrub(r.output)[:140].strip() == (
         '<X> run_in_non_default_domain done '
-        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
-        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
-        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
     )
 
 
@@ -621,9 +623,9 @@ def test_scheduler_with_inputs(engine, cli, cleanup):
 
     assert scrub(r.output).strip() == (
         '<X> fancy_inputs_outputs done '
-        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
-        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>] → '
-        '[<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>]'
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
     )
 
 
