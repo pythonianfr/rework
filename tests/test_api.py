@@ -71,6 +71,13 @@ def register_tasks():
     def happy_days(task):
         pass
 
+    @api.task(
+        domain='toto',
+        inputs=(
+        io.number('history'),
+    ))
+    def nr(task):
+        pass
 
 
 def test_freeze_ops(engine, cleanup):
@@ -100,7 +107,10 @@ def test_freeze_ops(engine, cleanup):
             {'choices': ['foo', 'bar'], 'name': 'option', 'required': False, 'type': 'string'},
             {'choices': None, 'name': 'ignoreme', 'required': False, 'type': 'string'}
         ]),
-        ('hammy', 'ham', None)
+        ('hammy', 'ham', None),
+        ('nr', 'toto', [
+            {'choices': None, 'name': 'history', 'required': False, 'type': 'number'}
+        ])
     ]
 
     res = [
@@ -321,6 +331,30 @@ def test_prepare_with_inputs(engine, cleanup):
 
     unpacked_file = unpack_iofile(spec, inputdata, 'myfile.txt')
     assert unpacked_file == b'some file'
+
+
+def test_prepare_inputs_nr_domain_mismatch(engine, cleanup):
+    reset_ops(engine)
+    register_tasks()
+    api.freeze_operations(engine)
+    data = {
+        'history': '0'
+    }
+    sid = api.prepare(
+        engine,
+        'nr',
+        rule='0 0 * * * *',
+        inputdata=data
+    )
+    inputdata = engine.execute(
+        'select inputdata from rework.sched where id = %(sid)s',
+        sid=sid
+    ).scalar()
+
+    specs = iospec(engine)
+    spec = filterio(specs, 'nr')
+    with pytest.raises(TypeError):
+        unpacked = unpack_io(spec, inputdata)
 
 
 def test_with_noinput(engine, cleanup):
