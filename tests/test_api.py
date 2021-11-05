@@ -72,7 +72,7 @@ def register_tasks():
         pass
 
     @api.task(
-        domain='toto',
+        domain='non-default',
         inputs=(
         io.number('history'),
     ))
@@ -108,7 +108,7 @@ def test_freeze_ops(engine, cleanup):
             {'choices': None, 'name': 'ignoreme', 'required': False, 'type': 'string'}
         ]),
         ('hammy', 'ham', None),
-        ('nr', 'toto', [
+        ('nr', 'non-default', [
             {'choices': None, 'name': 'history', 'required': False, 'type': 'number'}
         ])
     ]
@@ -340,12 +340,22 @@ def test_prepare_inputs_nr_domain_mismatch(engine, cleanup):
     data = {
         'history': '0'
     }
+    with pytest.raises(Exception):
+        sid = api.prepare(
+            engine,
+            'nr',
+            rule='0 0 * * * *',
+            inputdata=data
+        )
+
     sid = api.prepare(
         engine,
         'nr',
+        domain='non-default',
         rule='0 0 * * * *',
         inputdata=data
     )
+
     inputdata = engine.execute(
         'select inputdata from rework.sched where id = %(sid)s',
         sid=sid
@@ -353,8 +363,8 @@ def test_prepare_inputs_nr_domain_mismatch(engine, cleanup):
 
     specs = iospec(engine)
     spec = filterio(specs, 'nr')
-    with pytest.raises(TypeError):
-        unpacked = unpack_io(spec, inputdata)
+    unpacked = unpack_io(spec, inputdata)
+    assert unpacked == {'history': 0}
 
 
 def test_with_noinput(engine, cleanup):

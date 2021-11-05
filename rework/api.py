@@ -16,6 +16,7 @@ from rework.helper import (
     host,
     InputEncoder,
     iospec,
+    ops_and_domains,
     pack_io
 )
 from rework.task import (
@@ -192,6 +193,10 @@ def prepare(engine,
             _anyrule=False):
     if metadata:
         assert isinstance(metadata, dict)
+
+    ops_doms = ops_and_domains(engine)
+    if (opname, domain) not in ops_doms:
+        raise Exception(f'{opname} / {domain} are not known')
 
     # validate the rules
     BetterCronTrigger.from_extended_crontab(rule)

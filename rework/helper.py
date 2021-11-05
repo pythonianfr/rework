@@ -88,6 +88,15 @@ def host():
     return s.getsockname()[0]
 
 
+# read stuff
+
+def ops_and_domains(engine):
+    res = engine.execute(
+        'select name, domain from rework.operation'
+    ).fetchall()
+    return set((name, domain) for name, domain in res)
+
+
 # db cleanup
 
 def cleanup_workers(engine, finished):
@@ -313,7 +322,6 @@ class PGLogWriter:
 
 
 # cron handling
-
 
 class BetterCronTrigger(CronTrigger):
 
