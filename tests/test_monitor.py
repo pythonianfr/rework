@@ -212,11 +212,11 @@ def test_basic_worker_task_execution(engine, cleanup):
 def test_monitor_base(engine, cleanup):
     with workers(engine) as mon:
         assert engine.execute(
-            'select count(id) from rework.monitor where id = {}'.format(mon.monid)
+            f'select count(id) from rework.monitor where id = {mon.monid}'
         ).scalar() == 1
 
         res = engine.execute(
-            'select options from rework.monitor where id = {}'.format(mon.monid)
+            f'select options from rework.monitor where id = {mon.monid}'
         ).scalar()
         assert {
             'maxmem': 0,
@@ -227,7 +227,7 @@ def test_monitor_base(engine, cleanup):
         } == res
 
     # generic monitor assertions
-    guard(engine, 'select count(id) from rework.monitor where id = {}'.format(mon.monid),
+    guard(engine, f'select count(id) from rework.monitor where id = {mon.monid}',
           lambda r: r.scalar() == 0)
 
 
@@ -237,7 +237,7 @@ def test_domain(engine, cleanup):
         t1 = api.schedule(engine, 'run_in_non_default_domain')
         t2 = api.schedule(engine, 'print_sleep_and_go_away', 1)
 
-        guard(engine, 'select running from rework.worker where id = {}'.format(wid),
+        guard(engine, f'select running from rework.worker where id = {wid}',
               lambda r: r.scalar() == False)
 
         assert t1.status == 'queued'
@@ -248,7 +248,7 @@ def test_domain(engine, cleanup):
         t1 = api.schedule(engine, 'run_in_non_default_domain')
         t2 = api.schedule(engine, 'print_sleep_and_go_away', 1)
 
-        guard(engine, 'select running from rework.worker where id = {}'.format(wid),
+        guard(engine, f'select running from rework.worker where id = {wid}',
               lambda r: r.scalar() == False)
 
         assert t1.status == 'done'
@@ -300,7 +300,7 @@ def test_worker_shutdown(engine, cleanup):
                 shutdown=True
             ).do(cn)
         assert worker.shutdown_asked()
-        guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
+        guard(engine, f'select shutdown from rework.worker where id = {wid}',
               lambda r: r.scalar() == True)
 
         guard(engine, 'select count(id) from rework.worker where running = true',
@@ -319,7 +319,7 @@ def test_worker_kill(engine, cleanup):
             update('rework.worker').where(id=wid).values(
                 kill=True
             ).do(cn)
-        guard(engine, 'select kill from rework.worker where id = {}'.format(wid),
+        guard(engine, f'select kill from rework.worker where id = {wid}',
               lambda r: r.scalar() == True)
 
         mon.preemptive_kill()
@@ -346,7 +346,7 @@ def test_worker_max_runs(engine, cleanup):
         t = api.schedule(engine, 'print_sleep_and_go_away', 'a')
         t.join()
 
-        guard(engine, 'select running from rework.worker where id = {}'.format(wid),
+        guard(engine, f'select running from rework.worker where id = {wid}',
               lambda r: r.scalar() == False)
 
     with workers(engine, maxruns=1) as mon:
@@ -357,7 +357,7 @@ def test_worker_max_runs(engine, cleanup):
 
         t1.join()
 
-        guard(engine, 'select running from rework.worker where id = {}'.format(wid),
+        guard(engine, f'select running from rework.worker where id = {wid}',
               lambda r: r.scalar() == False)
 
         assert t2.state == 'queued'
@@ -375,15 +375,15 @@ def test_worker_max_mem(engine, cleanup):
         t1.join()
 
         assert engine.execute(
-            'select mem from rework.worker where id = {}'.format(wid)
+            f'select mem from rework.worker where id = {wid}'
         ).scalar() == 0
         mon.track_resources()
         assert engine.execute(
-            'select mem from rework.worker where id = {}'.format(wid)
+            f'select mem from rework.worker where id = {wid}'
         ).scalar() > 50
         t2 = api.schedule(engine, 'allocate_and_leak_mbytes', 100)
         t2.join()
-        guard(engine, 'select shutdown from rework.worker where id = {}'.format(wid),
+        guard(engine, f'select shutdown from rework.worker where id = {wid}',
               lambda r: r.scalar() == True)
         worker = Worker(engine.url, wid)
         assert worker.shutdown_asked()
@@ -394,7 +394,7 @@ def test_task_abortion(engine, cleanup):
         wid = mon.wids[0]
 
         t = api.schedule(engine, 'infinite_loop', True)
-        guard(engine, 'select count(id) from rework.task where worker = {}'.format(wid),
+        guard(engine, f'select count(id) from rework.task where worker = {wid}',
               lambda res: res.scalar() == 1)
 
         assert t.state == 'running'
@@ -406,7 +406,7 @@ def test_task_abortion(engine, cleanup):
         # check cpu usage
         mon.track_resources()
         cpu = engine.execute(
-            'select cpu from rework.worker where id = {}'.format(wid)
+            f'select cpu from rework.worker where id = {wid}'
         ).scalar()
         assert cpu > 0
 
@@ -421,11 +421,11 @@ def test_task_abortion(engine, cleanup):
         assert t.deathinfo.startswith('preemptive kill')
 
         # one dead worker
-        guard(engine, 'select running from rework.worker where id = {}'.format(wid),
+        guard(engine, f'select running from rework.worker where id = {wid}',
               lambda res: not res.scalar())
 
         diagnostic = engine.execute(
-            'select deathinfo from rework.worker where id = {}'.format(wid)
+            f'select deathinfo from rework.worker where id = {wid}'
         ).scalar()
 
         assert 'preemptive kill at <X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X>' == scrub(diagnostic)
@@ -445,7 +445,7 @@ def test_worker_unplanned_death(engine, cleanup):
         deadlist = wait_true(mon.reap_dead_workers)
         assert wid in deadlist
 
-        guard(engine, 'select deathinfo from rework.worker where id = {}'.format(wid),
+        guard(engine, f'select deathinfo from rework.worker where id = {wid}',
               lambda r: r.scalar() == 'Unaccounted death (hard crash)')
 
         assert t.state == 'aborted'
@@ -523,7 +523,7 @@ def test_logging_stress_test(engine, cleanup):
 
         t.join()
         records = engine.execute(
-            'select id, line from rework.log where task = {}'.format(t.tid)
+            f'select id, line from rework.log where task = {t.tid}'
         ).fetchall()
 
         # we check that there is a constant offset between the

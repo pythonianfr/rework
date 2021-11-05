@@ -179,7 +179,7 @@ def test_debug_port(engine, cli, cleanup):
         assert len(mon.wids) == 2
 
         guard(engine,
-              'select running from rework.worker where id = {}'.format(killtarget),
+              f'select running from rework.worker where id = {killtarget}',
               lambda r: not r.scalar())
 
         r = cli('list-workers', engine.url)
@@ -190,7 +190,7 @@ def test_debug_port(engine, cli, cleanup):
 
         stats = mon.ensure_workers()
         assert stats.new
-        guard(engine, 'select running from rework.worker where id = {}'.format(stats.new[0]),
+        guard(engine, f'select running from rework.worker where id = {stats.new[0]}',
               lambda r: r.scalar())
 
         r = cli('list-workers', engine.url)
@@ -327,8 +327,8 @@ def test_shrink_minworkers(engine, cli, cleanup):
 
         # wait for the first shutdown to happen
         guard(engine,
-              'select running from rework.worker '
-              'where id = {}'.format(stat2.shrink[0]),
+              f'select running from rework.worker '
+              f'where id = {stat2.shrink[0]}',
               lambda r: not r.scalar())
 
         # give 2 times a chance to shutdown a spare worker
@@ -341,8 +341,8 @@ def test_shrink_minworkers(engine, cli, cleanup):
             shuttingdown = stat.shrink[0]
             assert shuttingdown in mon.wids
             guard(engine,
-                  'select running from rework.worker '
-                  'where id = {}'.format(shuttingdown),
+                  f'select running from rework.worker '
+                  f'where id = {shuttingdown}',
                   lambda r: not r.scalar())
 
         guard(engine,
@@ -462,7 +462,7 @@ def test_shutdown_worker(engine, cli, cleanup):
     with workers(engine) as mon:
         cli('shutdown-worker', url, mon.wids[0])
 
-        guard(engine, 'select running from rework.worker where id = {}'.format(mon.wids[0]),
+        guard(engine, f'select running from rework.worker where id = {mon.wids[0]}',
               lambda res: res.scalar() == 0)
 
         r = cli('list-workers', url)
