@@ -412,7 +412,9 @@ def test_abort_task(engine, cli, cleanup):
             '<X> infinite_loop aborted '
             '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
             '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
-            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] '
+            'preemptive kill at '
+            '<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X> <X>'
         ) == scrub(r.output)
 
 
@@ -441,7 +443,9 @@ def test_kill_worker(engine, cli, cleanup):
             '<X> infinite_loop aborted '
             '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
             '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
-            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
+            '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] '
+            'preemptive kill at '
+            '<X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X> <X>'
         ) == scrub(r.output)
 
 

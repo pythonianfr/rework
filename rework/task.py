@@ -367,7 +367,7 @@ class Task:
                 status='done'
             ).do(cn)
 
-    def abort(self):
+    def abort(self, msg='<no known cause>'):
         """ask the abortion of the task
 
         The effective abortion will be done by the responsible monitor
@@ -395,5 +395,6 @@ class Task:
                 'worker.id = task.worker',
                 'task.id = %(id)s', id=self.tid
             ).values(
-                kill=True
+                kill=True,
+                deathinfo=msg
             ).do(cn)

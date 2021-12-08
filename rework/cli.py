@@ -291,8 +291,11 @@ def list_tasks(dburi, tracebacks=False, logcount=False):
     init()
     engine = create_engine(find_dburi(dburi))
     opmap = dict(engine.execute('select id, name from rework.operation').fetchall())
-    sql = ('select id from rework.task order by id')
-    for tid, in engine.execute(sql):
+    sql = ('select t.id, w.deathinfo, w.mem '
+           'from rework.task as t left outer join rework.worker as w '
+           'on t.worker = w.id '
+           'order by id')
+    for tid, di, mem in engine.execute(sql):
         task = Task.byid(engine, tid)
         stat = task.state
         print(Style.RESET_ALL + str(tid),
@@ -318,6 +321,10 @@ def list_tasks(dburi, tracebacks=False, logcount=False):
 
         if tracebacks and task.traceback:
             print(Fore.YELLOW + task.traceback, end='')
+
+        if di:
+            print(Fore.YELLOW + di, end=' ')
+            print(Fore.YELLOW + str(mem), end='')
         print()
 
 
@@ -362,7 +369,7 @@ def abort_task(dburi, taskid):
     """
     engine = create_engine(find_dburi(dburi))
     task = Task.byid(engine, taskid)
-    task.abort()
+    task.abort('from the command line')
 
 
 @rework.command(name='list-scheduled')

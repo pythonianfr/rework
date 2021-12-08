@@ -321,7 +321,7 @@ class Monitor:
                 delta = parse_delta(timeout)
                 now = utcnow()
                 if (now - start_time) > delta:
-                    Task.byid(self.engine, tid).abort()
+                    Task.byid(self.engine, tid).abort('timeout')
 
     def track_starting(self):
         if not self.pending_start:
