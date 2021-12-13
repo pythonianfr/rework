@@ -1,0 +1,18 @@
+image: debian/bullseye
+packages:
+  - mercurial
+  - python3-pip
+  - postgresql
+  - emacs-nox
+sources:
+  - hg+https://hg.sr.ht/~pythonian/rework
+tasks:
+  - install: |
+      export PATH=$PATH:~/.local/bin:/usr/lib/postgresql/13/bin
+      pip3 install tox wheel setuptools pystuck --quiet
+      pip3 install -e rework --prefer-binary
+  - run-tests: |
+      export PATH=$PATH:~/.local/bin:/usr/lib/postgresql/13/bin
+      pip3 install pytest pytest_sa_pg
+      cd rework
+      pytest
