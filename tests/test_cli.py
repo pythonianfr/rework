@@ -548,9 +548,9 @@ def test_scheduler(engine, cli, cleanup):
         tid = engine.execute('select id from rework.task').scalar()
         t = Task.byid(engine, tid)
         wait_true(lambda: t.status == 'done')
-        r = cli('list-tasks', engine.url)
 
-    assert scrub(r.output).strip() == (
+    r = cli('list-tasks', engine.url)
+    assert scrub(r.output).strip().startswith(
         '<X> print_sleep_and_go_away done '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
