@@ -7,7 +7,7 @@ import pickle
 import click
 from colorama import init, Fore, Style
 from pkg_resources import iter_entry_points
-import zstd
+import pyzstd as zstd
 
 from sqlalchemy import create_engine
 from sqlhelp import update, select

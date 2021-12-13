@@ -11,7 +11,7 @@ import json
 import struct
 
 from apscheduler.triggers.cron import CronTrigger
-import zstd
+import pyzstd as zstd
 import pytz
 import psutil
 from sqlalchemy.engine import url
@@ -445,7 +445,7 @@ def pack_io(spec, args):
 def nary_unpack(packedbytes):
     try:
         packedbytes = zstd.decompress(packedbytes.tobytes())
-    except zstd.Error:
+    except zstd.ZstdDecompressor:
         raise TypeError('wrong input format')
 
     [sizes_size] = struct.unpack(

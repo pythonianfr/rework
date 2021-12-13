@@ -25,7 +25,7 @@ setup(name='rework',
           'tzlocal',
           'inireader',
           'apscheduler',
-          'zstd',
+          'pyzstd',
           'dateutils',
           'psyl'
       ],
