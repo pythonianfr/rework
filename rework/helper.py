@@ -445,7 +445,7 @@ def pack_io(spec, args):
 def nary_unpack(packedbytes):
     try:
         packedbytes = zstd.decompress(packedbytes.tobytes())
-    except zstd.ZstdDecompressor:
+    except zstd.ZstdError:
         raise TypeError('wrong input format')
 
     [sizes_size] = struct.unpack(
