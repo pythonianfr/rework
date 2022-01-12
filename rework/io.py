@@ -4,7 +4,8 @@ from datetime import datetime as dt
 
 from dateutil.parser import (
     isoparse,
-    parse as defaultparse
+    parse as defaultparse,
+    ParserError
 )
 from dateutil.relativedelta import relativedelta
 from psyl import lisp
@@ -50,6 +51,10 @@ class number(_iobase):
     def binary_encode(self, args):
         val = self.val(args)
         if val is not None:
+            if not isinstance(val, (int, float)):
+                raise TypeError(
+                    f'value `{repr(val)}` is not a number'
+                )
             return str(val).encode('utf-8')
 
     def binary_decode(self, args):
@@ -67,6 +72,10 @@ class string(_iobase):
     def binary_encode(self, args):
         val = self.val(args)
         if val is not None:
+            if not isinstance(val, str):
+                raise TypeError(
+                    f'value `{repr(val)}` is not a string'
+                )
             return val.encode('utf-8')
 
     def binary_decode(self, args):
@@ -78,7 +87,13 @@ class string(_iobase):
 class file(_iobase):
 
     def binary_encode(self, args):
-        return self.val(args)
+        val = self.val(args)
+        if val is not None:
+            if not isinstance(val, bytes):
+                raise TypeError(
+                    f'value `{repr(val)}` is not bytes'
+                )
+        return val
 
     def binary_decode(self, args):
         return args.get(self.name)
@@ -90,10 +105,20 @@ class datetime(_iobase):
         val = self.val(args)
         if val is None:
             return
+        if not isinstance(val, (str, dt)):
+            raise TypeError(
+                f'value `{repr(val)}` is not str/datetime'
+            )
+
         if isinstance(val, str):
-            val = val.encode('utf-8')
-        else:
-            val = val.isoformat().encode('utf-8')
+            try:
+                val = defaultparse(val)
+            except ParserError:
+                raise TypeError(
+                    f'value `{repr(val)}` is not a valid datetime'
+                )
+
+        val = val.isoformat().encode('utf-8')
         return val
 
     def binary_decode(self, args):
@@ -140,7 +165,9 @@ class moment(_iobase):
             lisp.evaluate(val, env=_MOMENT_ENV)
         except:
             import traceback as tb; tb.print_exc()
-            raise
+            raise TypeError(
+                f'value `{repr(val)}` is not a valid moment expression'
+            )
 
         return val.encode('utf-8')
 

@@ -266,9 +266,27 @@ def test_prepare_with_inputs(engine, cleanup):
     res = engine.execute('select count(*) from rework.sched').scalar()
     assert res == 1
 
+    for name, badvalue in (
+            ('name', 42),
+            ('myfile.txt', 'hello'),
+            ('weight', '65'),
+            ('birthdate', 'lol'),
+    ):
+        failargs = args.copy()
+        failargs[name] = badvalue
+        with pytest.raises(TypeError):
+            api.prepare(
+                engine,
+                'yummy',
+                rule='* * * * * *',
+                _anyrule=True,
+                inputdata=failargs,
+                metadata={'user': 'Babar'}
+            )
+
     failargs = args.copy()
-    failargs['name'] = 42
-    with pytest.raises(AttributeError):
+    failargs['option'] = 3.14
+    with pytest.raises(ValueError):
         api.prepare(
             engine,
             'yummy',
@@ -350,7 +368,7 @@ def test_prepare_inputs_nr_domain_mismatch(engine, cleanup):
     register_tasks()
     api.freeze_operations(engine)
     data = {
-        'history': '0'
+        'history': 0
     }
     with pytest.raises(Exception):
         sid = api.prepare(

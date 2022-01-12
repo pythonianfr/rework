@@ -26,7 +26,7 @@ setup(name='rework',
           'inireader',
           'apscheduler',
           'pyzstd',
-          'dateutils',
+          'python-dateutil',
           'psyl'
       ],
       package_data={'rework': [
