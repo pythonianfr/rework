@@ -266,6 +266,18 @@ def test_prepare_with_inputs(engine, cleanup):
     res = engine.execute('select count(*) from rework.sched').scalar()
     assert res == 1
 
+    failargs = args.copy()
+    failargs['name'] = 42
+    with pytest.raises(AttributeError):
+        api.prepare(
+            engine,
+            'yummy',
+            rule='* * * * * *',
+            _anyrule=True,
+            inputdata=failargs,
+            metadata={'user': 'Babar'}
+        )
+
     with pytest.raises(ValueError) as err:
         api.prepare(
             engine,
