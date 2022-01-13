@@ -6,10 +6,10 @@ doc = Path(__file__).parent / 'README.md'
 
 
 setup(name='rework',
-      version='0.13.0',
+      version='0.14.0',
       author='Aurelien Campeas',
       author_email='aurelien.campeas@pythonian.fr',
-      description='A database-oriented distributed task dispatcher',
+      description='A database backed distributed task dispatcher',
       long_description=doc.read_text(),
       long_description_content_type='text/markdown',
       url='https://hg.sr.ht/~pythonian/rework',
