@@ -57,6 +57,7 @@ def register_tasks():
         io.file('myfile.txt', required=True),
         io.number('weight'),
         io.datetime('birthdate'),
+        io.moment('sometime'),
         io.string('name'),
         io.string('option', choices=('foo', 'bar')),
         io.string('ignoreme'))
@@ -104,6 +105,7 @@ def test_freeze_ops(engine, cleanup):
             {'choices': None, 'name': 'myfile.txt', 'required': True, 'type': 'file'},
             {'choices': None, 'name': 'weight', 'required': False, 'type': 'number'},
             {'choices': None, 'name': 'birthdate', 'required': False, 'type': 'datetime'},
+            {'choices': None, 'name': 'sometime', 'required': False, 'type': 'moment'},
             {'choices': None, 'name': 'name', 'required': False, 'type': 'string'},
             {'choices': ['foo', 'bar'], 'name': 'option', 'required': False, 'type': 'string'},
             {'choices': None, 'name': 'ignoreme', 'required': False, 'type': 'string'}
@@ -169,10 +171,18 @@ def test_with_inputs(engine, cleanup):
         'name': 'Babar',
         'weight': 65,
         'birthdate': dt(1973, 5, 20, 9),
+        'sometime': '(date "1973-5-20")',
         'option': 'foo'
     }
     t = api.schedule(engine, 'yummy', args)
-    assert t.input == args
+    assert t.input == {
+        'myfile.txt': b'some file',
+        'weight': 65,
+        'birthdate': dt(1973, 5, 20, 9, 0),
+        'sometime': dt(1973, 5, 20, 0, 0),
+        'name': 'Babar',
+        'option': 'foo'
+    }
 
     with pytest.raises(ValueError) as err:
         api.schedule(engine, 'yummy', {'no-such-thing': 42})
@@ -203,11 +213,13 @@ def test_with_inputs(engine, cleanup):
         'name': 'Babar',
         'weight': 65,
         'birthdate': '1973-5-20',
+        'sometime': '(date "1973-5-20")',
         'option': 'foo'
     }
     t = api.schedule(engine, 'yummy', args2)
     assert t.input == {
         'birthdate': dt(1973, 5, 20, 0, 0),
+        'sometime': dt(1973, 5, 20, 0, 0),
         'myfile.txt': b'some file',
         'name': 'Babar',
         'option': 'foo',
@@ -244,6 +256,7 @@ def test_convert_io(engine, cleanup):
         'name': 'Babar',
         'weight': '65',
         'birthdate': '1973-5-20T09:00:00',
+        'sometime': '(date "1973-5-20")',
         'option': 'foo'
     }
     specs = iospec(engine)
@@ -253,6 +266,7 @@ def test_convert_io(engine, cleanup):
         'myfile.txt': b'some file',
         'weight': 65,
         'birthdate': dt(1973, 5, 20, 9, 0),
+        'sometime': '(date "1973-5-20")',
         'name': 'Babar',
         'option': 'foo'
     }
@@ -268,6 +282,7 @@ def test_prepare_with_inputs(engine, cleanup):
         'name': 'Babar',
         'weight': 65,
         'birthdate': dt(1973, 5, 20, 9),
+        'sometime': '(date "1973-5-20")',
         'option': 'foo'
     }
     api.prepare(
@@ -295,6 +310,7 @@ def test_prepare_with_inputs(engine, cleanup):
             ('myfile.txt', 'hello'),
             ('weight', '65'),
             ('birthdate', 'lol'),
+            ('sometime', 'lol')
     ):
         failargs = args.copy()
         failargs[name] = badvalue
