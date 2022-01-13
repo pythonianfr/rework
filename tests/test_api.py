@@ -2,6 +2,7 @@ import pytest
 from datetime import datetime as dt
 
 from rework.helper import (
+    convert_io,
     filterio,
     iospec,
     host,
@@ -232,6 +233,29 @@ def test_moment_input(engine, cleanup):
     )
     when = t.input['when']
     assert when == dt(2021, 1, 1, 9, 0)
+
+
+def test_convert_io(engine, cleanup):
+    reset_ops(engine)
+    register_tasks()
+    api.freeze_operations(engine)
+    args = {
+        'myfile.txt': 'some file',
+        'name': 'Babar',
+        'weight': '65',
+        'birthdate': '1973-5-20T09:00:00',
+        'option': 'foo'
+    }
+    specs = iospec(engine)
+    spec = filterio(specs, 'yummy')
+    typed = convert_io(spec, args)
+    assert typed == {
+        'myfile.txt': b'some file',
+        'weight': 65,
+        'birthdate': dt(1973, 5, 20, 9, 0),
+        'name': 'Babar',
+        'option': 'foo'
+    }
 
 
 def test_prepare_with_inputs(engine, cleanup):

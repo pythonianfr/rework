@@ -415,6 +415,28 @@ def nary_pack(*bytestr):
     )
 
 
+def convert_io(spec, args):
+    """Tries to convert string values into the well typed input values
+    needed for prepare or schedule calls.
+
+    May be usefull for user interfaces (or coming from json values).
+
+    """
+    if args is None and not len(spec):
+        return
+
+    typed = {}
+    for field in spec:
+        inp = _iobase.from_type(
+            field['type'], field['name'], field['required'], field['choices']
+        )
+        val = inp.from_string(args)
+        if val is not None:
+            typed[inp.name] = val
+
+    return typed
+
+
 def pack_io(spec, args):
     if args is None and not len(spec):
         return

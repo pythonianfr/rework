@@ -48,6 +48,9 @@ class _iobase:
 
 class number(_iobase):
 
+    def from_string(self, args):
+        return self.binary_decode(args)
+
     def binary_encode(self, args):
         val = self.val(args)
         if val is not None:
@@ -69,6 +72,9 @@ class number(_iobase):
 
 class string(_iobase):
 
+    def from_string(self, args):
+        return self.val(args)
+
     def binary_encode(self, args):
         val = self.val(args)
         if val is not None:
@@ -86,6 +92,13 @@ class string(_iobase):
 
 class file(_iobase):
 
+    def from_string(self, args):
+        val = self.val(args)
+        if val is not None:
+            if not isinstance(val, bytes):
+                return val.encode('utf-8')
+            return val
+
     def binary_encode(self, args):
         val = self.val(args)
         if val is not None:
@@ -100,6 +113,11 @@ class file(_iobase):
 
 
 class datetime(_iobase):
+
+    def from_string(self, args):
+        val = self.val(args)
+        if val is not None:
+            return defaultparse(val)
 
     def binary_encode(self, args):
         val = self.val(args)
@@ -155,6 +173,12 @@ _MOMENT_ENV = lisp.Env({
 
 
 class moment(_iobase):
+
+    def from_string(self, args):
+        val = self.val(args)
+        if val is not None:
+            lisp.evaluate(val, env=_MOMENT_ENV)
+            return val
 
     def binary_encode(self, args):
         val = self.val(args)
