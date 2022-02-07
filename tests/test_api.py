@@ -6,6 +6,7 @@ from rework.helper import (
     filterio,
     iospec,
     host,
+    prepared,
     unpack_io,
     unpack_iofile,
     unpack_iofiles_length
@@ -401,6 +402,38 @@ def test_prepare_with_inputs(engine, cleanup):
 
     unpacked_file = unpack_iofile(spec, inputdata, 'myfile.txt')
     assert unpacked_file == b'some file'
+
+    prep = prepared(engine, 'yummy', 'default')
+    assert prep == [
+        (4,
+         (b'myfile.txt',
+          b'weight',
+          b'birthdate',
+          b'sometime',
+          b'name',
+        b'option',
+          b'some file',
+          b'65',
+          b'1973-05-20T09:00:00',
+          b'(date "1973-5-20")',
+          b'Babar',
+          b'foo'),
+         {'user': 'Babar'},
+         '* * * * * *'),
+        (5,
+         (b'myfile.txt',
+          b'weight',
+          b'birthdate',
+          b'name',
+          b'option',
+          b'some file',
+          b'65',
+          b'1973-05-20T00:00:00',
+          b'Babar',
+          b'foo'),
+         None,
+         '* * * * * *')
+    ]
 
 
 def test_prepare_inputs_nr_domain_mismatch(engine, cleanup):

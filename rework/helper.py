@@ -397,6 +397,25 @@ def filterio(specs, operation, domain=None, hostid=None):
     return out[0]
 
 
+def prepared(engine, operation, domain):
+    q = (
+        'select s.id, s.inputdata, s.metadata, s.rule '
+        'from rework.sched as s, rework.operation as o '
+        'where s.domain = %(domain)s and '
+        '      s.operation = o.id and '
+        '      o.name = %(operation)s'
+    )
+    return [
+        (sid, nary_unpack(inp), meta, rule)
+        for sid, inp, meta, rule in
+        engine.execute(
+            q,
+            operation=operation,
+            domain=domain
+        ).fetchall()
+    ]
+
+
 # binary serializer
 
 def nary_pack(*bytestr):
