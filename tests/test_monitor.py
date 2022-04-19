@@ -681,6 +681,22 @@ def test_scheduler(engine, cleanup):
         )
 
 
+def test_scheduled_overlap(engine, cleanup):
+    api.prepare(
+        engine,
+        'infinite_loop',
+        rule='* * * * * *',
+        _anyrule=True
+    )
+    with workers(engine) as mon:
+        mon.step()
+        time.sleep(1)
+        mon.step()
+        time.sleep(1)
+        nbtasks = engine.execute('select count (*) from rework.task').scalar()
+        assert nbtasks == 2
+
+
 def test_with_outputs(engine, cleanup):
     with workers(engine):
         t = api.schedule(
