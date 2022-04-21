@@ -688,13 +688,30 @@ def test_scheduled_overlap(engine, cleanup):
         rule='* * * * * *',
         _anyrule=True
     )
-    with workers(engine) as mon:
+    api.prepare(
+        engine,
+        'infinite_loop_long_timeout',
+        rule='* * * * * *',
+        _anyrule=True
+    )
+    with workers(engine, numworkers=2) as mon:
         mon.step()
-        time.sleep(1)
-        mon.step()
-        time.sleep(1)
-        nbtasks = engine.execute('select count (*) from rework.task').scalar()
-        assert nbtasks == 2
+        time.sleep(2)
+
+    nbtasks = engine.execute(
+        'select count(t.id) '
+        'from rework.task as t, rework.operation as o '
+        'where t.operation = o.id and '
+        '      o.name = \'infinite_loop\''
+    ).scalar()
+    assert nbtasks == 1
+    nbtasks = engine.execute(
+        'select count(t.id) '
+        'from rework.task as t, rework.operation as o '
+        'where t.operation = o.id and '
+        '      o.name = \'infinite_loop_long_timeout\''
+    ).scalar()
+    assert nbtasks == 1
 
 
 def test_with_outputs(engine, cleanup):

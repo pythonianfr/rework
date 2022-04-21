@@ -8,13 +8,17 @@ import traceback as tb
 from pathlib import Path
 import sys
 import pickle
+from threading import (
+    Event,
+    Thread
+)
 
 import tzlocal
 import pytz
 import psutil
-from apscheduler.schedulers.background import BackgroundScheduler
 from sqlhelp import select, insert, update
 
+from rework.sched import schedulerservice
 from rework.helper import (
     BetterCronTrigger,
     cpu_usage,
@@ -89,13 +93,32 @@ class monstats:
     __repr__ = __str__
 
 
+def _schedule(engine, opname, domain, inputdata, host, meta):
+    def wrapped():
+        print(f'scheduling {opname} {domain}')
+        t = api.schedule(
+            engine,
+            opname,
+            rawinputdata=inputdata if inputdata else None,
+            hostid=None,
+            domain=domain or 'default',
+            metadata=meta
+        )
+        print(f'scheduled {opname} {domain} -> {t}')
+        # we must wait there to make sure
+        # apscheduler understands this is not finished
+        t.join()
+        print(f'scheduled {opname} {domain} -> {t} ended')
+    return wrapped
+
+
 class scheduler:
     __slots__ = ('engine', 'domain', 'sched', 'defs')
 
     def __init__(self, engine, domain):
         self.engine = engine
         self.domain = domain
-        self.sched = BackgroundScheduler()
+        self.sched = schedulerservice()
         self.sched.start()  # start empty
         self.defs = []
 
@@ -106,16 +129,16 @@ class scheduler:
         self.sched.shutdown()
 
     def schedule(self, opname, domain, inputdata, host, meta, rule):
-        self.sched.add_job(
-            lambda: api.schedule(
+        job = self.sched.add_job(
+            _schedule(
                 self.engine,
                 opname,
-                rawinputdata=inputdata if inputdata else None,
-                hostid=host,
-                domain=domain,
-                metadata=meta
+                domain,
+                inputdata,
+                host,
+                meta
             ),
-            trigger=BetterCronTrigger.from_extended_crontab(rule)
+            trigger=BetterCronTrigger.from_extended_crontab(rule),
         )
 
     def loop(self):
@@ -124,7 +147,7 @@ class scheduler:
             # reload everything
             self.stop()
             print(f'scheduler: reloading definitions for {self.domain}')
-            self.sched = BackgroundScheduler()
+            self.sched = schedulerservice()
             for operation, domain, inputdata, host, meta, rule in defs:
                 self.schedule(operation, domain, inputdata, host, meta, rule)
             self.defs = defs
