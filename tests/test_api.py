@@ -498,7 +498,7 @@ def test_schedule_domain(engine, cleanup):
 
     with pytest.raises(ValueError) as err:
         api.schedule(engine, 'foo')
-    assert err.value.args[0] == 'Ambiguous operation selection'
+    assert err.value.args[0] == 'Ambiguous operation selection `foo`'
 
 
     api.schedule(engine, 'foo', domain='test')

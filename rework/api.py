@@ -162,7 +162,7 @@ def schedule(engine,
                     domain=domain,
                     metadata=metadata
                 )
-            raise ValueError('Ambiguous operation selection')
+            raise ValueError(f'Ambiguous operation selection `{opname}`')
         if not len(opids):
             raise Exception(
                 f'No operation was found for these parameters: '

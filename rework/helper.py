@@ -392,7 +392,7 @@ def filterio(specs, operation, domain=None, hostid=None):
         return None
 
     if len(out) > 1:
-        raise ValueError('Ambiguous operation selection')
+        raise ValueError(f'Ambiguous operation selection `{operation}`')
 
     return out[0]
 
