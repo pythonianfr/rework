@@ -1,4 +1,5 @@
 import imp
+from datetime import timedelta
 from time import sleep
 import tzlocal
 from pathlib import Path
@@ -447,8 +448,8 @@ def import_scheduled(dburi, path):
 @click.argument('dburi')
 @click.option('--workers', is_flag=True, default=False)
 @click.option('--tasks', is_flag=True, default=False)
-@click.option('--finished', type=click.DateTime())
-def vacuum(dburi, workers=False, tasks=False, finished=None):
+@click.option('--days', type=int, default=0)
+def vacuum(dburi, workers=False, tasks=False, days=0):
     " delete non-runing workers or finished tasks "
     if not (workers or tasks):
         print('to cleanup old workers or tasks '
@@ -460,8 +461,8 @@ def vacuum(dburi, workers=False, tasks=False, finished=None):
         return
 
     engine = create_engine(find_dburi(dburi))
-    if finished is None:
-        finished = utcnow()
+    finished = utcnow() - timedelta(days=days)
+
     if workers:
         count = cleanup_workers(engine, finished)
         print(f'deleted {count} workers')
