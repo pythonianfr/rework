@@ -99,30 +99,36 @@ def ops_and_domains(engine):
 
 # db cleanup
 
-def cleanup_workers(engine, finished):
+def cleanup_workers(engine, finished, domain):
     with engine.begin() as cn:
         count = cn.execute(
             'with deleted as '
             '(delete from rework.worker '
             '        where running = false and '
-            '              finished < %(finished)s '
+            '              finished < %(finished)s and'
+            '              domain = %(domain)s'
             ' returning 1) '
             'select count(*) from deleted',
-            finished=finished
+            finished=finished,
+            domain=domain
         ).scalar()
     return count
 
 
-def cleanup_tasks(engine, finished):
+def cleanup_tasks(engine, finished, domain):
     with engine.begin() as cn:
         count = cn.execute(
             'with deleted as '
-            '(delete from rework.task '
-            '        where status = \'done\' and '
-            '              finished < %(finished)s '
+            '(delete from rework.task as t'
+            '        using rework.operation as o'
+            '        where t.status = \'done\' and '
+            '              t.finished < %(finished)s and'
+            '              t.operation = o.id and '
+            '              o.domain = %(domain)s'
             ' returning 1) '
             'select count(*) from deleted',
-            finished=finished
+            finished=finished,
+            domain=domain
         ).scalar()
     return count
 
