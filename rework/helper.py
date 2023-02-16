@@ -322,7 +322,7 @@ class PGLogWriter:
         for part in message.splitlines():
             self.handler.emit(
                     logging.LogRecord(
-                        self.stream, self.level, '', -1, part, (), ()
+                        self.stream, self.level, '', -1, part, (), None
                     )
                 )
 

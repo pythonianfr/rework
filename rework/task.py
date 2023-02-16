@@ -89,9 +89,6 @@ class Task:
         with engine.begin() as cn:
             sql = "select operation from rework.task where id = %(tid)s"
             operation = cn.execute(sql, tid=tid).scalar()
-            if operation is None:
-                return None
-
             return cls(engine, tid, operation)
 
     def save_output(self, data, raw=False):
@@ -145,8 +142,8 @@ class Task:
             yield
         finally:
             if std:
-                sys.stdout.flush(force=True)
-                sys.stderr.flush(force=True)
+                sys.stdout.flush()
+                sys.stderr.flush()
             if pghdlr in root.handlers:
                 root.handlers.remove(pghdlr)
             pghdlr.flush()

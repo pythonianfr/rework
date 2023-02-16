@@ -73,7 +73,7 @@ def test_basic_task_operations(engine, cleanup):
     assert (t2.tid, t2.operation) == (t.tid, t.operation)
 
     t3 = Task.byid(engine, 42000)
-    assert t3 is None
+    assert (t3.tid, t3.operation) == (42000, None)
 
     with pytest.raises(Exception) as err:
         api.schedule(engine, 'no_such_task')
