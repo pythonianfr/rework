@@ -18,7 +18,7 @@ setup(name='rework',
       install_requires=[
           'psutil',
           'colorama',
-          'sqlalchemy',
+          'sqlalchemy < 2',
           'sqlhelp',
           'psycopg2-binary',
           'click',
