@@ -142,8 +142,8 @@ class Task:
             yield
         finally:
             if std:
-                sys.stdout.flush()
-                sys.stderr.flush()
+                sys.stdout.close()
+                sys.stderr.close()
             if pghdlr in root.handlers:
                 root.handlers.remove(pghdlr)
             pghdlr.flush()

@@ -305,13 +305,19 @@ class PGLogWriter:
             self.level = logging.WARNING
         self.pending = []
 
+    # TextIO interface
+
     def write(self, message):
         linefeed = '\n' in message
         if not linefeed and not message.strip('\n\r'):
+            # empty message with maybe just an \r
             return
         self.pending.append(message)
         if linefeed:
             self.flush()
+
+    def close(self):
+        self.flush(force=True)
 
     def flush(self, force=False):
         message = ''.join(msg for msg in self.pending)
