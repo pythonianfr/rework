@@ -119,7 +119,7 @@ class Task:
             ).do(cn)
 
     @contextmanager
-    def capturelogs(self, sync=True, level=logging.NOTSET, std=False):
+    def capturelogs(self, sync=None, level=logging.NOTSET, std=False):
         """within this context, all logs at the given level will be captured
         and be retrievable through the `Task.log(...)` api call
 
@@ -130,10 +130,12 @@ class Task:
         captured, at INFO level.
 
         """
-        pghdlr = PGLogHandler(self, sync)
+        pghdlr = PGLogHandler(self)
         root = logging.getLogger()
         root.setLevel(level)
         root.addHandler(pghdlr)
+        if sync is not None:
+            root.warning('`sync` parameter of capturelogs is deprecated.')
         if std:
             out, err = sys.stdout, sys.stderr
             sys.stdout = PGLogWriter('stdout', pghdlr)

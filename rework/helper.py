@@ -245,10 +245,9 @@ def find_dburi(something):
 class PGLogHandler(logging.Handler):
     maxqueue = 100
 
-    def __init__(self, task, sync=True):
+    def __init__(self, task):
         super(PGLogHandler, self).__init__()
         self.task = task
-        self.sync = sync
         self.lastflush = time.time()
         self.queue = []
         self.formatter = logging.Formatter(
@@ -263,31 +262,30 @@ class PGLogHandler(logging.Handler):
             len(self.queue) > self.maxqueue):
             self.flush()
 
+
+    _sql = (
+        'insert into rework.log '
+        '(task, tstamp, line) '
+        'values (%(task)s, %(tstamp)s, %(line)s)'
+    )
+
     def flush(self):
         if not self.queue:
             return
 
-        values = [{'task': self.task.tid,
-                   'tstamp': record.created,
-                   'line': self.formatter.format(record)}
-                  for record in self.queue]
+        values = [
+            {
+                'task': self.task.tid,
+                'tstamp': record.created,
+                'line': self.formatter.format(record)
+            }
+            for record in self.queue
+        ]
         self.queue = []
         self.lastflush = time.time()
 
-        def writeback_log(values, engine):
-            with engine.begin() as cn:
-                sql = ('insert into rework.log '
-                       '(task, tstamp, line) '
-                       'values (%(task)s, %(tstamp)s, %(line)s)')
-                cn.execute(sql, values)
-
-        th = Thread(target=writeback_log,
-                    args=(values, self.task.engine))
-        th.daemon = True
-        # fire and forget
-        th.start()
-        if self.sync:
-            th.join()
+        with self.task.engine.begin() as cn:
+            cn.execute(self._sql, values)
 
     def close(self):
         pass
