@@ -7,11 +7,6 @@ from datetime import datetime
 import traceback as tb
 from pathlib import Path
 import sys
-import pickle
-from threading import (
-    Event,
-    Thread
-)
 
 import tzlocal
 import pytz
@@ -129,7 +124,7 @@ class scheduler:
         self.sched.shutdown()
 
     def schedule(self, opname, domain, inputdata, host, meta, rule):
-        job = self.sched.add_job(
+        self.sched.add_job(
             _schedule(
                 self.engine,
                 opname,
@@ -148,8 +143,8 @@ class scheduler:
             self.stop()
             print(f'scheduler: reloading definitions for {self.domain}')
             self.sched = schedulerservice()
-            for operation, domain, inputdata, host, meta, rule in defs:
-                self.schedule(operation, domain, inputdata, host, meta, rule)
+            for operation, domain, inputdata, hostid, meta, rule in defs:
+                self.schedule(operation, domain, inputdata, hostid, meta, rule)
             self.defs = defs
             print(f'scheduler: starting with definitions:\n{self.defs}')
             self.sched.start()

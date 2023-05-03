@@ -97,7 +97,7 @@ class Worker:
                     traceback=traceback.format_exc()
                 ).do(cn)
             raise
-        except SystemExit as exit:
+        except SystemExit:
             raise
 
     def heartbeat(self):

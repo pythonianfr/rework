@@ -158,13 +158,13 @@ def test_failed_pending_start(engine, cleanup):
     from rework.api import workers
 
     with workers(engine, maxworkers=2, minworkers=2, start_timeout=0) as mon:
-        stat1 = mon.step()
+        mon.step()
         pending = mon.pending_start.copy()
         assert len(pending) == 2
         assert len(mon.wids) == 2
 
         time.sleep(.1)
-        stat2 = mon.step()
+        mon.step()
         assert len(mon.pending_start) == 2
         assert len(mon.wids) == 2
 
@@ -238,7 +238,7 @@ def test_domain(engine, cleanup):
         t2 = api.schedule(engine, 'print_sleep_and_go_away', 1)
 
         guard(engine, f'select running from rework.worker where id = {wid}',
-              lambda r: r.scalar() == False)
+              lambda r: r.scalar() is False)
 
         assert t1.status == 'queued'
         assert t2.status == 'done'
@@ -249,14 +249,14 @@ def test_domain(engine, cleanup):
         t2 = api.schedule(engine, 'print_sleep_and_go_away', 1)
 
         guard(engine, f'select running from rework.worker where id = {wid}',
-              lambda r: r.scalar() == False)
+              lambda r: r.scalar() is False)
 
         assert t1.status == 'done'
         assert t2.status == 'queued'
 
 
 def test_worker_two_runs_nondfefault_domain(engine, cleanup):
-    with workers(engine, maxruns=2, domain='nondefault') as mon:
+    with workers(engine, maxruns=2, domain='nondefault'):
         t1 = api.schedule(engine, 'run_in_non_default_domain')
         t2 = api.schedule(engine, 'run_in_non_default_domain')
         t3 = api.schedule(engine, 'run_in_non_default_domain')
@@ -301,7 +301,7 @@ def test_worker_shutdown(engine, cleanup):
             ).do(cn)
         assert worker.shutdown_asked()
         guard(engine, f'select shutdown from rework.worker where id = {wid}',
-              lambda r: r.scalar() == True)
+              lambda r: r.scalar() is True)
 
         guard(engine, 'select count(id) from rework.worker where running = true',
               lambda r: r.scalar() == 0)
@@ -320,7 +320,7 @@ def test_worker_kill(engine, cleanup):
                 kill=True
             ).do(cn)
         guard(engine, f'select kill from rework.worker where id = {wid}',
-              lambda r: r.scalar() == True)
+              lambda r: r.scalar() is True)
 
         mon.preemptive_kill()
 
@@ -347,7 +347,7 @@ def test_worker_max_runs(engine, cleanup):
         t.join()
 
         guard(engine, f'select running from rework.worker where id = {wid}',
-              lambda r: r.scalar() == False)
+              lambda r: r.scalar() is False)
 
     with workers(engine, maxruns=1) as mon:
         wid = mon.wids[0]
@@ -358,7 +358,7 @@ def test_worker_max_runs(engine, cleanup):
         t1.join()
 
         guard(engine, f'select running from rework.worker where id = {wid}',
-              lambda r: r.scalar() == False)
+              lambda r: r.scalar() is False)
 
         assert t2.state == 'queued'
         assert t2.worker is None
@@ -384,7 +384,7 @@ def test_worker_max_mem(engine, cleanup):
         t2 = api.schedule(engine, 'allocate_and_leak_mbytes', 100)
         t2.join()
         guard(engine, f'select shutdown from rework.worker where id = {wid}',
-              lambda r: r.scalar() == True)
+              lambda r: r.scalar() is True)
         worker = Worker(engine.url, wid)
         assert worker.shutdown_asked()
 
@@ -457,7 +457,7 @@ def test_worker_unplanned_death(engine, cleanup):
 
 
 def test_killed_task(engine, cleanup):
-    with workers(engine) as mon:
+    with workers(engine):
         t = api.schedule(engine, 'infinite_loop')
         t.join('running')
 
@@ -465,7 +465,7 @@ def test_killed_task(engine, cleanup):
     assert t.traceback is None
 
     try:
-        with workers(engine) as mon:
+        with workers(engine):
             t = api.schedule(engine, 'infinite_loop')
             t.join('running')
             raise Exception('kill the monitor')

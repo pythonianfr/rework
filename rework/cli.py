@@ -56,7 +56,8 @@ def register_operations(dburi, module, domain=None, asdomain=None):
 
     The registered operations will be relative to the current host.
     """
-    mod = imp.load_source('operations', module)
+    # load the module
+    imp.load_source('operations', module)
     engine = create_engine(find_dburi(dburi))
     ok, ko = api.freeze_operations(engine, domain)
 

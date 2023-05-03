@@ -1,2 +1,5 @@
 [tool.pytype]
 inputs = ['rework']
+
+[tool.ruff]
+ignore = ["E501", "E702", "E722", "E731"]

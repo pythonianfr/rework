@@ -1,5 +1,4 @@
 import os
-import time
 from pathlib import Path
 
 import pytest
@@ -110,8 +109,6 @@ def test_register_operations(engine, cli, cleanup):
 
 
 def test_unregister_operations(engine, cli, cleanup):
-    r0 = cli('list-operations', engine.url)
-
     r = cli('unregister-operation', engine.url, 'no_such_op', '--no-confirm')
     assert r.output.startswith('Nothing to unregister')
 
@@ -674,6 +671,6 @@ def test_scheduler_export_import(engine, cli, cleanup):
 
     r = cli('list-scheduled', engine.url)
     assert scrub(r.output).strip() == (
-        f'<X> `print_sleep_and_go_away` default `no host` `no meta` "* * * * * *"\n'
-        f'<X> `fancy_inputs_outputs` default `no host` `no meta` "* * * * * *"'
+        '<X> `print_sleep_and_go_away` default `no host` `no meta` "* * * * * *"\n'
+        '<X> `fancy_inputs_outputs` default `no host` `no meta` "* * * * * *"'
     )
