@@ -58,6 +58,7 @@ def register_tasks():
         io.file('myfile.txt', required=True),
         io.number('weight'),
         io.datetime('birthdate'),
+        io.boolean('happy'),
         io.moment('sometime'),
         io.string('name'),
         io.string('option', choices=('foo', 'bar')),
@@ -106,6 +107,7 @@ def test_freeze_ops(engine, cleanup):
             {'choices': None, 'name': 'myfile.txt', 'required': True, 'type': 'file'},
             {'choices': None, 'name': 'weight', 'required': False, 'type': 'number'},
             {'choices': None, 'name': 'birthdate', 'required': False, 'type': 'datetime'},
+            {'choices': None, 'name': 'happy', 'required': False, 'type': 'boolean'},
             {'choices': None, 'name': 'sometime', 'required': False, 'type': 'moment'},
             {'choices': None, 'name': 'name', 'required': False, 'type': 'string'},
             {'choices': ['foo', 'bar'], 'name': 'option', 'required': False, 'type': 'string'},
@@ -172,6 +174,7 @@ def test_with_inputs(engine, cleanup):
         'name': 'Babar',
         'weight': 65,
         'birthdate': dt(1973, 5, 20, 9),
+        'happy': True,
         'sometime': '(date "1973-5-20")',
         'option': 'foo'
     }
@@ -180,6 +183,7 @@ def test_with_inputs(engine, cleanup):
         'myfile.txt': b'some file',
         'weight': 65,
         'birthdate': dt(1973, 5, 20, 9, 0),
+        'happy': True,
         'sometime': dt(1973, 5, 20, 0, 0),
         'name': 'Babar',
         'option': 'foo'
@@ -214,12 +218,14 @@ def test_with_inputs(engine, cleanup):
         'name': 'Babar',
         'weight': 65,
         'birthdate': '1973-5-20',
+        'happy': True,
         'sometime': '(date "1973-5-20")',
         'option': 'foo'
     }
     t = api.schedule(engine, 'yummy', args2)
     assert t.input == {
         'birthdate': dt(1973, 5, 20, 0, 0),
+        'happy': True,
         'sometime': dt(1973, 5, 20, 0, 0),
         'myfile.txt': b'some file',
         'name': 'Babar',

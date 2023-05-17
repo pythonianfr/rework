@@ -69,6 +69,27 @@ class number(_iobase):
             return float(val)
 
 
+class boolean(_iobase):
+
+    def from_string(self, args):
+        return self.binary_decode(args)
+
+    def binary_encode(self, args):
+        val = self.val(args)
+        if val is not None:
+            if not isinstance(val, (int, bool)):
+                raise TypeError(
+                    f'value `{repr(val)}` is not a boolean'
+                )
+            return str(val).encode('utf-8')
+
+    def binary_decode(self, args):
+        val = args.get(self.name)
+        if val is None:
+            return
+        return True if val.lower() in (b'true', 'true') else False
+
+
 class string(_iobase):
 
     def from_string(self, args):
