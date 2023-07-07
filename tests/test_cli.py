@@ -105,7 +105,7 @@ def test_register_operations(engine, cli, cleanup):
 
     # keep the other tests sane !
     cleanup()
-    from . import tasks
+    from . import tasks  # noqa
 
 
 def test_unregister_operations(engine, cli, cleanup):

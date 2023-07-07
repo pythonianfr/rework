@@ -9,7 +9,7 @@ from pytest_sa_pg import db
 from rework import api, cli as rcli, schema
 
 # our test tasks
-from . import tasks as _tasks
+from . import tasks as _tasks  # noqa
 
 
 DATADIR = Path(__file__).parent / 'data'

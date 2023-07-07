@@ -495,8 +495,8 @@ def test_with_noinput(engine, cleanup):
 
 def test_schedule_domain(engine, cleanup):
     reset_ops(engine)
-    from . import task_testenv
-    from . import task_prodenv
+    from . import task_testenv  # noqa
+    from . import task_prodenv  # noqa
 
     api.freeze_operations(engine, domain='test')
     api.freeze_operations(engine, domain='production')

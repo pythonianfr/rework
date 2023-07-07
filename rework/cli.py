@@ -131,7 +131,7 @@ def new_worker(**config):
     " spawn a new worker -- this is a purely *internal* command "
     if config.get('debug_port', 0):
         try:
-            import pystuck
+            import pystuck  # noqa
         except ImportError:
             print('--debug-port is unsupported without `pystuck` ')
             print('try "pip install pystuck" to make it work')
