@@ -360,8 +360,10 @@ class BetterCronTrigger(CronTrigger):
 class InputEncoder(json.JSONEncoder):
 
     def default(self, o):
-        if getattr(o, '__json_encode__'):
+        if getattr(o, '__json_encode__', None):
             return o.__json_encode__()
+        if isinstance(o, datetime):
+            return o.isoformat()
         return super().default(o)
 
 
@@ -457,7 +459,7 @@ def convert_io(spec, args):
     typed = {}
     for field in spec:
         inp = _iobase.from_type(
-            field['type'], field['name'], field['required'], field['choices']
+            field['type'], field['name'], field['required'], field['choices'], field['default']
         )
         val = inp.from_string(args)
         if val is not None:
@@ -467,13 +469,14 @@ def convert_io(spec, args):
 
 
 def pack_io(spec, args):
+    "Prepare the args for a .prepare or .schedule api call"
     if args is None and not len(spec):
         return
 
     raw = {}
     for field in spec:
         inp = _iobase.from_type(
-            field['type'], field['name'], field['required'], field['choices']
+            field['type'], field['name'], field['required'], field['choices'], field['default']
         )
         val = inp.binary_encode(args)
         if val is not None:
@@ -534,7 +537,7 @@ def unpack_io(spec,
                 output.pop(fname, None)
                 continue
         inp = _iobase.from_type(
-            field['type'], fname, field['required'], field['choices']
+            field['type'], fname, field['required'], field['choices'], field['default']
         )
         val = inp.binary_decode(output)
         if val is None:
@@ -555,7 +558,7 @@ def unpack_iofiles_length(spec, packedbytes):
             continue
 
         inp = _iobase.from_type(
-            'file', fname, field['required'], field['choices']
+            'file', fname, field['required'], field['choices'], None
         )
         val = inp.binary_decode(output)
         if val is None:
@@ -578,6 +581,6 @@ def unpack_iofile(spec, packedbytes, name):
         assert field['type'] == 'file'
 
         inp = _iobase.from_type(
-            'file', fname, field['required'], field['choices']
+            'file', fname, field['required'], field['choices'], None
         )
         return inp.binary_decode(output)

@@ -11,12 +11,13 @@ from psyl import lisp
 
 
 class _iobase:
-    _fields = 'name', 'required', 'choices'
+    _fields = 'name', 'required', 'choices', 'default'
 
-    def __init__(self, name, required=False, choices=None):
+    def __init__(self, name, required=False, choices=None, default=None):
         self.name = name
         self.required = required
         self.choices = choices
+        self.default = default
 
     def __json_encode__(self):
         out = {
@@ -27,11 +28,13 @@ class _iobase:
         return out
 
     @staticmethod
-    def from_type(atype, name, required, choices):
-        return globals()[atype](name, required, choices)
+    def from_type(atype, name, required, choices, default):
+        return globals()[atype](name, required, choices, default)
 
     def val(self, args):
         val = args.get(self.name)
+        if val is None:
+            val = self.default
         if val is None:
             if self.required:
                 raise ValueError(

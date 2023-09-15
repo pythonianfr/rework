@@ -56,11 +56,11 @@ def register_tasks():
 
     @api.task(inputs=(
         io.file('myfile.txt', required=True),
-        io.number('weight'),
-        io.datetime('birthdate'),
-        io.boolean('happy'),
-        io.moment('sometime'),
-        io.string('name'),
+        io.number('weight', default=42),
+        io.datetime('birthdate', default=dt(2023, 1, 1, 12)),
+        io.boolean('happy', default=True),
+        io.moment('sometime', default='(date "2023-5-20")'),
+        io.string('name', default='Celeste'),
         io.string('option', choices=('foo', 'bar')),
         io.string('ignoreme'))
     )
@@ -100,22 +100,32 @@ def test_freeze_ops(engine, cleanup):
         ('cheesy', 'cheese', None),
         ('foo', 'default', None),
         ('happy_days', 'default', [
-            {'choices': None, 'name': 'when', 'required': False, 'type': 'moment'}
+            {'choices': None, 'name': 'when', 'default': None,
+             'required': False, 'type': 'moment'}
         ]),
         ('noinput', 'default', []),
         ('yummy', 'default', [
-            {'choices': None, 'name': 'myfile.txt', 'required': True, 'type': 'file'},
-            {'choices': None, 'name': 'weight', 'required': False, 'type': 'number'},
-            {'choices': None, 'name': 'birthdate', 'required': False, 'type': 'datetime'},
-            {'choices': None, 'name': 'happy', 'required': False, 'type': 'boolean'},
-            {'choices': None, 'name': 'sometime', 'required': False, 'type': 'moment'},
-            {'choices': None, 'name': 'name', 'required': False, 'type': 'string'},
-            {'choices': ['foo', 'bar'], 'name': 'option', 'required': False, 'type': 'string'},
-            {'choices': None, 'name': 'ignoreme', 'required': False, 'type': 'string'}
+            {'choices': None, 'default': None, 'name': 'myfile.txt',
+             'required': True, 'type': 'file'},
+            {'choices': None, 'default': 42, 'name': 'weight',
+             'required': False, 'type': 'number'},
+            {'choices': None, 'default': '2023-01-01T12:00:00', 'name': 'birthdate',
+             'required': False, 'type': 'datetime'},
+            {'choices': None, 'default': True, 'name': 'happy',
+             'required': False, 'type': 'boolean'},
+            {'choices': None, 'default': '(date "2023-5-20")', 'name': 'sometime',
+             'required': False, 'type': 'moment'},
+            {'choices': None, 'default': 'Celeste', 'name': 'name',
+             'required': False, 'type': 'string'},
+            {'choices': ['foo', 'bar'], 'default': None, 'name': 'option',
+             'required': False, 'type': 'string'},
+            {'choices': None, 'default': None, 'name': 'ignoreme',
+             'required': False, 'type': 'string'}
         ]),
         ('hammy', 'ham', None),
         ('nr', 'non-default', [
-            {'choices': None, 'name': 'history', 'required': False, 'type': 'number'}
+            {'choices': None, 'default': None, 'name': 'history',
+             'required': False, 'type': 'number'}
         ])
     ]
 
@@ -129,7 +139,8 @@ def test_freeze_ops(engine, cleanup):
     ]
     assert res == [
         ('hammy', 'ham', [
-            {'choices': None, 'name': 'taste', 'required': False, 'type': 'string'}
+            {'choices': None, 'name': 'taste', 'default': None,
+             'required': False, 'type': 'string'}
         ])
     ]
 
@@ -188,6 +199,23 @@ def test_with_inputs(engine, cleanup):
         'name': 'Babar',
         'option': 'foo'
     }
+
+    # test default values
+    args = {
+        'myfile.txt': b'some file',
+        'option': 'foo'
+    }
+    t = api.schedule(engine, 'yummy', args)
+    assert t.input == {
+        'myfile.txt': b'some file',
+        'weight': 42,
+        'birthdate': dt(2023, 1, 1, 12),
+        'happy': True,
+        'sometime': dt(2023, 5, 20, 0, 0),
+        'name': 'Celeste',
+        'option': 'foo'
+    }
+
 
     with pytest.raises(ValueError) as err:
         api.schedule(engine, 'yummy', {'no-such-thing': 42})
@@ -388,16 +416,20 @@ def test_prepare_with_inputs(engine, cleanup):
     unpacked = unpack_io(spec, inputdata)
     assert unpacked == {
         'birthdate': dt(1973, 5, 20, 0, 0),
+        'happy': True,
         'myfile.txt': b'some file',
         'name': 'Babar',
         'option': 'foo',
+        'sometime': dt(2023, 5, 20, 0, 0),
         'weight': 65
     }
     unpacked = unpack_io(spec, inputdata, nofiles=True)
     assert unpacked == {
         'weight': 65,
+        'happy': True,
         'birthdate': dt(1973, 5, 20, 0, 0),
         'name': 'Babar',
+        'sometime': dt(2023, 5, 20, 0, 0),
         'option': 'foo'
     }
 
@@ -415,12 +447,14 @@ def test_prepare_with_inputs(engine, cleanup):
          (b'myfile.txt',
           b'weight',
           b'birthdate',
+          b'happy',
           b'sometime',
           b'name',
         b'option',
           b'some file',
           b'65',
           b'1973-05-20T09:00:00',
+          b'True',
           b'(date "1973-5-20")',
           b'Babar',
           b'foo'),
@@ -430,11 +464,15 @@ def test_prepare_with_inputs(engine, cleanup):
          (b'myfile.txt',
           b'weight',
           b'birthdate',
+          b'happy',
+          b'sometime',
           b'name',
           b'option',
           b'some file',
           b'65',
           b'1973-05-20T00:00:00',
+          b'True',
+          b'(date "2023-5-20")',
           b'Babar',
           b'foo'),
          None,
