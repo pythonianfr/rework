@@ -27,6 +27,7 @@ setup(name='rework',
           'tzlocal',
           'inireader',
           'apscheduler == 3.10.4',
+          'pystuck',
           'pyzstd',
           'python-dateutil',
           'psyl'
