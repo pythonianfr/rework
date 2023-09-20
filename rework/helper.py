@@ -476,7 +476,7 @@ def pack_io(spec, args):
     raw = {}
     for field in spec:
         inp = _iobase.from_type(
-            field['type'], field['name'], field['required'], field['choices'], field['default']
+            field['type'], field['name'], field['required'], field['choices'], field.get('default')
         )
         val = inp.binary_encode(args)
         if val is not None:
@@ -537,7 +537,7 @@ def unpack_io(spec,
                 output.pop(fname, None)
                 continue
         inp = _iobase.from_type(
-            field['type'], fname, field['required'], field['choices'], field['default']
+            field['type'], fname, field['required'], field['choices'], field.get('default')
         )
         val = inp.binary_decode(output)
         if val is None:
