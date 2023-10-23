@@ -372,17 +372,25 @@ def test_worker_max_mem(engine, cleanup):
         wid = mon.wids[0]
 
         t1 = api.schedule(engine, 'allocate_and_leak_mbytes', 50)
-        t1.join()
+        t1.join('running')
 
-        assert engine.execute(
-            f'select mem from rework.worker where id = {wid}'
-        ).scalar() == 0
-        mon.track_resources()
+        while len(t1.logs()) < 2:
+            mon.step()
+
+        t1.join()
         assert engine.execute(
             f'select mem from rework.worker where id = {wid}'
         ).scalar() > 50
+
         t2 = api.schedule(engine, 'allocate_and_leak_mbytes', 100)
+        s = mon.step()
+        while not s.new:
+            # make sure the monitor spawns a new worker
+            # before joining on t2 == done
+            s = mon.step()
+
         t2.join()
+
         guard(engine, f'select shutdown from rework.worker where id = {wid}',
               lambda r: r.scalar() is True)
         worker = Worker(engine.url, wid)

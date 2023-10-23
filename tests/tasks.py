@@ -86,9 +86,16 @@ LEAK = None
 
 @api.task
 def allocate_and_leak_mbytes(task):
-    bytestr = 'a' * (task.input * 2**20)
-    global LEAK
-    LEAK = bytestr
+    with task.capturelogs(std=True):
+        bytestr = 'a' * (task.input * 2**20)
+        global LEAK
+        LEAK = bytestr
+        # let's run slow to allow the monitor
+        # tracker to catch the leak
+        time.sleep(.1)
+        print('Leaked')
+        time.sleep(.4)
+        print('Finished')
 
 
 @api.task
