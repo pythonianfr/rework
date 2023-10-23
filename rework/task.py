@@ -349,7 +349,10 @@ class Task:
         assert timeout >= 0
         t0 = time.time()
         while True:
-            if self.status == target:
+            stat = self.status
+            if stat == target:
+                break
+            if target == 'running' and stat == 'done':
                 break
             if timeout and (time.time() - t0) > timeout:
                 raise TimeOut(self)
