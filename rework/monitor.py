@@ -207,12 +207,14 @@ class Monitor:
 
     def spawn_worker(self, debug_port=0):
         wid = self.new_worker()
-        cmd = ['rework',
-               'new-worker', str(self.engine.url), str(wid), str(os.getpid()),
-               '--maxruns', str(self.maxruns),
-               '--maxmem', str(self.maxmem),
-               '--domain', self.domain,
-               '--debug-port', str(debug_port)]
+        cmd = [
+            'rework',
+            'new-worker', str(self.engine.url), str(wid), str(os.getpid()),
+            '--maxruns', str(self.maxruns),
+            '--maxmem', str(self.maxmem),
+            '--domain', self.domain,
+            '--debug-port', str(debug_port)
+        ]
         self.workers[wid] = sub.Popen(cmd, stdout=DEVNULL, stderr=DEVNULL)
         return wid
 
@@ -399,9 +401,11 @@ class Monitor:
 
         idle = numworkers - busycount
         assert idle >= 0
-        needed_workers = clip(waiting - idle - pending_start,
-                              self.minworkers - numworkers,
-                              self.maxworkers - numworkers)
+        needed_workers = clip(
+            waiting - idle - pending_start,
+            self.minworkers - numworkers,
+            self.maxworkers - numworkers
+        )
 
         # bail out if there's nothing to do
         if not needed_workers:
@@ -413,7 +417,9 @@ class Monitor:
 
         procs = {}
         for debug_port in debug_ports:
-            procs[self.spawn_worker(debug_port=debug_port)] = datetime.now()
+            procs[
+                self.spawn_worker(debug_port=debug_port)
+            ] = datetime.now()
 
         self.pending_start.update(procs)
 
@@ -455,7 +461,7 @@ class Monitor:
 
                 mark_dead_workers(
                     cn, [wid],
-                    'preemptive kill at {}'.format(utcnow().astimezone(TZ))
+                    f'preemptive kill at {utcnow().astimezone(TZ)}'
                 )
                 killed.append(wid)
         return killed
