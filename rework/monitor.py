@@ -3,7 +3,10 @@ import time
 import subprocess as sub
 import signal
 import json
-from datetime import datetime
+from datetime import (
+    datetime,
+    timedelta
+)
 import traceback as tb
 from pathlib import Path
 import sys
@@ -13,14 +16,14 @@ import pytz
 import psutil
 from sqlhelp import select, insert, update
 
-from rework.sched import schedulerservice
 from rework.helper import (
-    BetterCronTrigger,
     cpu_usage,
     host,
     kill_process_tree,
     memory_usage,
+    iter_stamps_from_cronrules,
     parse_delta,
+    partition,
     utcnow,
     wait_true
 )
@@ -88,66 +91,71 @@ class monstats:
     __repr__ = __str__
 
 
-def _schedule(engine, opname, domain, inputdata, host, meta):
-    def wrapped():
-        print(f'scheduling {opname} {domain}')
-        t = api.schedule(
-            engine,
-            opname,
-            rawinputdata=inputdata if inputdata else None,
-            hostid=None,
-            domain=domain or 'default',
-            metadata=meta
-        )
-        print(f'scheduled {opname} {domain} -> {t}')
-        # we must wait there to make sure
-        # apscheduler understands this is not finished
-        t.join()
-        print(f'scheduled {opname} {domain} -> {t} ended')
-    return wrapped
-
-
 class scheduler:
-    __slots__ = ('engine', 'domain', 'sched', 'defs')
+    __slots__ = ('engine', 'domain', 'sched', 'defs', 'rulemap', 'runnable', 'laststamp')
+    _step = {'minutes': 10}
 
     def __init__(self, engine, domain):
         self.engine = engine
         self.domain = domain
-        self.sched = schedulerservice()
-        self.sched.start()  # start empty
-        self.defs = []
+        # two items below should be synchronized
+        self.defs = []  # current base definitions
+        self.rulemap = []  # map from rule to wrapped api.schedule call
+        # batch of (tstamp, wrapped) for at most the next hour
+        self.runnable = []
+        self.laststamp = datetime.now(TZ)
 
     def __repr__(self):
         return f'<scheduler for {self.domain} ->\n{self.defs}>'
 
-    def stop(self):
-        self.sched.shutdown()
-
-    def schedule(self, opname, domain, inputdata, host, meta, rule):
-        self.sched.add_job(
-            _schedule(
-                self.engine,
-                opname,
-                domain,
-                inputdata,
-                host,
-                meta
-            ),
-            trigger=BetterCronTrigger.from_extended_crontab(rule),
+    def schedule(self, rule, *args):
+        self.rulemap.append(
+            (
+                rule,
+                lambda: api.schedule(self.engine, *args)
+            )
         )
+
+    def run_scheduled(self):
+        if not self.defs:
+            return
+
+        lastnow = self.laststamp
+        if not self.runnable:
+            # time to build the next runnable batch
+            self.runnable = list(
+                sorted(
+                    iter_stamps_from_cronrules(
+                        self.rulemap,
+                        lastnow + timedelta(milliseconds=1),
+                        lastnow + timedelta(**self._step)
+                    ),
+                    key=lambda stamp_func: stamp_func[0]
+                )
+            )
+
+        now = datetime.now(TZ)
+        runlater, runnable = partition(
+            lambda stamp_func: stamp_func[0] <= now,
+            self.runnable
+        )
+        for stamp, func in runnable:
+            self.laststamp = stamp
+            func()
+        self.runnable = runlater
 
     def loop(self):
         defs = self.definitions
         if defs != self.defs:
             # reload everything
-            self.stop()
             print(f'scheduler: reloading definitions for {self.domain}')
-            self.sched = schedulerservice()
+            self.rulemap = []
             for operation, domain, inputdata, hostid, meta, rule in defs:
-                self.schedule(operation, domain, inputdata, hostid, meta, rule)
+                self.schedule(rule, operation, domain, inputdata, hostid, meta)
             self.defs = defs
             print(f'scheduler: starting with definitions:\n{self.defs}')
-            self.sched.start()
+
+        self.run_scheduled()
 
     @property
     def definitions(self):
@@ -560,7 +568,6 @@ class Monitor:
                     self.monid, datetime.now().isoformat()
                 )
             )
-            self.scheduler.stop()
             self.unregister()
 
     def wait_all_started(self, stop=False):

@@ -8,9 +8,9 @@ from pathlib import Path
 
 from sqlalchemy.exc import IntegrityError
 from sqlhelp import select, insert
+from croniter import croniter
 
 from rework.helper import (
-    BetterCronTrigger,
     delta_isoformat,
     filterio,
     host,
@@ -199,9 +199,9 @@ def prepare(engine,
         raise Exception(f'{opname} / {domain} are not known')
 
     # validate the rules
-    BetterCronTrigger.from_extended_crontab(rule)
     if not _anyrule and rule.startswith('*'):
-        raise Exception('"every second" rule is forbidden')
+        raise ValueError('"every second" rule is forbidden')
+    assert croniter.is_valid(rule)
 
     spec = filterio(iospec(engine), opname, domain, host)
     inputdata = inputdata or {} if spec else inputdata

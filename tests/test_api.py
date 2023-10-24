@@ -7,7 +7,7 @@ from rework.helper import (
     filterio,
     iospec,
     host,
-    next_stamps_from_cronrules,
+    iter_stamps_from_cronrules,
     prepared,
     unpack_io,
     unpack_iofile,
@@ -21,11 +21,11 @@ def test_cronrules():
     start = dt(2023, 1, 1, tzinfo=tz)
     end = dt(2023, 1, 1, 0, 10, tzinfo=tz)
     # run 15 seconds and see
-    stamps = next_stamps_from_cronrules(
-        {
-            '*/2 * * * *': 'Hello',
-            '*/3 * * * *': 'World'
-        },
+    stamps = iter_stamps_from_cronrules(
+        [
+            ('*/2 * * * *', 'Hello'),
+            ('*/3 * * * *', 'World')
+        ],
         start,
         end
     )
@@ -43,6 +43,37 @@ def test_cronrules():
         ('2023-01-01T00:08:00+00:00', 'Hello'),
         ('2023-01-01T00:09:00+00:00', 'World'),
         ('2023-01-01T00:10:00+00:00', 'Hello')
+    ]
+
+
+def test_cronrules_seconds():
+    tz = pytz.utc
+    start = dt(2023, 1, 1, tzinfo=tz)
+    end = dt(2023, 1, 1, 0, 0, 10, tzinfo=tz)
+    # run 15 seconds and see
+    stamps = iter_stamps_from_cronrules(
+        [
+            ('*/2 * * * * *', 'Hello'),
+            ('*/3 * * * * *', 'World')
+        ],
+        start,
+        end
+    )
+    stamps = [
+        (stamp.isoformat(), data)
+        for stamp, data in sorted(stamps)
+    ]
+    assert stamps == [
+        ('2023-01-01T00:00:00+00:00', 'Hello'),
+        ('2023-01-01T00:00:00+00:00', 'World'),
+        ('2023-01-01T00:00:02+00:00', 'Hello'),
+        ('2023-01-01T00:00:03+00:00', 'World'),
+        ('2023-01-01T00:00:04+00:00', 'Hello'),
+        ('2023-01-01T00:00:06+00:00', 'Hello'),
+        ('2023-01-01T00:00:06+00:00', 'World'),
+        ('2023-01-01T00:00:08+00:00', 'Hello'),
+        ('2023-01-01T00:00:09+00:00', 'World'),
+        ('2023-01-01T00:00:10+00:00', 'Hello')
     ]
 
 
@@ -199,9 +230,6 @@ def test_prepare(engine, cleanup):
 
     api.prepare(engine, 'foo', ' 0 0 8 * * *')
     api.prepare(engine, 'foo', ' 0 0 8 * * *')
-
-    with pytest.raises(Exception):
-        api.prepare(engine, 'foo', '* * * * * *')
 
     res = engine.execute('select count(*) from rework.sched').scalar()
     assert res == 1

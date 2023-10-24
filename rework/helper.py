@@ -1,5 +1,6 @@
 import os
 import io
+import itertools as it
 from threading import Thread
 import socket
 import time
@@ -10,7 +11,6 @@ import re
 import json
 import struct
 
-from apscheduler.triggers.cron import CronTrigger
 from croniter import croniter_range
 import pyzstd as zstd
 import pytz
@@ -24,6 +24,11 @@ from rework.io import _iobase
 
 def utcnow():
     return datetime.utcnow().replace(tzinfo=pytz.utc)
+
+
+def partition(pred, iterable):
+    t1, t2 = it.tee(iterable)
+    return it.filterfalse(pred, t1), filter(pred, t2)
 
 
 def memory_usage(pid):
@@ -334,36 +339,10 @@ class PGLogWriter:
 
 # cron handling
 
-class BetterCronTrigger(CronTrigger):
-
-    @classmethod
-    def from_extended_crontab(cls, expr, timezone=None):
-        """Create a :class:`~CronTrigger` from an extended standard crontab expression.
-
-        See https://en.wikipedia.org/wiki/Cron for more information on
-        the format accepted here.  We add an initial field there for
-        seconds
-        """
-        values = expr.split()
-        if len(values) != 6:
-            raise ValueError(
-                f'Wrong number of fields; got {len(values)}, expected 6'
-            )
-
-        return cls(
-            second=values[0], minute=values[1], hour=values[2], day=values[3],
-            month=values[4], day_of_week=values[5], timezone=timezone
-        )
-
-
-def next_stamps_from_cronrules(rulemap, start, stop):
-    stamps = set()
-    for rule, payload in rulemap.items():
+def iter_stamps_from_cronrules(rulemap, start, stop):
+    for rule, payload in rulemap:
         for stamp in croniter_range(start, stop, rule):
-            stamps.add(
-                (stamp, payload)
-            )
-    return stamps
+            yield stamp, payload
 
 
 # json input serializer

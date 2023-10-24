@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import time
 
 import pytest
 from sqlhelp import insert
@@ -540,6 +541,8 @@ def test_scheduler(engine, cli, cleanup):
     with workers(engine) as mon:
         mon.wait_all_started()
         mon.step()
+        time.sleep(1)
+        mon.step()
         # from this we have a task
         wait_true(lambda: engine.execute('select id from rework.task').scalar())
         tid = engine.execute('select id from rework.task').scalar()
@@ -572,6 +575,8 @@ def test_scheduler(engine, cli, cleanup):
 
     with workers(engine, domain='nondefault') as mon:
         mon.wait_all_started()
+        mon.step()
+        time.sleep(1)
         mon.step()
         wait_true(lambda: engine.execute('select id from rework.task').scalar())
         tid = engine.execute('select id from rework.task').scalar()
