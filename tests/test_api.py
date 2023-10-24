@@ -1,17 +1,49 @@
 import pytest
 from datetime import datetime as dt
+import pytz
 
 from rework.helper import (
     convert_io,
     filterio,
     iospec,
     host,
+    next_stamps_from_cronrules,
     prepared,
     unpack_io,
     unpack_iofile,
     unpack_iofiles_length
 )
 from rework import api, io
+
+
+def test_cronrules():
+    tz = pytz.utc
+    start = dt(2023, 1, 1, tzinfo=tz)
+    end = dt(2023, 1, 1, 0, 10, tzinfo=tz)
+    # run 15 seconds and see
+    stamps = next_stamps_from_cronrules(
+        {
+            '*/2 * * * *': 'Hello',
+            '*/3 * * * *': 'World'
+        },
+        start,
+        end
+    )
+    assert [
+        (stamp.isoformat(), data)
+        for stamp, data in sorted(stamps)
+    ] == [
+        ('2023-01-01T00:00:00+00:00', 'Hello'),
+        ('2023-01-01T00:00:00+00:00', 'World'),
+        ('2023-01-01T00:02:00+00:00', 'Hello'),
+        ('2023-01-01T00:03:00+00:00', 'World'),
+        ('2023-01-01T00:04:00+00:00', 'Hello'),
+        ('2023-01-01T00:06:00+00:00', 'Hello'),
+        ('2023-01-01T00:06:00+00:00', 'World'),
+        ('2023-01-01T00:08:00+00:00', 'Hello'),
+        ('2023-01-01T00:09:00+00:00', 'World'),
+        ('2023-01-01T00:10:00+00:00', 'Hello')
+    ]
 
 
 def test_task_decorator(cleanup):

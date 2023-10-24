@@ -27,10 +27,12 @@ setup(name='rework',
           'tzlocal',
           'inireader',
           'apscheduler == 3.10.4',
+          'croniter',
           'pystuck',
           'pyzstd',
           'python-dateutil',
-          'psyl'
+          'psyl',
+          'pytz'
       ],
       package_data={'rework': [
           'schema.sql'

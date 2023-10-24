@@ -11,6 +11,7 @@ import json
 import struct
 
 from apscheduler.triggers.cron import CronTrigger
+from croniter import croniter_range
 import pyzstd as zstd
 import pytz
 import psutil
@@ -353,6 +354,16 @@ class BetterCronTrigger(CronTrigger):
             second=values[0], minute=values[1], hour=values[2], day=values[3],
             month=values[4], day_of_week=values[5], timezone=timezone
         )
+
+
+def next_stamps_from_cronrules(rulemap, start, stop):
+    stamps = set()
+    for rule, payload in rulemap.items():
+        for stamp in croniter_range(start, stop, rule):
+            stamps.add(
+                (stamp, payload)
+            )
+    return stamps
 
 
 # json input serializer
