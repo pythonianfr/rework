@@ -28,7 +28,7 @@ def utcnow():
 
 def partition(pred, iterable):
     t1, t2 = it.tee(iterable)
-    return it.filterfalse(pred, t1), filter(pred, t2)
+    return list(it.filterfalse(pred, t1)), list(filter(pred, t2))
 
 
 def memory_usage(pid):

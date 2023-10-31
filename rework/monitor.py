@@ -125,6 +125,7 @@ class scheduler:
         lastnow = self.laststamp
         if not self.runnable:
             # time to build the next runnable batch
+            L.info('scheduler: rebuilding a fresh runnable list')
             self.runnable = list(
                 sorted(
                     iter_stamps_from_cronrules(
@@ -141,9 +142,11 @@ class scheduler:
             lambda stamp_func: stamp_func[0] <= now,
             self.runnable
         )
+        L.info(f'scheduler: will run {len(runnable)} tasks now')
         for stamp, func in runnable:
             self.laststamp = stamp
             func()
+        L.info(f'scheduler: will keep {len(runnable)} tasks for later')
         self.runnable = runlater
 
     def loop(self):
