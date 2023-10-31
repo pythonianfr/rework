@@ -7,6 +7,7 @@ from datetime import (
     datetime,
     timedelta
 )
+import logging
 import traceback as tb
 from pathlib import Path
 import sys
@@ -32,6 +33,7 @@ from rework.task import Task
 
 
 TZ = tzlocal.get_localzone()
+L = logging.getLogger('rework')
 
 try:
     DEVNULL = sub.DEVNULL
@@ -148,12 +150,12 @@ class scheduler:
         defs = self.definitions
         if defs != self.defs:
             # reload everything
-            print(f'scheduler: reloading definitions for {self.domain}')
+            L.info(f'scheduler: reloading definitions for {self.domain}')
             self.rulemap = []
             for operation, domain, inputdata, hostid, meta, rule in defs:
                 self.schedule(rule, operation, domain, inputdata, hostid, meta)
             self.defs = defs
-            print(f'scheduler: starting with definitions:\n{self.defs}')
+            L.info(f'scheduler: starting with definitions:\n{self.defs}')
 
         self.run_scheduled()
 
@@ -379,13 +381,13 @@ class Monitor:
 
         # signal the outcome
         if not self.pending_start:
-            print('no more pending starts')
+            L.info('no more pending starts')
         else:
             pending = {
                 wid: str(dt)
                 for wid, dt in self.pending_start.items()
             }
-            print(f'workers yet to start : {pending}')
+            L.info(f'workers yet to start : {pending}')
         return self.pending_start
 
     def ensure_workers(self):
@@ -464,7 +466,7 @@ class Monitor:
                 wid = row.id
                 proc = self.workers.pop(wid)
                 if not kill_process_tree(proc.pid):
-                    print(f'could not kill {proc.pid}')
+                    L.info(f'could not kill {proc.pid}')
                     continue
 
                 mark_dead_workers(
@@ -484,7 +486,7 @@ class Monitor:
             try:
                 cmd = ' '.join(psutil.Process(pid).cmdline())
                 if 'new-worker' not in cmd and str(self.engine.url) not in cmd:
-                    print(f'pid {pid} was probably recycled')
+                    L.info(f'pid {pid} was probably recycled')
                     deadlist.append(wid)
             except psutil.NoSuchProcess:
                 deadlist.append(wid)
@@ -594,7 +596,7 @@ class Monitor:
         self.preemptive_kill()
         dead = self.reap_dead_workers()
         if dead:
-            print(f'reaped {len(dead)} dead workers')
+            L.info(f'reaped {len(dead)} dead workers')
         stats = self.ensure_workers()
         self.scheduler.loop()
         self.dead_man_switch()
@@ -603,11 +605,11 @@ class Monitor:
     def _run(self):
         deleted = self.cleanup_unstarted()
         if deleted:
-            print(f'cleaned {deleted} unstarted workers')
+            L.info(f'cleaned {deleted} unstarted workers')
         while True:
             stats = self.step()
             if stats.new:
-                print(f'spawned {len(stats.new)} active workers')
+                L.info(f'spawned {len(stats.new)} active workers')
             if stats.shrink:
-                print(f'worker {stats.shrink[0]} asked to shutdown')
+                L.info(f'worker {stats.shrink[0]} asked to shutdown')
             time.sleep(1)
