@@ -8,7 +8,7 @@ from pathlib import Path
 
 from sqlalchemy.exc import IntegrityError
 from sqlhelp import select, insert
-from croniter import croniter
+from icron import croniter
 
 from rework.helper import (
     delta_isoformat,

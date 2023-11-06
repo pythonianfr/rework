@@ -11,7 +11,7 @@ import re
 import json
 import struct
 
-from croniter import croniter_range
+from icron import croniter_range
 import pyzstd as zstd
 import pytz
 import psutil
