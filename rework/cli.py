@@ -4,6 +4,7 @@ from time import sleep
 import tzlocal
 from pathlib import Path
 import pickle
+import logging
 
 import click
 from colorama import init, Fore, Style
@@ -153,6 +154,12 @@ def new_worker(**config):
 @click.option('--debugfile')
 def monitor(dburi, **config):
     " start a monitor controlling min/max workers "
+    l = logging.getLogger('rework')
+    h = logging.StreamHandler()
+    l.addHandler(h)
+    l.setLevel(logging.DEBUG)
+    h.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+    l.critical(f'start monitor {config=}')
     engine = create_engine(find_dburi(dburi))
     monitor = Monitor(engine, **config)
     monitor.run()
