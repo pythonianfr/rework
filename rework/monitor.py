@@ -34,6 +34,11 @@ from rework.task import Task
 
 TZ = tzlocal.get_localzone()
 L = logging.getLogger('rework')
+H = logging.StreamHandler()
+H.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+L.addHandler(H)
+L.setLevel(logging.DEBUG)
+
 
 try:
     DEVNULL = sub.DEVNULL
@@ -93,6 +98,27 @@ class monstats:
     __repr__ = __str__
 
 
+def run_sched(lastnow, runnable, _now=None):
+    now = _now or datetime.now(TZ)
+    runnow, runlater = partition(
+        lambda stamp_func: stamp_func[0] <= now,
+        runnable
+    )
+    if not runnow:
+        L.debug(f'scheduler: nothing to run for {now.isoformat()} from {lastnow.isoformat()}')
+        return runlater, lastnow
+
+    # consume the runnow list
+    # and return the last associated stamp
+    L.info(f'scheduler: will run {len(runnow)} tasks now')
+    for stamp, func in runnow:
+        func()
+    L.info(f'scheduler: will keep {len(runlater)} tasks for later')
+
+    # runlater contains everything not consummed yet
+    return runlater, stamp
+
+
 class scheduler:
     __slots__ = ('engine', 'domain', 'sched', 'defs', 'rulemap', 'runnable', 'laststamp')
     _step = {'minutes': 10}
@@ -122,8 +148,8 @@ class scheduler:
         if not self.defs:
             return
 
-        lastnow = self.laststamp
         if not self.runnable:
+            lastnow = self.laststamp
             # time to build the next runnable batch
             L.info('scheduler: rebuilding a fresh runnable list')
             self.runnable = list(
@@ -136,18 +162,19 @@ class scheduler:
                     key=lambda stamp_func: stamp_func[0]
                 )
             )
+            L.info(f'scheduler: prepared {len(self.runnable)} items')
 
-        now = datetime.now(TZ)
-        runlater, runnable = partition(
-            lambda stamp_func: stamp_func[0] <= now,
+        runnable, laststamp = run_sched(
+            self.laststamp,
             self.runnable
         )
-        L.info(f'scheduler: will run {len(runnable)} tasks now')
-        for stamp, func in runnable:
-            self.laststamp = stamp
-            func()
-        L.info(f'scheduler: will keep {len(runnable)} tasks for later')
-        self.runnable = runlater
+        consummed = len(self.runnable) - len(runnable)
+        L.debug(f'scheduler: consummed {consummed} items')
+        if consummed:
+            L.debug(f'scheduler: advanced stamp from {self.laststamp} to {laststamp}')
+
+        self.runnable = runnable
+        self.laststamp = laststamp
 
     def loop(self):
         defs = self.definitions

@@ -521,7 +521,7 @@ def test_vacuum(engine, cli, cleanup):
     assert ntasks == 0
 
 
-def test_scheduler(engine, cli, cleanup):
+def test_scheduler_noinput(engine, cli, cleanup):
     r = cli('list-scheduled', engine.url)
     assert len(r.output.strip()) == 0
 
@@ -540,8 +540,10 @@ def test_scheduler(engine, cli, cleanup):
 
     with workers(engine) as mon:
         mon.wait_all_started()
+        assert len(mon.scheduler.runnable) == 0
         mon.step()
-        time.sleep(1)
+        assert len(mon.scheduler.runnable) > 0  # might be 600 or ... a bit less
+        time.sleep(2)
         mon.step()
         # from this we have a task
         wait_true(lambda: engine.execute('select id from rework.task').scalar())
@@ -584,7 +586,9 @@ def test_scheduler(engine, cli, cleanup):
         wait_true(lambda: t.status == 'done')
         r = cli('list-tasks', engine.url)
 
-    assert scrub(r.output)[:140].strip() == (
+    # we cut the tail because we might have two tasks there
+    # the one that ran, and another just queued
+    assert scrub(r.output)[:138].strip() == (
         '<X> run_in_non_default_domain done '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
@@ -620,6 +624,8 @@ def test_scheduler_with_inputs(engine, cli, cleanup):
     with workers(engine) as mon:
         mon.wait_all_started()
         mon.step()
+        time.sleep(1.1)
+        mon.step()
         # from this we have a task
         wait_true(lambda: engine.execute('select id from rework.task').scalar())
         tid = engine.execute('select id from rework.task').scalar()
@@ -627,7 +633,9 @@ def test_scheduler_with_inputs(engine, cli, cleanup):
         wait_true(lambda: t.status == 'done')
         r = cli('list-tasks', engine.url)
 
-    assert scrub(r.output).strip() == (
+    # we cut the tail because we might have two tasks there
+    # the one that ran, and another just queued
+    assert scrub(r.output)[:134].strip() == (
         '<X> fancy_inputs_outputs done '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '

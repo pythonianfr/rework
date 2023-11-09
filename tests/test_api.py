@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime as dt
+from datetime import datetime as dt, timedelta
 import pytz
 
 from rework.helper import (
@@ -13,7 +13,7 @@ from rework.helper import (
     unpack_iofile,
     unpack_iofiles_length
 )
-from rework import api, io
+from rework import api, io, monitor
 
 
 def test_cronrules():
@@ -75,6 +75,48 @@ def test_cronrules_seconds():
         ('2023-01-01T00:00:09+00:00', 'World'),
         ('2023-01-01T00:00:10+00:00', 'Hello')
     ]
+
+
+def test_monitor_scheduler():
+    runlist = []
+    def f():
+        runlist.append('Hello')
+
+    tz = pytz.utc
+    start = dt(2023, 1, 1, tzinfo=tz)
+    end = dt(2023, 1, 1, 0, 0, 9, tzinfo=tz)
+    stamps = list(
+        iter_stamps_from_cronrules(
+            [
+                ('* * * * * *', f)
+            ],
+            start,
+            end
+        )
+    )
+    assert len(stamps) == 10
+
+    now = dt(2023, 1, 1, 0, 0, 4, tzinfo=tz)
+    runnable, laststamp = monitor.run_sched(
+        now,  # consume half
+        stamps,
+        _now=now
+    )
+    assert laststamp == dt(2023, 1, 1, 0, 0, 4, tzinfo=tz)
+    assert len(runnable) == 5  # 5 items ahead out of 10
+    assert len(runlist) == 5   # we run 5 out of 10
+
+    assert runnable[0][0] == dt(2023, 1, 1, 0, 0, 5, tzinfo=tz)
+
+    now = laststamp + timedelta(seconds=3)
+    runnable, laststamp = monitor.run_sched(
+        now,
+        runnable,
+        _now=now
+    )
+    assert len(runnable) == 2
+    assert len(runlist) == 8
+    assert laststamp == dt(2023, 1, 1, 0, 0, 7, tzinfo=tz)
 
 
 def test_task_decorator(cleanup):

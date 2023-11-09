@@ -155,10 +155,7 @@ def new_worker(**config):
 def monitor(dburi, **config):
     " start a monitor controlling min/max workers "
     l = logging.getLogger('rework')
-    h = logging.StreamHandler()
-    l.addHandler(h)
-    l.setLevel(logging.DEBUG)
-    h.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+    l.setLevel(logging.INFO)
     l.critical(f'start monitor {config=}')
     engine = create_engine(find_dburi(dburi))
     monitor = Monitor(engine, **config)
