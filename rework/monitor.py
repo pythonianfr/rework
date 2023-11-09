@@ -176,7 +176,7 @@ class scheduler:
         self.runnable = runnable
         self.laststamp = laststamp
 
-    def loop(self):
+    def step(self):
         defs = self.definitions
         if defs != self.defs:
             # reload everything
@@ -628,7 +628,7 @@ class Monitor:
         if dead:
             L.info(f'reaped {len(dead)} dead workers')
         stats = self.ensure_workers()
-        self.scheduler.loop()
+        self.scheduler.step()
         self.dead_man_switch()
         return stats
 
