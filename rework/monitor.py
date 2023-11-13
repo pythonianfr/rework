@@ -33,11 +33,22 @@ from rework.task import Task
 
 
 TZ = tzlocal.get_localzone()
-L = logging.getLogger('rework')
-H = logging.StreamHandler()
-H.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
-L.addHandler(H)
-L.setLevel(logging.DEBUG)
+
+def setuplogger():
+    logger = logging.getLogger('rework')
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        logging.Formatter(
+            '%(asctime)s %(message)s',
+            '%Y-%m-%d %H:%M:%S'
+        )
+    )
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+    return logger
+
+
+L = setuplogger()
 
 
 try:
