@@ -162,7 +162,6 @@ class scheduler:
         if not self.runnable:
             lastnow = self.laststamp
             # time to build the next runnable batch
-            L.info('scheduler: rebuilding a fresh runnable list')
             self.runnable = list(
                 sorted(
                     iter_stamps_from_cronrules(
@@ -173,7 +172,9 @@ class scheduler:
                     key=lambda stamp_func: stamp_func[0]
                 )
             )
-            L.info(f'scheduler: prepared {len(self.runnable)} items')
+            if self.runnable:
+                L.info(f'scheduler: prepared {len(self.runnable)} items')
+                L.debug(f'scheduler: next item will run at {self.runnable[0][0]}')
 
         runnable, laststamp = run_sched(
             self.laststamp,
