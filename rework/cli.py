@@ -1,5 +1,5 @@
 import imp
-from datetime import timedelta
+from datetime import datetime, timedelta
 from time import sleep
 import tzlocal
 from pathlib import Path
@@ -19,6 +19,7 @@ from rework.helper import (
     cleanup_tasks,
     cleanup_workers,
     find_dburi,
+    iter_stamps_from_cronrules,
     utcnow
 )
 from rework.worker import Worker
@@ -398,6 +399,27 @@ def list_scheduled(dburi):
               f'`{meta or "no meta"}` "{rule}"'
         )
     print(Style.RESET_ALL)
+
+
+@rework.command(name='scheduled-plan')
+@click.argument('dburi')
+@click.argument('domain')
+@click.option('--hours', default=1)
+def scheduled_plan(dburi, domain, hours=1):
+    engine = create_engine(find_dburi(dburi))
+    q = select(
+        's.rule', 'op.name'
+    ).table('rework.sched as s', 'rework.operation as op'
+    ).where('s.operation = op.id'
+    ).where('s.domain = %(domain)s', domain=domain)
+    out = q.do(engine).fetchall()
+    now = datetime.now(TZ)
+    for stamp, op in sorted(iter_stamps_from_cronrules(
+            out,
+            now,
+            now + timedelta(hours=hours))):
+        print(Fore.GREEN + str(stamp), end=' ')
+        print(Fore.WHITE + op)
 
 
 @rework.command(name='export-scheduled')
