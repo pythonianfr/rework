@@ -668,8 +668,8 @@ def test_scheduler_export_import(engine, cli, cleanup):
 
     r = cli('list-scheduled', engine.url)
     assert r.output.strip() == (
-        f'{sid} `print_sleep_and_go_away` default `no host` `no meta` "* * * * * *"\n'
-        f'{sid2} `fancy_inputs_outputs` default `no host` `no meta` "* * * * * *"'
+        f'{sid2} `fancy_inputs_outputs` default `no host` `no meta` "* * * * * *"\n'
+        f'{sid} `print_sleep_and_go_away` default `no host` `no meta` "* * * * * *"'
     )
 
     with tempdir() as path:
@@ -684,6 +684,6 @@ def test_scheduler_export_import(engine, cli, cleanup):
 
     r = cli('list-scheduled', engine.url)
     assert scrub(r.output).strip() == (
-        '<X> `print_sleep_and_go_away` default `no host` `no meta` "* * * * * *"\n'
-        '<X> `fancy_inputs_outputs` default `no host` `no meta` "* * * * * *"'
+        '<X> `fancy_inputs_outputs` default `no host` `no meta` "* * * * * *"\n'
+        '<X> `print_sleep_and_go_away` default `no host` `no meta` "* * * * * *"'
     )

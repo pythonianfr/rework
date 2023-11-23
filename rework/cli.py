@@ -384,12 +384,14 @@ def list_scheduled(dburi):
     init()
     engine = create_engine(find_dburi(dburi))
     sql = (
-        'select id, operation, domain, inputdata, host, metadata, rule '
-        'from rework.sched'
+        'select s.id, o.name, s.domain, inputdata, s.host, metadata, rule '
+        'from rework.sched as s, rework.operation as o '
+        'where o.id = s.operation '
+        'order by o.name'
     )
-    for sid, op, dom, indata, host, meta, rule in engine.execute(sql):
-        q = select('name').table('rework.operation').where(id=op)
-        opname = q.do(engine).scalar()
+    for sid, opname, dom, indata, host, meta, rule in engine.execute(sql):
+        # q = select('name').table('rework.operation').where(id=op)
+        # opname = q.do(engine).scalar()
         print(Fore.WHITE + f'{sid}', end=' ')
         print(Fore.GREEN +
               f'`{opname}` {dom} `{host or "no host"}` '
