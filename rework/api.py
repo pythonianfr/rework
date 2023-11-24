@@ -204,6 +204,7 @@ def prepare(engine,
         raise Exception('"every second" rule is forbidden')
 
     spec = filterio(iospec(engine), opname, domain, host)
+    inputdata = inputdata or {} if spec else inputdata
     if rawinputdata is None and inputdata is not None:
         if spec is not None:
             rawinputdata = pack_io(spec, inputdata)
