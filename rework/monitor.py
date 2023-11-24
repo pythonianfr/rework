@@ -197,10 +197,11 @@ class scheduler:
             # reload everything
             L.info(f'scheduler: reloading definitions for {self.domain}')
             self.rulemap = []
-            for operation, domain, inputdata, hostid, meta, rule in defs:
+            L.info(f'scheduler: starting with {len(defs)} definitions')
+            for idx, (operation, domain, inputdata, hostid, meta, rule) in enumerate(defs):
+                L.info(f'{idx} {operation} {rule} {hostid} {meta}')
                 self.schedule(rule, operation, domain, inputdata, hostid, meta)
             self.defs = defs
-            L.info(f'scheduler: starting with definitions:\n{self.defs}')
 
         self.run_scheduled()
 
