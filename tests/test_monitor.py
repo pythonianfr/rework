@@ -685,7 +685,7 @@ def test_scheduler(engine, cleanup):
         mon.step()
         assert str(mon.scheduler) == (
             "<scheduler for nondefault ->\n"
-            "[('run_in_non_default_domain', 'nondefault', None, None, None, '* * * * * *')]>"
+            "[('run_in_non_default_domain', '* * * * * *', None, None, None)]>"
         )
 
 

@@ -198,9 +198,9 @@ class scheduler:
             L.info(f'scheduler: reloading definitions for {self.domain}')
             self.rulemap = []
             L.info(f'scheduler: starting with {len(defs)} definitions')
-            for idx, (operation, domain, inputdata, hostid, meta, rule) in enumerate(defs):
+            for idx, (operation, rule, inputdata, hostid, meta) in enumerate(defs):
                 L.info(f'{idx} {operation} {rule} {hostid} {meta}')
-                self.schedule(rule, operation, domain, inputdata, hostid, meta)
+                self.schedule(rule, operation, self.domain, inputdata, hostid, meta)
             self.defs = defs
 
         self.run_scheduled()
@@ -208,10 +208,11 @@ class scheduler:
     @property
     def definitions(self):
         q = select(
-            'op.name', 's.domain', 's.inputdata', 's.host', 's.metadata', 's.rule'
+            'op.name', 's.rule', 's.inputdata', 's.host', 's.metadata'
         ).table('rework.sched as s', 'rework.operation as op'
         ).where('s.operation = op.id'
-        ).where('s.domain = %(domain)s', domain=self.domain)
+        ).where('s.domain = %(domain)s', domain=self.domain
+        ).order('op.name')
 
         return q.do(self.engine).fetchall()
 
