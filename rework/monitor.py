@@ -123,7 +123,10 @@ def run_sched(lastnow, runnable, _now=None):
     # and return the last associated stamp
     L.info(f'scheduler: will run {len(runnow)} tasks now')
     for stamp, func in runnow:
-        func()
+        try:
+            func()
+        except:
+            L.exception('scheduler: oops, scheduling just crashed')
     L.info(f'scheduler: will keep {len(runlater)} tasks for later')
 
     # runlater contains everything not consummed yet
