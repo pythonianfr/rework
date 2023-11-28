@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 import json
 import struct
+import logging
 
 from icron import croniter_range
 import pyzstd as zstd
@@ -20,6 +21,20 @@ from sqlhelp import select
 from inireader import reader
 
 from rework.io import _iobase
+
+
+def setuplogger(level=logging.DEBUG):
+    logger = logging.getLogger('rework')
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        logging.Formatter(
+            '%(asctime)s %(message)s',
+            '%Y-%m-%d %H:%M:%S'
+        )
+    )
+    logger.addHandler(handler)
+    logger.setLevel(level)
+    return logger
 
 
 def utcnow():

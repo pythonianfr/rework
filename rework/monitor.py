@@ -7,7 +7,6 @@ from datetime import (
     datetime,
     timedelta
 )
-import logging
 import traceback as tb
 from pathlib import Path
 import sys
@@ -25,6 +24,7 @@ from rework.helper import (
     iter_stamps_from_cronrules,
     parse_delta,
     partition,
+    setuplogger,
     utcnow,
     wait_true
 )
@@ -33,23 +33,6 @@ from rework.task import Task
 
 
 TZ = tzlocal.get_localzone()
-
-def setuplogger():
-    logger = logging.getLogger('rework')
-    handler = logging.StreamHandler()
-    handler.setFormatter(
-        logging.Formatter(
-            '%(asctime)s %(message)s',
-            '%Y-%m-%d %H:%M:%S'
-        )
-    )
-    logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
-    return logger
-
-
-L = setuplogger()
-
 
 try:
     DEVNULL = sub.DEVNULL
@@ -109,36 +92,39 @@ class monstats:
     __repr__ = __str__
 
 
-def run_sched(lastnow, runnable, _now=None):
+def run_sched(logger, lastnow, runnable, _now=None):
     now = _now or datetime.now(TZ)
     runnow, runlater = partition(
         lambda stamp_func: stamp_func[0] <= now,
         runnable
     )
     if not runnow:
-        L.debug(f'scheduler: nothing to run for {now.isoformat()} from {lastnow.isoformat()}')
+        logger.debug(
+            f'scheduler: nothing to run for {now.isoformat()} from {lastnow.isoformat()}'
+        )
         return runlater, lastnow
 
     # consume the runnow list
     # and return the last associated stamp
-    L.info(f'scheduler: will run {len(runnow)} tasks now')
+    logger.info(f'scheduler: will run {len(runnow)} tasks now')
     for stamp, func in runnow:
         try:
             func()
         except:
-            L.exception('scheduler: oops, scheduling just crashed')
-    L.info(f'scheduler: will keep {len(runlater)} tasks for later')
+            logger.exception('scheduler: oops, scheduling just crashed')
+    logger.info(f'scheduler: will keep {len(runlater)} tasks for later')
 
     # runlater contains everything not consummed yet
     return runlater, stamp
 
 
 class scheduler:
-    __slots__ = ('engine', 'domain', 'sched', 'defs', 'rulemap', 'runnable', 'laststamp')
+    __slots__ = ('engine', 'logger', 'domain', 'sched', 'defs', 'rulemap', 'runnable', 'laststamp')
     _step = {'minutes': 10}
 
-    def __init__(self, engine, domain):
+    def __init__(self, engine, logger, domain):
         self.engine = engine
+        self.logger = logger
         self.domain = domain
         # two items below should be synchronized
         self.defs = []  # current base definitions
@@ -176,17 +162,20 @@ class scheduler:
                 )
             )
             if self.runnable:
-                L.info(f'scheduler: prepared {len(self.runnable)} items')
-                L.debug(f'scheduler: next item will run at {self.runnable[0][0]}')
+                self.logger.info(f'scheduler: prepared {len(self.runnable)} items')
+                self.logger.info(f'scheduler: next item will run at {self.runnable[0][0]}')
 
         runnable, laststamp = run_sched(
+            self.logger,
             self.laststamp,
             self.runnable
         )
         consummed = len(self.runnable) - len(runnable)
-        L.debug(f'scheduler: consummed {consummed} items')
         if consummed:
-            L.debug(f'scheduler: advanced stamp from {self.laststamp} to {laststamp}')
+            self.logger.info(f'scheduler: consummed {consummed} items')
+            self.logger.info(
+                f'scheduler: advanced stamp from {self.laststamp} to {laststamp}'
+            )
 
         self.runnable = runnable
         self.laststamp = laststamp
@@ -195,11 +184,11 @@ class scheduler:
         defs = self.definitions
         if defs != self.defs:
             # reload everything
-            L.info(f'scheduler: reloading definitions for {self.domain}')
+            self.logger.info(f'scheduler: reloading definitions for {self.domain}')
             self.rulemap = []
-            L.info(f'scheduler: starting with {len(defs)} definitions')
+            self.logger.info(f'scheduler: starting with {len(defs)} definitions')
             for idx, (operation, rule, inputdata, hostid, meta) in enumerate(defs):
-                L.info(f'{idx} {operation} {rule} {hostid} {meta}')
+                self.logger.info(f'{idx} {operation} {rule} {hostid} {meta}')
                 self.schedule(rule, operation, self.domain, inputdata, hostid, meta)
             self.defs = defs
 
@@ -218,18 +207,19 @@ class scheduler:
 
 
 class Monitor:
-    __slots__ = ('engine', 'domain',
+    __slots__ = ('engine', 'logger', 'domain',
                  'minworkers', 'maxworkers',
                  'maxruns', 'maxmem', 'debugport',
                  'workers', 'host', 'monid',
                  'start_timeout', 'debugfile',
                  'pending_start', 'scheduler')
 
-    def __init__(self, engine, domain='default',
+    def __init__(self, engine, logger=None, domain='default',
                  minworkers=None, maxworkers=2,
                  maxruns=0, maxmem=0, debug=False,
                  start_timeout=30, debugfile=None):
         self.engine = engine
+        self.logger = logger or setuplogger()
         self.domain = domain
         self.maxworkers = maxworkers
         self.minworkers = minworkers if minworkers is not None else maxworkers
@@ -245,7 +235,7 @@ class Monitor:
         if debugfile:
             self.debugfile = Path(debugfile).open('wb')
         self.pending_start = {}
-        self.scheduler = scheduler(engine, domain)
+        self.scheduler = scheduler(engine, logger, domain)
         signal.signal(signal.SIGTERM, self.sigterm)
 
     def sigterm(self, signum, stack):
@@ -428,13 +418,13 @@ class Monitor:
 
         # signal the outcome
         if not self.pending_start:
-            L.info('no more pending starts')
+            self.logger.info('no more pending starts')
         else:
             pending = {
                 wid: str(dt)
                 for wid, dt in self.pending_start.items()
             }
-            L.info(f'workers yet to start : {pending}')
+            self.logger.info(f'workers yet to start : {pending}')
         return self.pending_start
 
     def ensure_workers(self):
@@ -513,7 +503,7 @@ class Monitor:
                 wid = row.id
                 proc = self.workers.pop(wid)
                 if not kill_process_tree(proc.pid):
-                    L.info(f'could not kill {proc.pid}')
+                    self.logger.info(f'could not kill {proc.pid}')
                     continue
 
                 mark_dead_workers(
@@ -533,7 +523,7 @@ class Monitor:
             try:
                 cmd = ' '.join(psutil.Process(pid).cmdline())
                 if 'new-worker' not in cmd and str(self.engine.url) not in cmd:
-                    L.info(f'pid {pid} was probably recycled')
+                    self.logger.info(f'pid {pid} was probably recycled')
                     deadlist.append(wid)
             except psutil.NoSuchProcess:
                 deadlist.append(wid)
@@ -643,7 +633,7 @@ class Monitor:
         self.preemptive_kill()
         dead = self.reap_dead_workers()
         if dead:
-            L.info(f'reaped {len(dead)} dead workers')
+            self.logger.info(f'reaped {len(dead)} dead workers')
         stats = self.ensure_workers()
         self.scheduler.step()
         self.dead_man_switch()
@@ -652,11 +642,11 @@ class Monitor:
     def _run(self):
         deleted = self.cleanup_unstarted()
         if deleted:
-            L.info(f'cleaned {deleted} unstarted workers')
+            self.logger.info(f'cleaned {deleted} unstarted workers')
         while True:
             stats = self.step()
             if stats.new:
-                L.info(f'spawned {len(stats.new)} active workers')
+                self.logger.info(f'spawned {len(stats.new)} active workers')
             if stats.shrink:
-                L.info(f'worker {stats.shrink[0]} asked to shutdown')
+                self.logger.info(f'worker {stats.shrink[0]} asked to shutdown')
             time.sleep(1)

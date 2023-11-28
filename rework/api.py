@@ -17,7 +17,8 @@ from rework.helper import (
     InputEncoder,
     iospec,
     ops_and_domains,
-    pack_io
+    pack_io,
+    setuplogger
 )
 from rework.task import (
     __task_inputs__,
@@ -337,7 +338,8 @@ def workers(engine, domain='default',
 
     """
     mon = Monitor(
-        engine, domain, minworkers, maxworkers, maxruns, maxmem, debug,
+        engine, setuplogger(), domain,
+        minworkers, maxworkers, maxruns, maxmem, debug,
         start_timeout=start_timeout
     )
     mon.register()

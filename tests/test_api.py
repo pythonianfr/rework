@@ -9,6 +9,7 @@ from rework.helper import (
     host,
     iter_stamps_from_cronrules,
     prepared,
+    setuplogger,
     unpack_io,
     unpack_iofile,
     unpack_iofiles_length
@@ -98,6 +99,7 @@ def test_monitor_scheduler():
 
     now = dt(2023, 1, 1, 0, 0, 4, tzinfo=tz)
     runnable, laststamp = monitor.run_sched(
+        setuplogger(),
         now,  # consume half
         stamps,
         _now=now
@@ -110,6 +112,7 @@ def test_monitor_scheduler():
 
     now = laststamp + timedelta(seconds=3)
     runnable, laststamp = monitor.run_sched(
+        setuplogger(),
         now,
         runnable,
         _now=now

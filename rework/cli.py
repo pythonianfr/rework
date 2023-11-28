@@ -20,7 +20,8 @@ from rework.helper import (
     cleanup_workers,
     find_dburi,
     iter_stamps_from_cronrules,
-    utcnow
+    utcnow,
+    setuplogger
 )
 from rework.worker import Worker
 from rework.task import Task
@@ -155,14 +156,13 @@ def new_worker(**config):
 @click.option('--debugfile')
 def monitor(dburi, **config):
     " start a monitor controlling min/max workers "
-    log = logging.getLogger('rework')
-    if 'debug' in config:
-        log.setLevel(logging.DEBUG)
+    if config.get('debug'):
+        logger = setuplogger(logging.DEBUG)
     else:
-        log.setLevel(logging.INFO)
-    log.critical(f'start monitor {config=}')
+        logger = setuplogger(logging.INFO)
+    logger.critical(f'start monitor {config=}')
     engine = create_engine(find_dburi(dburi))
-    monitor = Monitor(engine, **config)
+    monitor = Monitor(engine, logger, **config)
     monitor.run()
 
 
