@@ -189,6 +189,7 @@ class scheduler:
             # reload everything
             self.logger.info(f'sched: reloading definitions for {self.domain}')
             self.rulemap = []
+            self.runnable = []
             self.logger.info(f'sched: starting with {len(defs)} definitions')
             for idx, (operation, rule, inputdata, hostid, meta) in enumerate(defs):
                 self.logger.info(f'{idx} {operation} {rule} {hostid} {meta}')
