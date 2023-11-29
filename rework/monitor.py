@@ -101,19 +101,19 @@ def run_sched(logger, lastnow, runnable, _now=None):
     )
     if not runnow:
         logger.debug(
-            f'scheduler: nothing to run for {now.isoformat()} from {lastnow.isoformat()}'
+            f'sched: nothing to run for {now.isoformat()} from {lastnow.isoformat()}'
         )
         return runlater, lastnow
 
     # consume the runnow list
     # and return the last associated stamp
-    logger.info(f'scheduler: will run {len(runnow)} tasks now')
+    logger.info(f'sched: will run {len(runnow)} tasks now')
     for stamp, func in runnow:
         try:
             func()
         except:
-            logger.exception('scheduler: oops, scheduling just crashed')
-    logger.info(f'scheduler: will keep {len(runlater)} tasks for later')
+            logger.exception('sched: oops, scheduling just crashed')
+    logger.info(f'sched: will keep {len(runlater)} tasks for later')
 
     # runlater contains everything not consummed yet
     return runlater, stamp
@@ -163,10 +163,10 @@ class scheduler:
                 )
             )
             if self.runnable:
-                self.logger.info(f'scheduler: prepared {len(self.runnable)} items')
+                self.logger.info(f'sched: prepared {len(self.runnable)} items')
                 for stamp, op in schedule_plan(self.engine, self.domain, timedelta(**self._step)):
-                    self.logger.info(f'scheduler: {stamp} -> {op}')
-                self.logger.info(f'scheduler: next item will run at {self.runnable[0][0]}')
+                    self.logger.info(f'sched: {stamp} -> {op}')
+                self.logger.info(f'sched: next item will run at {self.runnable[0][0]}')
 
         runnable, laststamp = run_sched(
             self.logger,
@@ -175,9 +175,9 @@ class scheduler:
         )
         consummed = len(self.runnable) - len(runnable)
         if consummed:
-            self.logger.info(f'scheduler: consummed {consummed} items')
+            self.logger.info(f'sched: consummed {consummed} items')
             self.logger.info(
-                f'scheduler: advanced stamp from {self.laststamp} to {laststamp}'
+                f'sched: advanced stamp from {self.laststamp} to {laststamp}'
             )
 
         self.runnable = runnable
@@ -187,9 +187,9 @@ class scheduler:
         defs = self.definitions
         if defs != self.defs:
             # reload everything
-            self.logger.info(f'scheduler: reloading definitions for {self.domain}')
+            self.logger.info(f'sched: reloading definitions for {self.domain}')
             self.rulemap = []
-            self.logger.info(f'scheduler: starting with {len(defs)} definitions')
+            self.logger.info(f'sched: starting with {len(defs)} definitions')
             for idx, (operation, rule, inputdata, hostid, meta) in enumerate(defs):
                 self.logger.info(f'{idx} {operation} {rule} {hostid} {meta}')
                 self.schedule(rule, operation, self.domain, inputdata, hostid, meta)
@@ -421,13 +421,13 @@ class Monitor:
 
         # signal the outcome
         if not self.pending_start:
-            self.logger.info('no more pending starts')
+            self.logger.info('mon: no more pending starts')
         else:
             pending = {
                 wid: str(dt)
                 for wid, dt in self.pending_start.items()
             }
-            self.logger.info(f'workers yet to start : {pending}')
+            self.logger.info(f'mon: workers yet to start : {pending}')
         return self.pending_start
 
     def ensure_workers(self):
@@ -506,7 +506,7 @@ class Monitor:
                 wid = row.id
                 proc = self.workers.pop(wid)
                 if not kill_process_tree(proc.pid):
-                    self.logger.info(f'could not kill {proc.pid}')
+                    self.logger.info(f'mon: could not kill {proc.pid}')
                     continue
 
                 mark_dead_workers(
@@ -636,7 +636,7 @@ class Monitor:
         self.preemptive_kill()
         dead = self.reap_dead_workers()
         if dead:
-            self.logger.info(f'reaped {len(dead)} dead workers')
+            self.logger.info(f'mon: reaped {len(dead)} dead workers')
         stats = self.ensure_workers()
         self.scheduler.step()
         self.dead_man_switch()
@@ -645,11 +645,11 @@ class Monitor:
     def _run(self):
         deleted = self.cleanup_unstarted()
         if deleted:
-            self.logger.info(f'cleaned {deleted} unstarted workers')
+            self.logger.info(f'mon: cleaned {deleted} unstarted workers')
         while True:
             stats = self.step()
             if stats.new:
-                self.logger.info(f'spawned {len(stats.new)} active workers')
+                self.logger.info(f'mon: spawned {len(stats.new)} active workers')
             if stats.shrink:
-                self.logger.info(f'worker {stats.shrink[0]} asked to shutdown')
+                self.logger.info(f'mon: worker {stats.shrink[0]} asked to shutdown')
             time.sleep(1)
