@@ -24,6 +24,7 @@ from rework.helper import (
     iter_stamps_from_cronrules,
     parse_delta,
     partition,
+    schedule_plan,
     setuplogger,
     utcnow,
     wait_true
@@ -120,7 +121,7 @@ def run_sched(logger, lastnow, runnable, _now=None):
 
 class scheduler:
     __slots__ = ('engine', 'logger', 'domain', 'sched', 'defs', 'rulemap', 'runnable', 'laststamp')
-    _step = {'minutes': 10}
+    _step = {'minutes': 30}
 
     def __init__(self, engine, logger, domain):
         self.engine = engine
@@ -163,6 +164,8 @@ class scheduler:
             )
             if self.runnable:
                 self.logger.info(f'scheduler: prepared {len(self.runnable)} items')
+                for stamp, op in schedule_plan(self.engine, self.domain, timedelta(**self._step)):
+                    self.logger.info(f'scheduler: {stamp} -> {op}')
                 self.logger.info(f'scheduler: next item will run at {self.runnable[0][0]}')
 
         runnable, laststamp = run_sched(

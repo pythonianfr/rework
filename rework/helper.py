@@ -10,7 +10,7 @@ from pathlib import Path
 import re
 import json
 import struct
-import logging
+import tzlocal
 
 from icron import croniter_range
 import pyzstd as zstd
@@ -358,6 +358,22 @@ def iter_stamps_from_cronrules(rulemap, start, stop):
     for rule, payload in rulemap:
         for stamp in croniter_range(start, stop, rule):
             yield stamp, payload
+
+
+def schedule_plan(engine, domain, delta):
+    tz = tzlocal.get_localzone()
+    q = select(
+        's.rule', 'op.name'
+    ).table('rework.sched as s', 'rework.operation as op'
+    ).where('s.operation = op.id'
+    ).where('s.domain = %(domain)s', domain=domain)
+    out = q.do(engine).fetchall()
+    now = datetime.now(tz)
+    for stamp, op in sorted(iter_stamps_from_cronrules(
+            out,
+            now,
+            now + delta)):
+        yield stamp, op
 
 
 # json input serializer
