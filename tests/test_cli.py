@@ -386,7 +386,7 @@ def test_abort_task(engine, cli, cleanup):
 
         r = cli('list-tasks', url)
         assert (
-            '<X> infinite_loop running '
+            '<X> infinite_loop running domain=default '
             '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
             '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
         )== scrub(r.output)
@@ -407,7 +407,7 @@ def test_abort_task(engine, cli, cleanup):
 
         r = cli('list-tasks', url)
         assert (
-            '<X> infinite_loop aborted '
+            '<X> infinite_loop aborted domain=default '
             '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
             '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
             '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] '
@@ -438,7 +438,7 @@ def test_kill_worker(engine, cli, cleanup):
 
         r = cli('list-tasks', url)
         assert (
-            '<X> infinite_loop aborted '
+            '<X> infinite_loop aborted domain=default '
             '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
             '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
             '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] '
@@ -503,6 +503,8 @@ def test_vacuum(engine, cli, cleanup):
             t1.join() or t2.join() or t3.join()
             r = cli('list-tasks', engine.url)
             assert r.output.count('done') == 3
+            r = cli('list-tasks', engine.url, domain='nosuchdomain')
+            assert r.output.count('done') == 0
 
     run_stuff()
 
@@ -553,7 +555,7 @@ def test_scheduler_noinput(engine, cli, cleanup):
 
     r = cli('list-tasks', engine.url)
     assert scrub(r.output).strip().startswith(
-        '<X> print_sleep_and_go_away done '
+        '<X> print_sleep_and_go_away done domain=default '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
@@ -585,11 +587,18 @@ def test_scheduler_noinput(engine, cli, cleanup):
         t = Task.byid(engine, tid)
         wait_true(lambda: t.status == 'done')
         r = cli('list-tasks', engine.url)
+        r2 = cli('list-tasks', engine.url, domain='nondefault')
 
     # we cut the tail because we might have two tasks there
     # the one that ran, and another just queued
-    assert scrub(r.output)[:138].strip() == (
-        '<X> run_in_non_default_domain done '
+    assert scrub(r.output)[:155].strip() == (
+        '<X> run_in_non_default_domain done domain=nondefault '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
+        '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
+    )
+    assert scrub(r2.output).strip() == (
+        '<X> run_in_non_default_domain done domain=nondefault '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
@@ -635,8 +644,8 @@ def test_scheduler_with_inputs(engine, cli, cleanup):
 
     # we cut the tail because we might have two tasks there
     # the one that ran, and another just queued
-    assert scrub(r.output)[:134].strip() == (
-        '<X> fancy_inputs_outputs done '
+    assert scrub(r.output)[:147].strip() == (
+        '<X> fancy_inputs_outputs done domain=default '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'

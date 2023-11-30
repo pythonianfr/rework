@@ -295,22 +295,26 @@ status_color = {
 
 @rework.command('list-tasks')
 @click.argument('dburi')
+@click.option('--domain', default=None)
 @click.option('--tracebacks/--no-tracebacks', default=False)
 @click.option('--logcount/--no-logcount', default=False)
-def list_tasks(dburi, tracebacks=False, logcount=False):
+def list_tasks(dburi, domain=None, tracebacks=False, logcount=False):
     init()
     engine = create_engine(find_dburi(dburi))
     opmap = dict(engine.execute('select id, name from rework.operation').fetchall())
-    sql = ('select t.id, w.deathinfo, w.mem '
+    sql = ('select t.id, w.deathinfo, w.mem, w.domain '
            'from rework.task as t left outer join rework.worker as w '
            'on t.worker = w.id '
            'order by id')
-    for tid, di, mem in engine.execute(sql):
+    for tid, di, mem, odomain in engine.execute(sql):
+        if domain and domain != odomain:
+            continue
         task = Task.byid(engine, tid)
         stat = task.state
         print(Style.RESET_ALL + str(tid),
               Fore.GREEN + opmap[task.operation],
               status_color[stat] + stat, end=' ')
+        print(Fore.YELLOW + f'domain={odomain}', end=' ')
         if logcount:
             sql = 'select count(*) from rework.log where task = %(tid)s'
             count = engine.execute(sql, {'tid': task.tid}).scalar()
