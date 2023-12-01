@@ -259,18 +259,12 @@ def unprepare(engine, sid):
     return count
 
 
-def freeze_operations(engine, domain=None, domain_map=None,
-                      hostid=None):
+def freeze_operations(engine, domain=None, hostid=None):
     values = []
     if hostid is None:
         hostid = host()
 
-    if domain_map:
-        domain = domain_map.get(domain, domain)
-
     for (fdomain, fname), (func, timeout) in __task_registry__.items():
-        if domain_map:
-            fdomain = domain_map.get(fdomain, fdomain)
         if domain is not None and domain != fdomain:
             continue
         if timeout is not None:
