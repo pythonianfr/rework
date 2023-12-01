@@ -389,6 +389,8 @@ def abort_task(dburi, taskid):
 @rework.command(name='list-scheduled')
 @click.argument('dburi')
 def list_scheduled(dburi):
+    """list the prepared operations with their cron rule
+    """
     init()
     engine = create_engine(find_dburi(dburi))
     sql = (
@@ -412,6 +414,11 @@ def list_scheduled(dburi):
 @click.argument('dburi')
 @click.argument('sid')
 def unprepare(dburi, sid):
+    """remove a scheduling plan given its id
+
+    To get the schedule plans, use the `list-scheduled` command.
+
+    """
     init()
     engine = create_engine(find_dburi(dburi))
     count = api.unprepare(engine, sid)
@@ -427,6 +434,10 @@ def unprepare(dburi, sid):
 @click.argument('domain')
 @click.option('--hours', default=1)
 def scheduled_plan(dburi, domain, hours=1):
+    """show what operation will be executed at which time in the next hour
+
+    It is possible to ask for more hours using --hours.
+    """
     engine = create_engine(find_dburi(dburi))
     for stamp, op in schedule_plan(engine, domain, timedelta(hours=hours)):
         print(Fore.GREEN + str(stamp), end=' ')
