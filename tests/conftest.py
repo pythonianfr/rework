@@ -23,7 +23,7 @@ def engine(request):
         'timezone': 'UTC',
         'log_timezone': 'UTC'
     })
-    e = create_engine('postgresql://localhost:{}/postgres'.format(PORT))
+    e = create_engine(f'postgresql://localhost:{PORT}/postgres')
     schema.init(e, drop=True)
     api.freeze_operations(e)
     # help the `cleanup` fixture
@@ -41,7 +41,7 @@ def cli():
             if isinstance(v, bool):
                 args.append(f'--{k}' if v else f'--no-{k}')
                 continue
-            args.append('--{}'.format(k))
+            args.append(f'--{k}')
             args.append(str(v))
         return CliRunner().invoke(rcli.rework, args)
     return runner

@@ -597,7 +597,7 @@ class Monitor:
         try:
             self.cleanup_stale_monitors()
             self.register()
-            self.dump_to_debugfile('monitor id ' + str(self.monid))
+            self.dump_to_debugfile(f'monitor id {self.monid}')
             self._run()
         except Exception:
             traceback = tb.format_exc()
@@ -607,9 +607,7 @@ class Monitor:
             self.killall(msg='monitor exit', traceback=traceback)
         finally:
             self.dump_to_debugfile(
-                'monitor {} exit at {}'.format(
-                    self.monid, datetime.now().isoformat()
-                )
+                f'monitor {self.monid} exit at {datetime.now().isoformat()}'
             )
             self.unregister()
 
