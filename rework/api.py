@@ -259,7 +259,7 @@ def unprepare(engine, sid):
     return count
 
 
-def freeze_operations(engine, domain=None, hostid=None):
+def freeze_operations(engine, domain=None, hostid=None, reset=True):
     values = []
     if hostid is None:
         hostid = host()
@@ -291,6 +291,15 @@ def freeze_operations(engine, domain=None, hostid=None):
                 __task_outputs__[(fdomain, fname)]
             )
         values.append(val)
+
+    if reset:
+        with engine.begin() as cn:
+            for path in [val['path'] for val in values]:
+                cn.execute(
+                    'delete from rework.operation '
+                    'where path=%(path)s',
+                    path=path
+                )
 
     recorded = []
     alreadyknown = []

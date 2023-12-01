@@ -38,6 +38,9 @@ def cli():
     def runner(*args, **kw):
         args = [str(a) for a in args]
         for k, v in kw.items():
+            if isinstance(v, bool):
+                args.append(f'--{k}' if v else f'--no-{k}')
+                continue
             args.append('--{}'.format(k))
             args.append(str(v))
         return CliRunner().invoke(rcli.rework, args)

@@ -46,7 +46,7 @@ def test_register_operations(engine, cli, cleanup):
     newtaskspath = Path(__file__).parent / 'newtasks.py'
     r = cli('register-operations', engine.url, newtaskspath)
     assert 'registered 2 new operation (0 already known)' in r.output
-    r = cli('register-operations', engine.url, newtaskspath)
+    r = cli('register-operations', engine.url, newtaskspath, reset=False)
     assert 'registered 0 new operation (2 already known)' in r.output
 
     r = cli('list-operations', engine.url)
@@ -63,13 +63,13 @@ def test_register_operations(engine, cli, cleanup):
     cleanup()
 
     # per-domain
-    r = cli('register-operations', engine.url, newtaskspath, domain='default')
+    r = cli('register-operations', engine.url, newtaskspath, domain='default', reset=False)
     assert 'registered 1 new operation (0 already known)' in r.output
     r = cli('list-operations', engine.url)
     assert 'boring_task' in r.output
     assert 'scrap_sites' not in r.output
 
-    r = cli('register-operations', engine.url, newtaskspath, domain='scrappers')
+    r = cli('register-operations', engine.url, newtaskspath, domain='scrappers', reset=False)
     assert 'registered 1 new operation (0 already known)' in r.output
     r = cli('list-operations', engine.url)
     assert 'boring_task' in r.output
@@ -79,14 +79,14 @@ def test_register_operations(engine, cli, cleanup):
 
     # per-domain + asdomain
     r = cli('register-operations', engine.url, newtaskspath,
-            domain='default', asdomain='cloudhost')
+            domain='default', asdomain='cloudhost', reset=False)
     assert 'registered 1 new operation (0 already known)' in r.output
     r = cli('list-operations', engine.url)
     assert 'boring_task' in r.output
     assert 'scrap_sites' not in r.output
 
     r = cli('register-operations', engine.url, newtaskspath,
-            domain='scrappers', asdomain='cloudscrappers')
+            domain='scrappers', asdomain='cloudscrappers', reset=False)
     assert 'registered 1 new operation (0 already known)' in r.output
     r = cli('list-operations', engine.url)
     assert 'boring_task' in r.output
@@ -100,8 +100,8 @@ def test_register_operations(engine, cli, cleanup):
             domain='nu-such-domain')
     assert 'registered 0 new operation (0 already known)' in r.output
 
-    r = cli('register-operations', engine.url, newtaskspath, domain='default')
-    r = cli('register-operations', engine.url, newtaskspath)  # all domains
+    r = cli('register-operations', engine.url, newtaskspath, domain='default', reset=False)
+    r = cli('register-operations', engine.url, newtaskspath, reset=False)  # all domains
     assert 'registered 1 new operation (1 already known)' in r.output
 
     # keep the other tests sane !

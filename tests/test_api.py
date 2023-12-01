@@ -254,8 +254,8 @@ def test_freeze_ops(engine, cleanup):
 
     reset_ops(engine)
     register_tasks()
-    api.freeze_operations(engine, domain='default')
-    api.freeze_operations(engine, domain='ham')
+    api.freeze_operations(engine, domain='default', reset=False)
+    api.freeze_operations(engine, domain='ham', reset=False)
 
     res = engine.execute(
         'select name, domain from rework.operation order by domain, name'
@@ -651,9 +651,9 @@ def test_schedule_domain(engine, cleanup):
     from . import task_testenv  # noqa
     from . import task_prodenv  # noqa
 
-    api.freeze_operations(engine, domain='test')
-    api.freeze_operations(engine, domain='production')
-    api.freeze_operations(engine, domain='production', hostid='192.168.122.42')
+    api.freeze_operations(engine, domain='test', reset=False)
+    api.freeze_operations(engine, domain='production', reset=False)
+    api.freeze_operations(engine, domain='production', hostid='192.168.122.42', reset=False)
 
     with pytest.raises(ValueError) as err:
         api.schedule(engine, 'foo')

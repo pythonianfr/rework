@@ -50,7 +50,8 @@ def init_db(ctx, dburi):
 @click.argument('module', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 @click.option('--domain')
 @click.option('--asdomain')
-def register_operations(dburi, module, domain=None, asdomain=None):
+@click.option('--reset/--no-reset', is_flag=True, default=True)
+def register_operations(dburi, module, domain=None, asdomain=None, reset=True):
     """register operations from a python module containing
     python functions decorated with `api.task`
 
@@ -62,7 +63,7 @@ def register_operations(dburi, module, domain=None, asdomain=None):
     # load the module
     load_source('operations', module)
     engine = create_engine(find_dburi(dburi))
-    ok, ko = api.freeze_operations(engine, domain)
+    ok, ko = api.freeze_operations(engine, domain, reset=reset)
     print(f'registered {len(ok)} new operation ({len(ko)} already known)')
 
 
