@@ -246,6 +246,14 @@ def prepare(engine,
     return sid
 
 
+def unprepare(engine, sid):
+    with engine.begin() as cn:
+        cn.execute(
+            'delete from rework.sched where id=%(sid)s',
+            sid=sid
+        )
+
+
 def freeze_operations(engine, domain=None, domain_map=None,
                       hostid=None):
     values = []

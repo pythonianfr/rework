@@ -269,13 +269,18 @@ def test_freeze_ops(engine, cleanup):
     ]
 
 
-def test_prepare(engine, cleanup):
+def test_prepare_unprepare(engine, cleanup):
     register_tasks()
     api.freeze_operations(engine, domain='default')
 
     api.prepare(engine, 'foo', ' 0 0 8 * * *')
     api.prepare(engine, 'foo', ' 0 0 8 * * *')
+    sid = api.prepare(engine, 'foo', ' 0 30 8 * * *')
 
+    res = engine.execute('select count(*) from rework.sched').scalar()
+    assert res == 2
+
+    api.unprepare(engine, sid)
     res = engine.execute('select count(*) from rework.sched').scalar()
     assert res == 1
 
@@ -547,42 +552,43 @@ def test_prepare_with_inputs(engine, cleanup):
     assert unpacked_file == b'some file'
 
     prep = prepared(engine, 'yummy', 'default')
-    assert prep == [
-        (4,
-         (b'myfile.txt',
-          b'weight',
-          b'birthdate',
-          b'happy',
-          b'sometime',
-          b'name',
+    assert len(prep) == 2
+    assert prep[0][1] ==(
+        b'myfile.txt',
+        b'weight',
+        b'birthdate',
+        b'happy',
+        b'sometime',
+        b'name',
         b'option',
-          b'some file',
-          b'65',
-          b'1973-05-20T09:00:00',
-          b'True',
-          b'(date "1973-5-20")',
-          b'Babar',
-          b'foo'),
-         {'user': 'Babar'},
-         '* * * * * *'),
-        (5,
-         (b'myfile.txt',
-          b'weight',
-          b'birthdate',
-          b'happy',
-          b'sometime',
-          b'name',
-          b'option',
-          b'some file',
-          b'65',
-          b'1973-05-20T00:00:00',
-          b'True',
-          b'(date "2023-5-20")',
-          b'Babar',
-          b'foo'),
-         None,
-         '* * * * * *')
-    ]
+        b'some file',
+        b'65',
+        b'1973-05-20T09:00:00',
+        b'True',
+        b'(date "1973-5-20")',
+        b'Babar',
+        b'foo'
+    )
+    assert prep[0][2] == {'user': 'Babar'}
+    assert prep[0][3] == '* * * * * *'
+    assert prep[1][1] == (
+        b'myfile.txt',
+        b'weight',
+        b'birthdate',
+        b'happy',
+        b'sometime',
+        b'name',
+        b'option',
+        b'some file',
+        b'65',
+        b'1973-05-20T00:00:00',
+        b'True',
+        b'(date "2023-5-20")',
+        b'Babar',
+        b'foo'
+    )
+    assert prep[1][2] is None
+    assert prep[1][3] == '* * * * * *'
 
 
 def test_prepare_inputs_nr_domain_mismatch(engine, cleanup):
