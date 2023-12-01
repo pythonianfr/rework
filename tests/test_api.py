@@ -280,9 +280,13 @@ def test_prepare_unprepare(engine, cleanup):
     res = engine.execute('select count(*) from rework.sched').scalar()
     assert res == 2
 
-    api.unprepare(engine, sid)
+    count = api.unprepare(engine, sid)
+    assert count == 1
     res = engine.execute('select count(*) from rework.sched').scalar()
     assert res == 1
+
+    count = api.unprepare(engine, sid)
+    assert count == 0
 
 
 def test_with_inputs(engine, cleanup):

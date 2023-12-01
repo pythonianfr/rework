@@ -408,6 +408,20 @@ def list_scheduled(dburi):
     print(Style.RESET_ALL)
 
 
+@rework.command(name='unprepare')
+@click.argument('dburi')
+@click.argument('sid')
+def unprepare(dburi, sid):
+    init()
+    engine = create_engine(find_dburi(dburi))
+    count = api.unprepare(engine, sid)
+    print(Fore.WHITE + f'{sid}', end=' ')
+    print(
+        Fore.GREEN +
+        f': removed {count} prepared operation'
+    )
+
+
 @rework.command(name='scheduled-plan')
 @click.argument('dburi')
 @click.argument('domain')

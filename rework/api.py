@@ -248,10 +248,15 @@ def prepare(engine,
 
 def unprepare(engine, sid):
     with engine.begin() as cn:
-        cn.execute(
-            'delete from rework.sched where id=%(sid)s',
+        count = cn.execute(
+            'with deleted as ('
+            ' delete from rework.sched where id=%(sid)s '
+            ' returning 1'
+            ')'
+            'select count(*) from deleted',
             sid=sid
-        )
+        ).scalar()
+    return count
 
 
 def freeze_operations(engine, domain=None, domain_map=None,

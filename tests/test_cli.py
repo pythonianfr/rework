@@ -604,6 +604,11 @@ def test_scheduler_noinput(engine, cli, cleanup):
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
     )
 
+    r = cli('unprepare', engine.url, sid)
+    assert scrub(r.output) == '<X> : removed <X> prepared operation'
+    r = cli('unprepare', engine.url, sid)
+    assert scrub(r.output) == '<X> : removed <X> prepared operation'
+
 
 def test_scheduler_with_inputs(engine, cli, cleanup):
     # note: shouldn't be needed as per the "cleanup" fixture ...
