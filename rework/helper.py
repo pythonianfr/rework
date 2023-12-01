@@ -11,6 +11,8 @@ import re
 import json
 import struct
 import tzlocal
+import importlib
+import sys
 
 from icron import croniter_range
 import pyzstd as zstd
@@ -35,6 +37,19 @@ def setuplogger(level=logging.DEBUG):
     logger.addHandler(handler)
     logger.setLevel(level)
     return logger
+
+
+def load_source(modname, filename):
+    loader = importlib.machinery.SourceFileLoader(
+        modname, filename
+    )
+    spec = importlib.util.spec_from_file_location(
+        modname, filename, loader=loader
+    )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[modname] = module
+    loader.exec_module(module)
+    return module
 
 
 def utcnow():

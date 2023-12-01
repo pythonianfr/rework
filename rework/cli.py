@@ -1,4 +1,3 @@
-import imp
 from datetime import timedelta
 from time import sleep
 import tzlocal
@@ -19,6 +18,7 @@ from rework.helper import (
     cleanup_tasks,
     cleanup_workers,
     find_dburi,
+    load_source,
     schedule_plan,
     utcnow,
     setuplogger
@@ -60,10 +60,9 @@ def register_operations(dburi, module, domain=None, asdomain=None):
     The registered operations will be relative to the current host.
     """
     # load the module
-    imp.load_source('operations', module)
+    load_source('operations', module)
     engine = create_engine(find_dburi(dburi))
     ok, ko = api.freeze_operations(engine, domain)
-
     print(f'registered {len(ok)} new operation ({len(ko)} already known)')
 
 

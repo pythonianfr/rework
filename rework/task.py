@@ -1,5 +1,4 @@
 import sys
-import imp
 import time
 from pickle import dumps, loads
 import traceback as tb
@@ -9,6 +8,7 @@ import logging
 from sqlhelp import select, update
 
 from rework.helper import (
+    load_source,
     pack_io,
     PGLogHandler,
     PGLogWriter,
@@ -313,15 +313,15 @@ class Task:
             ).values(
                 started=utcnow()
             ).do(cn)
-        try:
-            name, path = self.engine.execute("""
-                select name, path
-                from rework.operation
-                where rework.operation.id = %(operation)s
-            """, {'operation': self.operation}
+            name, path = self.engine.execute(
+                'select name, path '
+                'from rework.operation '
+                'where rework.operation.id = %(operation)s',
+                operation=self.operation
             ).fetchone()
-            mod = imp.load_source('module', path)
-            func = getattr(mod, name)
+        mod = load_source('module', path)
+        func = getattr(mod, name)
+        try:
             func(self)
         except:
             with self.engine.begin() as cn:
