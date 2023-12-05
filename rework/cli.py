@@ -152,6 +152,7 @@ def new_worker(**config):
               help='shutdown on Mb consummed')
 @click.option('--domain', default='default')
 @click.option('--debug', is_flag=True, default=False)
+@click.option('--debug-port', type=int, default=0)
 @click.option('--start-timeout', type=int, default=30)
 @click.option('--debugfile')
 def monitor(dburi, **config):

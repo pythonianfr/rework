@@ -221,6 +221,7 @@ class Monitor:
     def __init__(self, engine, logger=None, domain='default',
                  minworkers=None, maxworkers=2,
                  maxruns=0, maxmem=0, debug=False,
+                 debug_port=0,
                  start_timeout=30, debugfile=None):
         self.engine = engine
         self.logger = logger or setuplogger()
@@ -230,7 +231,7 @@ class Monitor:
         assert 0 <= self.minworkers <= self.maxworkers
         self.maxruns = maxruns
         self.maxmem = maxmem
-        self.debugport = 6666 if debug else 0
+        self.debugport = 6666 or debug_port if debug else 0
         self.workers = {}
         self.host = host()
         self.start_timeout = start_timeout
