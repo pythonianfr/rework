@@ -11,6 +11,7 @@ import traceback as tb
 from pathlib import Path
 import sys
 
+import isodate
 import tzlocal
 import pytz
 import psutil
@@ -22,7 +23,6 @@ from rework.helper import (
     kill_process_tree,
     memory_usage,
     iter_stamps_from_cronrules,
-    parse_delta,
     partition,
     schedule_plan,
     setuplogger,
@@ -390,7 +390,7 @@ class Monitor:
         with self.engine.begin() as cn:
             for tid, start_time, timeout in cn.execute(sql).fetchall():
                 start_time = start_time.astimezone(pytz.utc)
-                delta = parse_delta(timeout)
+                delta = isodate.parse_duration(timeout)
                 now = utcnow()
                 if (now - start_time) > delta:
                     Task.byid(self.engine, tid).abort('timeout')

@@ -5,6 +5,7 @@ import time
 
 import pytest
 from sqlhelp import insert, update
+import isodate
 
 from rework import api
 from rework.monitor import Monitor
@@ -12,11 +13,9 @@ from rework.task import Task, TimeOut
 from rework.worker import Worker
 from rework.helper import (
     cpu_usage,
-    delta_isoformat,
     guard,
     kill_process_tree,
     memory_usage,
-    parse_delta,
     wait_true
 )
 from rework.testutils import scrub, workers
@@ -626,9 +625,9 @@ def test_timeout(engine, cleanup):
     d1 = datetime(2018, 1, 1)
     d2 = datetime(2018, 3, 3, 12, 45, 30)
     delta = d2 - d1
-    iso = delta_isoformat(delta)
-    assert iso == 'P61DT0H0M45930S'
-    delta_out = parse_delta(iso)
+    iso = isodate.duration_isoformat(delta)
+    assert iso == 'P61DT12H45M30S'
+    delta_out = isodate.parse_duration(iso)
     assert delta == delta_out
 
     with workers(engine, numworkers=3) as mon:

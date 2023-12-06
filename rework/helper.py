@@ -5,9 +5,8 @@ from threading import Thread
 import socket
 import time
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-import re
 import json
 import struct
 import tzlocal
@@ -213,24 +212,6 @@ def kill_process_tree(pid, timeout=3):
         kill_process_tree(proc.pid, timeout)
         kill(proc.pid)
     return kill(pid)
-
-
-# timedelta (de)serialisation
-
-def delta_isoformat(td):
-    return f'P{td.days}DT0H0M{td.seconds}S'
-
-
-_DELTA = re.compile('P(.*)DT(.*)H(.*)M(.*)S')
-def parse_delta(td):
-    match = _DELTA.match(td)
-    if not match:
-        raise Exception(f'unparseable time delta `{td}`')
-    days, hours, minutes, seconds = match.groups()
-    return timedelta(
-        days=int(days), hours=int(hours),
-        minutes=int(minutes), seconds=int(seconds)
-    )
 
 
 # configuration lookup

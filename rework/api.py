@@ -9,9 +9,9 @@ from pathlib import Path
 from sqlalchemy.exc import IntegrityError
 from sqlhelp import select, insert
 from icron import croniter
+import isodate
 
 from rework.helper import (
-    delta_isoformat,
     filterio,
     host,
     InputEncoder,
@@ -268,7 +268,7 @@ def freeze_operations(engine, domain=None, hostid=None, reset=True):
         if domain is not None and domain != fdomain:
             continue
         if timeout is not None:
-            timeout = delta_isoformat(timeout)
+            timeout = isodate.duration_isoformat(timeout)
         funcmod = func.__module__
         module = sys.modules[funcmod]
         modpath = module.__file__
