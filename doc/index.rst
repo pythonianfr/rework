@@ -216,7 +216,7 @@ Specifying inputs
 .................
 
 Having a formal declaration of the task input can help validate them
-and also, in `reworkui <https://hg.sr.ht/~pythonian/rework_ui>`_ it
+and also, in `rework_ui <https://hg.sr.ht/~pythonian/rework_ui>`_ it
 will provide an interactive web form allowing subsequent launches of
 the task.
 
