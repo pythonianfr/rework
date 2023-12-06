@@ -151,6 +151,7 @@ def new_worker(**config):
 @click.option('--maxmem', type=int, default=0,
               help='shutdown on Mb consummed')
 @click.option('--domain', default='default')
+@click.option('--vacuum', default='P1D')
 @click.option('--debug', is_flag=True, default=False)
 @click.option('--debug-port', type=int, default=0)
 @click.option('--start-timeout', type=int, default=30)
