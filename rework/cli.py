@@ -500,9 +500,10 @@ def import_scheduled(dburi, path):
 @click.argument('dburi')
 @click.option('--workers', is_flag=True, default=False)
 @click.option('--tasks', is_flag=True, default=False)
+@click.option('--queued', is_flag=True, default=False)
 @click.option('--domain', default='default')
 @click.option('--days', type=int, default=0)
-def vacuum(dburi, workers=False, tasks=False, domain='default', days=0):
+def vacuum(dburi, workers=False, tasks=False, queued=False, domain='default', days=0):
     " delete non-runing workers or finished tasks "
     if not (workers or tasks):
         print('to cleanup old workers or tasks '
@@ -521,7 +522,8 @@ def vacuum(dburi, workers=False, tasks=False, domain='default', days=0):
         print(f'deleted {count} workers')
 
     if tasks:
-        count = cleanup_tasks(engine, finished, domain)
+        status = 'queued' if queued else 'done'
+        count = cleanup_tasks(engine, finished, domain, status)
         print(f'deleted {count} tasks')
 
 
