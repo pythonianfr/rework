@@ -153,13 +153,14 @@ class scheduler:
 
         if not self.runnable:
             lastnow = self.laststamp
+            now = datetime.now(TZ)
             # time to build the next runnable batch
             self.runnable = list(
                 sorted(
                     iter_stamps_from_cronrules(
                         self.rulemap,
                         lastnow + timedelta(milliseconds=1),
-                        lastnow + timedelta(**self._step)
+                        now + timedelta(**self._step)
                     ),
                     key=lambda stamp_func: stamp_func[0]
                 )
