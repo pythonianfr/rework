@@ -307,7 +307,7 @@ Example:
 .. code-block:: python
 
    api.prepare(
-       engine,g
+       engine,
        'compute_things',
        {'myfile.txt': b'file contents',
        'birthdate': datetime(1973, 5, 20, 9),
