@@ -6,6 +6,11 @@ from rework import api, io
 
 
 @api.task
+def basic(task):
+    print('This task is a 10. So basic...')
+
+
+@api.task
 def print_sleep_and_go_away(task):
     print('Hello, world')
     time.sleep(.2)

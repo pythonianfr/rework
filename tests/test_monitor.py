@@ -41,6 +41,7 @@ def test_basic_task_operations(engine, cleanup):
     ]
     assert [
         ('allocate_and_leak_mbytes', 'tasks.py'),
+        ('basic', 'tasks.py'),
         ('capture_logs', 'tasks.py'),
         ('fancy_inputs_outputs', 'tasks.py'),
         ('flush_captured_stdout', 'tasks.py'),

@@ -19,6 +19,7 @@ def test_list_operations(engine, cli, cleanup):
         r = cli('list-operations', engine.url)
 
         assert """
+<X> `basic` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `print_sleep_and_go_away` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `run_in_non_default_domain` nondefault path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `raw_input` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
