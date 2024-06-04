@@ -19,4 +19,4 @@ def test_web_scheduling(engine, cleanup, capsys):
             "\n[parameters: {\'name\': \'basic\', \'modname\': {\'user\': \'WEBUI\'}}]"
         )
 
-        assert error in printed[-1]
+        assert error not in printed[-1]

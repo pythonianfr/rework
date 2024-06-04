@@ -139,11 +139,18 @@ class scheduler:
     def __repr__(self):
         return f'<scheduler for {self.domain} ->\n{self.defs}>'
 
-    def schedule(self, rule, *args):
+    def schedule(self, rule, opname, domain, rawinputdata, hostid, metadata):
         self.rulemap.append(
             (
                 rule,
-                lambda: api.schedule(self.engine, *args)
+                lambda: api.schedule(
+                    self.engine,
+                    opname=opname,
+                    domain=domain,
+                    rawinputdata=rawinputdata,
+                    hostid=hostid,
+                    metadata=metadata
+                )
             )
         )
 
@@ -194,9 +201,16 @@ class scheduler:
             self.rulemap = []
             self.runnable = []
             self.logger.info(f'sched: starting with {len(defs)} definitions')
-            for idx, (operation, rule, inputdata, hostid, meta) in enumerate(defs):
+            for idx, (operation, rule, rawinputdata, hostid, meta) in enumerate(defs):
                 self.logger.info(f'{idx} {operation} {rule} {hostid} {meta}')
-                self.schedule(rule, operation, self.domain, inputdata, hostid, meta)
+                self.schedule(
+                    rule,
+                    opname=operation,
+                    domain=self.domain,
+                    rawinputdata=rawinputdata,
+                    hostid=hostid,
+                    metadata=meta
+                )
             self.defs = defs
 
         self.run_scheduled()
