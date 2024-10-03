@@ -524,6 +524,18 @@ def test_vacuum(engine, cli, cleanup):
     assert ntasks == 0
 
 
+def test_vacuum_queued(engine, cli, cleanup):
+    t1 = api.schedule(engine, 'print_sleep_and_go_away', 1)
+
+    r = cli('list-tasks', engine.url)
+    assert r.output.count('queued') == 1
+
+    r = cli('vacuum', engine.url, '--tasks', '--queued')
+
+    r = cli('list-tasks', engine.url)
+    assert r.output.count('queued') == 1  # BAD
+
+
 def test_scheduler_noinput(engine, cli, cleanup):
     r = cli('list-scheduled', engine.url)
     assert len(r.output.strip()) == 0
