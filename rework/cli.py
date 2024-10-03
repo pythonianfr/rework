@@ -524,7 +524,7 @@ def vacuum(dburi, workers=False, tasks=False, queued=False, domain='default', da
 
     if tasks:
         status = 'queued' if queued else 'done'
-        count = cleanup_tasks(engine, finished, domain, status)
+        count = cleanup_tasks(engine, finished if status != 'queued' else None, domain, status)
         print(f'deleted {count} tasks')
 
 

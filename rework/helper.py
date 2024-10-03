@@ -152,16 +152,19 @@ def cleanup_workers(engine, finished, domain):
 
 def cleanup_tasks(engine, finished, domain, status='done'):
     with engine.begin() as cn:
+        finish = ''
+        if finished:
+            finish = 't.finished < %(finished)s and'
         count = cn.execute(
-            'with deleted as '
-            '(delete from rework.task as t'
-            '        using rework.operation as o'
-            '        where t.status = %(status)s and '
-            '              t.finished < %(finished)s and'
-            '              t.operation = o.id and '
-            '              o.domain = %(domain)s'
-            ' returning 1) '
-            'select count(*) from deleted',
+            f'with deleted as '
+            f'(delete from rework.task as t'
+            f'        using rework.operation as o'
+            f'        where t.status = %(status)s and '
+            f'              {finish}'
+            f'              t.operation = o.id and '
+            f'              o.domain = %(domain)s'
+            f' returning 1) '
+            f'select count(*) from deleted',
             finished=finished,
             domain=domain,
             status=status

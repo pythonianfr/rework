@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 from pathlib import Path
 import time
@@ -10,7 +11,11 @@ from rework.testutils import (
     tempdir,
     workers
 )
-from rework.helper import guard, wait_true
+from rework.helper import (
+    cleanup_tasks,
+    guard,
+    wait_true
+)
 from rework.task import Task
 
 
@@ -530,10 +535,23 @@ def test_vacuum_queued(engine, cli, cleanup):
     r = cli('list-tasks', engine.url)
     assert r.output.count('queued') == 1
 
+    # directly
+    cleanup_tasks(engine, None, 'default', 'queued')
+
+    r = cli('list-tasks', engine.url)
+    assert r.output.count('queued') == 0
+
+    # cli
+    t1 = api.schedule(engine, 'print_sleep_and_go_away', 1)
+
+    r = cli('list-tasks', engine.url)
+    assert r.output.count('queued') == 1
+
     r = cli('vacuum', engine.url, '--tasks', '--queued')
 
     r = cli('list-tasks', engine.url)
-    assert r.output.count('queued') == 1  # BAD
+    assert r.output.count('queued') == 0
+
 
 
 def test_scheduler_noinput(engine, cli, cleanup):
