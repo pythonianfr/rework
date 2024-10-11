@@ -1,4 +1,3 @@
-from datetime import datetime
 import os
 from pathlib import Path
 import time
@@ -530,7 +529,7 @@ def test_vacuum(engine, cli, cleanup):
 
 
 def test_vacuum_queued(engine, cli, cleanup):
-    t1 = api.schedule(engine, 'print_sleep_and_go_away', 1)
+    api.schedule(engine, 'print_sleep_and_go_away', 1)
 
     r = cli('list-tasks', engine.url)
     assert r.output.count('queued') == 1
@@ -542,7 +541,7 @@ def test_vacuum_queued(engine, cli, cleanup):
     assert r.output.count('queued') == 0
 
     # cli
-    t1 = api.schedule(engine, 'print_sleep_and_go_away', 1)
+    api.schedule(engine, 'print_sleep_and_go_away', 1)
 
     r = cli('list-tasks', engine.url)
     assert r.output.count('queued') == 1
