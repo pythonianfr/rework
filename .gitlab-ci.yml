@@ -1,0 +1,13 @@
+stages:
+  - test
+
+image: registry.heptapod.host/pythonian/dockerizer/ci-image:latest
+
+unit-test-job:
+  stage: test
+  tags:
+    - clever-cloud
+  script:
+    - pip install -e .
+    - ruff check .
+    - pytest
