@@ -105,7 +105,7 @@ def unregister_operation(dburi, operation, domain=None, module=None, host=None,
             print(Fore.RED + 'delete', end=' ')
             print(Fore.GREEN + name, end=' ')
             print(Fore.WHITE + domain, path, host)
-        if not click.confirm('really remove those [y/n]?'):
+        if not click.confirm('really remove those?'):
             print('Ok, nothing has been done.')
             return
 
