@@ -139,7 +139,7 @@ def test_task_decorator(cleanup):
             pass
 
     assert werr.value.args[0] == (
-        "Use either @task or @task(domain='domain', timeout=..., inputs=..., outputs=...)"
+        "Use either @task or @task(domain='domain', timeout=..., vacuum=..., inputs=..., outputs=...)"
     )
 
 
@@ -191,6 +191,10 @@ def register_tasks():
     def nr(task):
         pass
 
+    @api.task(vacuum=timedelta(days=1, hours=8))
+    def vac(task):
+        pass
+
 
 def test_freeze_ops(engine, cleanup):
     reset_ops(engine)
@@ -200,18 +204,19 @@ def test_freeze_ops(engine, cleanup):
     res = [
         tuple(row)
         for row in engine.execute(
-                'select name, domain, inputs from rework.operation '
+                'select name, domain, inputs, vacuum from rework.operation '
                 'order by domain, name'
         ).fetchall()
     ]
     assert res == [
-        ('cheesy', 'cheese', None),
-        ('foo', 'default', None),
+        ('cheesy', 'cheese', None, None),
+        ('foo', 'default', None, None),
         ('happy_days', 'default', [
             {'choices': None, 'name': 'when', 'default': None,
              'required': False, 'type': 'moment'}
-        ]),
-        ('noinput', 'default', []),
+        ], None),
+        ('noinput', 'default', [], None),
+        ('vac', 'default', None, timedelta(days=1, hours=8)),
         ('yummy', 'default', [
             {'choices': None, 'default': None, 'name': 'myfile.txt',
              'required': True, 'type': 'file'},
@@ -229,12 +234,12 @@ def test_freeze_ops(engine, cleanup):
              'required': False, 'type': 'string'},
             {'choices': None, 'default': None, 'name': 'ignoreme',
              'required': False, 'type': 'string'}
-        ]),
-        ('hammy', 'ham', None),
+        ], None),
+        ('hammy', 'ham', None, None),
         ('nr', 'non-default', [
             {'choices': None, 'default': None, 'name': 'history',
              'required': False, 'type': 'number'}
-        ])
+        ], None)
     ]
 
     res = [
@@ -264,6 +269,7 @@ def test_freeze_ops(engine, cleanup):
         ('foo', 'default'),
         ('happy_days', 'default'),
         ('noinput', 'default'),
+        ('vac', 'default'),
         ('yummy', 'default'),
         ('hammy', 'ham')
     ]

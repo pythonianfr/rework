@@ -25,6 +25,8 @@ def test_list_operations(engine, cli, cleanup):
         assert """
 <X> `basic` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `print_sleep_and_go_away` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
+<X> `custom_vacuum_rule_one_hour` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
+<X> `custom_vacuum_rule_one_second` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `run_in_non_default_domain` nondefault path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `raw_input` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `fancy_inputs_outputs` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
@@ -526,6 +528,24 @@ def test_vacuum(engine, cli, cleanup):
 
     ntasks = engine.execute('select count(*) from rework.task').scalar()
     assert ntasks == 0
+
+
+def test_vacuum_custom_rule(engine, cli, cleanup):
+    def run():
+        with workers(engine, numworkers=2):
+            t1 = api.schedule(engine, 'print_sleep_and_go_away', 1)
+            t2 = api.schedule(engine, 'custom_vacuum_rule_one_hour')
+            t3 = api.schedule(engine, 'custom_vacuum_rule_one_second')
+            t1.join()
+            t2.join()
+            t3.join()
+
+    run()
+
+    r = cli('list-tasks', engine.url)
+    assert r.output.count('done') == 3
+    r = cli('vacuum', engine.url, '--tasks')
+    assert r.output == 'deleted 2 tasks\n'
 
 
 def test_vacuum_queued(engine, cli, cleanup):

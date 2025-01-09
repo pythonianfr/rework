@@ -21,6 +21,16 @@ def print_sleep_and_go_away(task):
     print('And now I am done.')
 
 
+@api.task(vacuum=timedelta(days=1))
+def custom_vacuum_rule_one_hour(task):
+    print('hi')
+
+
+@api.task(vacuum=timedelta(seconds=1))
+def custom_vacuum_rule_one_second(task):
+    print('hi')
+
+
 @api.task(domain='nondefault')
 def run_in_non_default_domain(task):
     task.save_output('done')

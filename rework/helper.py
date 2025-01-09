@@ -155,6 +155,7 @@ def cleanup_tasks(engine, finished, domain, status='done'):
         finish = ''
         if finished:
             finish = 't.finished < %(finished)s and'
+        # everyone but those that have a dedicated vacuum rule
         count = cn.execute(
             f'with deleted as '
             f'(delete from rework.task as t'
@@ -162,14 +163,32 @@ def cleanup_tasks(engine, finished, domain, status='done'):
             f'        where t.status = %(status)s and '
             f'              {finish}'
             f'              t.operation = o.id and '
-            f'              o.domain = %(domain)s'
+            f'              o.vacuum is NULL and '
+            f'              o.domain = %(domain)s '
             f' returning 1) '
             f'select count(*) from deleted',
             finished=finished,
             domain=domain,
             status=status
         ).scalar()
-    return count
+        if finished:
+            finish = '%(finished)s > ( t.finished  + o.vacuum ) and '
+        count2 = cn.execute(
+            f'with deleted as '
+            f'(delete from rework.task as t'
+            f'        using rework.operation as o'
+            f'        where t.status = %(status)s and '
+            f'              {finish}'
+            f'              t.operation = o.id and '
+            f'              o.vacuum is NOT NULL and '
+            f'              o.domain = %(domain)s '
+            f' returning 1) '
+            f'select count(*) from deleted',
+            finished=finished,
+            domain=domain,
+            status=status
+        ).scalar()
+    return count + count2
 
 
 # process handling

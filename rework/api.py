@@ -57,18 +57,20 @@ def task(*args, **kw):
     All operation functions must take a single `task` parameter.
 
     """
-    msg = "Use either @task or @task(domain='domain', timeout=..., inputs=..., outputs=...)"
+    msg = "Use either @task or @task(domain='domain', timeout=..., vacuum=..., inputs=..., outputs=...)"
     if args:
         assert callable(args[0]), msg
     else:
-        assert 'domain' in kw or 'timeout' in kw or 'inputs' in kw or 'outputs' in kw, msg
+        assert ('domain' in kw or 'timeout' in kw or
+                'inputs' in kw or 'outputs' in kw or 'vacuum' in kw), msg
     domain = 'default'
     timeout = None
     inputs = None
     outputs = None
+    vacuum = None
 
     def register_task(func):
-        __task_registry__[(domain, func.__name__)] = (func, timeout)
+        __task_registry__[(domain, func.__name__)] = (func, timeout, vacuum)
         if inputs is None and outputs is None:
             return func
 
@@ -92,10 +94,14 @@ def task(*args, **kw):
     timeout = kw.pop('timeout', None)
     inputs = kw.pop('inputs', None)
     outputs = kw.pop('outputs', None)
+    vacuum = kw.pop('vacuum', None)
     assert domain or timeout or inputs or outputs
     if timeout is not None:
         msg = 'timeout must be a timedelta object'
         assert isinstance(timeout, timedelta), msg
+    if vacuum is not None:
+        msg = 'vacuum must be a timedelta object'
+        assert isinstance(vacuum, timedelta), msg
 
     return register_task
 
@@ -264,11 +270,13 @@ def freeze_operations(engine, domain=None, hostid=None, reset=True):
     if hostid is None:
         hostid = host()
 
-    for (fdomain, fname), (func, timeout) in __task_registry__.items():
+    for (fdomain, fname), (func, timeout, vacuum) in __task_registry__.items():
         if domain is not None and domain != fdomain:
             continue
         if timeout is not None:
             timeout = isodate.duration_isoformat(timeout)
+        if vacuum is not None:
+            vacuum = isodate.duration_isoformat(vacuum)
         funcmod = func.__module__
         module = sys.modules[funcmod]
         modpath = module.__file__
@@ -279,6 +287,7 @@ def freeze_operations(engine, domain=None, hostid=None, reset=True):
             'path': modpath,
             'domain': fdomain,
             'timeout': timeout,
+            'vacuum': vacuum,
         }
         # inputs
         if (fdomain, fname) in __task_inputs__:

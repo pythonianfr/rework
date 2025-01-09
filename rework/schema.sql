@@ -41,6 +41,7 @@ create table {ns}.operation (
   timeout text,
   inputs jsonb,
   outputs jsonb,
+  vacuum interval,
   constraint unique_operation unique (host, name, path)
 );
 
