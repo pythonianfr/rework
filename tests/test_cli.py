@@ -132,7 +132,7 @@ def test_list_monitors(engine, cli, cleanup):
 
         assert (
             '<X> <X>-<X>-<X> <X>:<X>:<X>+<X>  '
-            'default options(maxmem=<X>, maxruns=<X>, debugport=<X>, '
+            'default options(maxmem=<X>, vacuum=P<X>D, maxruns=<X>, debugport=<X>, '
             'maxworkers=<X>, minworkers=<X>)'
         ) == scrub(r.output)
 

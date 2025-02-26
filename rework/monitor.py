@@ -592,7 +592,8 @@ class Monitor:
                     'minworkers': self.minworkers,
                     'maxruns': self.maxruns,
                     'maxmem': self.maxmem,
-                    'debugport': self.debugport
+                    'debugport': self.debugport,
+                    'vacuum': isodate.duration_isoformat(self.vacuum)
                 })
             )
             self.monid = q.do(cn).scalar()

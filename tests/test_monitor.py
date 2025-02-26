@@ -225,7 +225,8 @@ def test_monitor_base(engine, cleanup):
             'maxruns': 0,
             'debugport': 0,
             'maxworkers': 1,
-            'minworkers': 1
+            'minworkers': 1,
+            'vacuum': 'P1D'
         } == res
 
     # generic monitor assertions
