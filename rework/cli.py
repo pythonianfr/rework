@@ -42,7 +42,7 @@ def rework():
 def init_db(ctx, dburi):
     " initialize a postgres database with everything needed "
     engine = create_engine(find_dburi(dburi))
-    schema.init(engine, drop=True)
+    schema.init(engine)
 
 
 @rework.command(name='register-operations')
