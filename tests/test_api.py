@@ -201,13 +201,15 @@ def test_freeze_ops(engine, cleanup):
     register_tasks()
     api.freeze_operations(engine)
 
-    res = [
-        tuple(row)
-        for row in engine.execute(
-                'select name, domain, inputs, vacuum from rework.operation '
-                'order by domain, name'
-        ).fetchall()
-    ]
+    with engine.begin() as cn:
+        res = [
+            tuple(row)
+            for row in cn.execute(
+                    'select name, domain, inputs, vacuum from rework.operation '
+                    'order by domain, name'
+            ).fetchall()
+        ]
+
     assert res == [
         ('cheesy', 'cheese', None, None),
         ('foo', 'default', None, None),
@@ -242,14 +244,16 @@ def test_freeze_ops(engine, cleanup):
         ], None)
     ]
 
-    res = [
-        tuple(row)
-        for row in engine.execute(
-                'select name, domain, outputs from rework.operation '
-                'where outputs is not null '
-                'order by domain, name'
-        ).fetchall()
-    ]
+    with engine.begin() as cn:
+        res = [
+            tuple(row)
+            for row in cn.execute(
+                    'select name, domain, outputs from rework.operation '
+                    'where outputs is not null '
+                    'order by domain, name'
+            ).fetchall()
+        ]
+
     assert res == [
         ('hammy', 'ham', [
             {'choices': None, 'name': 'taste', 'default': None,
@@ -262,9 +266,11 @@ def test_freeze_ops(engine, cleanup):
     api.freeze_operations(engine, domain='default', reset=False)
     api.freeze_operations(engine, domain='ham', reset=False)
 
-    res = engine.execute(
-        'select name, domain from rework.operation order by domain, name'
-    ).fetchall()
+    with engine.begin() as cn:
+        res = cn.execute(
+            'select name, domain from rework.operation order by domain, name'
+        ).fetchall()
+
     assert res == [
         ('foo', 'default'),
         ('happy_days', 'default'),
@@ -283,12 +289,14 @@ def test_prepare_unprepare(engine, cleanup):
     api.prepare(engine, 'foo', ' 0 0 8 * * *')
     sid = api.prepare(engine, 'foo', ' 0 30 8 * * *')
 
-    res = engine.execute('select count(*) from rework.sched').scalar()
+    with engine.begin() as cn:
+        res = cn.execute('select count(*) from rework.sched').scalar()
     assert res == 2
 
     count = api.unprepare(engine, sid)
     assert count == 1
-    res = engine.execute('select count(*) from rework.sched').scalar()
+    with engine.begin() as cn:
+        res = cn.execute('select count(*) from rework.sched').scalar()
     assert res == 1
 
     count = api.unprepare(engine, sid)
@@ -414,7 +422,8 @@ def test_convert_io(engine, cleanup):
         'sometime': '(date "1973-5-20")',
         'option': 'foo'
     }
-    specs = iospec(engine)
+    with engine.begin() as cn:
+        specs = iospec(cn)
     spec = filterio(specs, 'yummy')
     typed = convert_io(spec, args)
     assert typed == {
@@ -457,7 +466,8 @@ def test_prepare_with_inputs(engine, cleanup):
         inputdata=args,
         metadata={'user': 'Babar'}
     )
-    res = engine.execute('select count(*) from rework.sched').scalar()
+    with engine.begin() as cn:
+        res = cn.execute('select count(*) from rework.sched').scalar()
     assert res == 1
 
     for name, badvalue in (
@@ -526,12 +536,14 @@ def test_prepare_with_inputs(engine, cleanup):
         rule='* * * * * *', _anyrule=True
     )
 
-    inputdata = engine.execute(
-        'select inputdata from rework.sched where id = %(sid)s',
-        sid=sid
-    ).scalar()
+    with engine.begin() as cn:
+        inputdata = cn.execute(
+            'select inputdata from rework.sched where id = %(sid)s',
+            sid=sid
+        ).scalar()
 
-    specs = iospec(engine)
+        specs = iospec(cn)
+
     spec = filterio(specs, 'yummy')
     unpacked = unpack_io(spec, inputdata)
     assert unpacked == {
@@ -561,7 +573,9 @@ def test_prepare_with_inputs(engine, cleanup):
     unpacked_file = unpack_iofile(spec, inputdata, 'myfile.txt')
     assert unpacked_file == b'some file'
 
-    prep = prepared(engine, 'yummy', 'default')
+    with engine.begin() as cn:
+        prep = prepared(cn, 'yummy', 'default')
+
     assert len(prep) == 2
     assert prep[0][1] ==(
         b'myfile.txt',
@@ -624,12 +638,13 @@ def test_prepare_inputs_nr_domain_mismatch(engine, cleanup):
         inputdata=data
     )
 
-    inputdata = engine.execute(
-        'select inputdata from rework.sched where id = %(sid)s',
-        sid=sid
-    ).scalar()
+    with engine.begin() as cn:
+        inputdata = cn.execute(
+            'select inputdata from rework.sched where id = %(sid)s',
+            sid=sid
+        ).scalar()
+        specs = iospec(cn)
 
-    specs = iospec(engine)
     spec = filterio(specs, 'nr')
     unpacked = unpack_io(spec, inputdata)
     assert unpacked == {'history': 0}
@@ -673,12 +688,14 @@ def test_schedule_domain(engine, cleanup):
     api.schedule(engine, 'foo', domain='production', hostid='192.168.122.42')
     api.schedule(engine, 'foo', domain='production', hostid=host())
 
-    hosts = [
-        host for host, in engine.execute(
-            'select host from rework.task as t, rework.operation as op '
-            'where t.operation = op.id'
-        ).fetchall()
-    ]
+    with engine.begin() as cn:
+        hosts = [
+            host for host, in cn.execute(
+                'select host from rework.task as t, rework.operation as op '
+                'where t.operation = op.id'
+            ).fetchall()
+        ]
+
     assert hosts.count(host()) == 3
     assert hosts.count('192.168.122.42') == 1
 

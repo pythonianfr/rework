@@ -6,7 +6,7 @@ import json
 import traceback
 from pathlib import Path
 
-from sqlalchemy.exc import IntegrityError
+from psycopg.errors import UniqueViolation
 from sqlhelp import select, insert
 from icron import croniter
 import isodate
@@ -136,27 +136,27 @@ def schedule(engine,
     if metadata:
         assert isinstance(metadata, dict)
 
-    if rawinputdata is None:
-        spec = filterio(iospec(engine), opname, domain, hostid)
-        if spec is not None:
-            rawinputdata = pack_io(spec, inputdata)
-        elif inputdata is not None:
-            rawinputdata = dumps(inputdata, protocol=2)
-
-    q = select('id').table('rework.operation').where(
-        name=opname
-    )
-
-    if hostid is not None:
-        q.where(host=hostid)
-
-    if module is not None:
-        q.where(modname=module)
-
-    if domain is not None:
-        q.where(domain=domain)
-
     with engine.begin() as cn:
+        if rawinputdata is None:
+            spec = filterio(iospec(cn), opname, domain, hostid)
+            if spec is not None:
+                rawinputdata = pack_io(spec, inputdata)
+            elif inputdata is not None:
+                rawinputdata = dumps(inputdata, protocol=2)
+
+        q = select('id').table('rework.operation').where(
+            name=opname
+        )
+
+        if hostid is not None:
+            q.where(host=hostid)
+
+        if module is not None:
+            q.where(modname=module)
+
+        if domain is not None:
+            q.where(domain=domain)
+
         opids = q.do(cn).fetchall()
         if len(opids) > 1:
             if hostid is None:
@@ -201,24 +201,24 @@ def prepare(engine,
     if metadata:
         assert isinstance(metadata, dict)
 
-    ops_doms = ops_and_domains(engine)
-    if (opname, domain) not in ops_doms:
-        raise Exception(f'{opname} / {domain} are not known')
-
-    # validate the rules
-    if not _anyrule and rule.startswith('*'):
-        raise ValueError('"every second" rule is forbidden')
-    assert croniter.is_valid(rule)
-
-    spec = filterio(iospec(engine), opname, domain, host)
-    inputdata = inputdata or {} if spec else inputdata
-    if rawinputdata is None and inputdata is not None:
-        if spec is not None:
-            rawinputdata = pack_io(spec, inputdata)
-        else:
-            rawinputdata = dumps(inputdata, protocol=2)
-
     with engine.begin() as cn:
+        ops_doms = ops_and_domains(cn)
+        if (opname, domain) not in ops_doms:
+            raise Exception(f'{opname} / {domain} are not known')
+
+        # validate the rules
+        if not _anyrule and rule.startswith('*'):
+            raise ValueError('"every second" rule is forbidden')
+        assert croniter.is_valid(rule)
+
+        spec = filterio(iospec(cn), opname, domain, host)
+        inputdata = inputdata or {} if spec else inputdata
+        if rawinputdata is None and inputdata is not None:
+            if spec is not None:
+                rawinputdata = pack_io(spec, inputdata)
+            else:
+                rawinputdata = dumps(inputdata, protocol=2)
+
         opid = select('id').table('rework.operation').where(
             name=opname
         ).do(cn).scalar()
@@ -322,7 +322,7 @@ def freeze_operations(engine, domain=None, hostid=None, reset=True):
                 )
                 q.do(cn)
                 recorded.append(value)
-            except IntegrityError:
+            except UniqueViolation:
                 alreadyknown.append(value)
 
     return recorded, alreadyknown

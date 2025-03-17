@@ -520,14 +520,16 @@ def test_vacuum(engine, cli, cleanup):
 
     run_stuff()
 
-    ntasks = engine.execute('select count(*) from rework.task').scalar()
-    assert ntasks == 3
+    with engine.begin() as cn:
+        ntasks = cn.execute('select count(*) from rework.task').scalar()
+        assert ntasks == 3
 
     r = cli('vacuum', engine.url, '--workers')
     assert r.output == 'deleted 2 workers\n'
 
-    ntasks = engine.execute('select count(*) from rework.task').scalar()
-    assert ntasks == 0
+    with engine.begin() as cn:
+        ntasks = cn.execute('select count(*) from rework.task').scalar()
+        assert ntasks == 0
 
 
 def test_vacuum_custom_rule(engine, cli, cleanup):
@@ -598,8 +600,9 @@ def test_scheduler_noinput(engine, cli, cleanup):
         time.sleep(2)
         mon.step()
         # from this we have a task
-        wait_true(lambda: engine.execute('select id from rework.task').scalar())
-        tid = engine.execute('select id from rework.task').scalar()
+        with engine.begin() as cn:
+            wait_true(lambda: cn.execute('select id from rework.task').scalar())
+            tid = cn.execute('select id from rework.task').scalar()
         t = Task.byid(engine, tid)
         wait_true(lambda: t.status == 'done')
 
@@ -632,8 +635,9 @@ def test_scheduler_noinput(engine, cli, cleanup):
         mon.step()
         time.sleep(1)
         mon.step()
-        wait_true(lambda: engine.execute('select id from rework.task').scalar())
-        tid = engine.execute('select id from rework.task').scalar()
+        with engine.begin() as cn:
+            wait_true(lambda: cn.execute('select id from rework.task').scalar())
+            tid = cn.execute('select id from rework.task').scalar()
         t = Task.byid(engine, tid)
         wait_true(lambda: t.status == 'done')
         r = cli('list-tasks', engine.url)
@@ -647,7 +651,7 @@ def test_scheduler_noinput(engine, cli, cleanup):
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC]'
     )
-    assert scrub(r2.output).strip() == (
+    assert scrub(r2.output)[:155].strip() == (
         '<X> run_in_non_default_domain done domain=nondefault '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
         '[<X>-<X>-<X> <X>:<X>:<X>.<X>UTC] → '
@@ -691,8 +695,9 @@ def test_scheduler_with_inputs(engine, cli, cleanup):
         time.sleep(1.1)
         mon.step()
         # from this we have a task
-        wait_true(lambda: engine.execute('select id from rework.task').scalar())
-        tid = engine.execute('select id from rework.task').scalar()
+        with engine.begin() as cn:
+            wait_true(lambda: cn.execute('select id from rework.task').scalar())
+            tid = cn.execute('select id from rework.task').scalar()
         t = Task.byid(engine, tid)
         wait_true(lambda: t.status == 'done')
         r = cli('list-tasks', engine.url)

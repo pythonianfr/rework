@@ -33,12 +33,14 @@ def test_basic_task_operations(engine, cleanup):
     api.schedule(engine, 'print_sleep_and_go_away', 21,
                  metadata={'user': 'Joe'})
 
-    known = [
-        (name, Path(path).name)
-        for name, path in engine.execute(
-                'select name, path from rework.operation order by name'
-        ).fetchall()
-    ]
+    with engine.begin() as cn:
+        known = [
+            (name, Path(path).name)
+            for name, path in cn.execute(
+                    'select name, path from rework.operation order by name'
+            ).fetchall()
+        ]
+
     assert [
         ('allocate_and_leak_mbytes', 'tasks.py'),
         ('basic', 'tasks.py'),
@@ -92,6 +94,7 @@ def test_monitor_step(engine, cleanup):
 
     stats = mon.step()
     mon.wait_all_started()
+    print('*' * 50)
 
     assert len(stats.new) == 2
     assert all(
@@ -147,13 +150,15 @@ def test_basic_worker_operations(engine, cleanup):
     worker = Worker(engine.url, wid)
 
     with worker.running_status():
-        assert engine.execute(
-            'select count(id) from rework.worker where running = true'
-        ).scalar() == 1
+        with engine.begin() as cn:
+            assert cn.execute(
+                'select count(id) from rework.worker where running = true'
+            ).scalar() == 1
 
-    assert engine.execute(
-        'select count(id) from rework.worker where running = true'
-    ).scalar() == 0
+    with engine.begin() as cn:
+        assert cn.execute(
+            'select count(id) from rework.worker where running = true'
+        ).scalar() == 0
 
 
 def test_failed_pending_start(engine, cleanup):
@@ -171,14 +176,15 @@ def test_failed_pending_start(engine, cleanup):
         assert len(mon.wids) == 2
 
         assert mon.pending_start != pending
-        out = [
-            (run, kill, info[:15])
-            for run, kill, info in engine.execute(
-                    'select running, kill, deathinfo from rework.worker '
-                    'where id in %(wids)s',
-                    wids=tuple(pending.keys())
-            )
-        ]
+        with engine.begin() as cn:
+            out = [
+                (run, kill, info[:15])
+                for run, kill, info in cn.execute(
+                        'select running, kill, deathinfo from rework.worker '
+                        'where id = ANY(%(wids)s)',
+                        wids=list(pending)
+                ).fetchall()
+            ]
         assert out == [
             (False, True, 'preemptive kill'),
             (False, True, 'preemptive kill')
@@ -213,13 +219,15 @@ def test_basic_worker_task_execution(engine, cleanup):
 
 def test_monitor_base(engine, cleanup):
     with workers(engine) as mon:
-        assert engine.execute(
-            f'select count(id) from rework.monitor where id = {mon.monid}'
-        ).scalar() == 1
+        with engine.begin() as cn:
+            assert cn.execute(
+                f'select count(id) from rework.monitor where id = {mon.monid}'
+            ).scalar() == 1
 
-        res = engine.execute(
-            f'select options from rework.monitor where id = {mon.monid}'
-        ).scalar()
+            res = cn.execute(
+                f'select options from rework.monitor where id = {mon.monid}'
+            ).scalar()
+
         assert {
             'maxmem': 0,
             'maxruns': 0,
@@ -295,9 +303,10 @@ def test_worker_shutdown(engine, cleanup):
         guard(engine, 'select count(id) from rework.worker where running = true',
               lambda r: r.scalar() == 0)
 
-        assert u'explicit shutdown' == engine.execute(
-            'select deathinfo from rework.worker where id = %(wid)s', wid=wid
-        ).scalar()
+        with engine.begin() as cn:
+            assert u'explicit shutdown' == cn.execute(
+                'select deathinfo from rework.worker where id = %(wid)s', wid=wid
+            ).scalar()
 
 
 def test_worker_kill(engine, cleanup):
@@ -316,9 +325,10 @@ def test_worker_kill(engine, cleanup):
         guard(engine, 'select count(id) from rework.worker where running = true',
               lambda r: r.scalar() == 0)
 
-        assert engine.execute(
-            'select deathinfo from rework.worker where id = %(wid)s', wid=wid
-        ).scalar().startswith('preemptive kill')
+        with engine.begin() as cn:
+            assert cn.execute(
+                'select deathinfo from rework.worker where id = %(wid)s', wid=wid
+            ).scalar().startswith('preemptive kill')
 
 
 def test_worker_max_runs(engine, cleanup):
@@ -367,9 +377,10 @@ def test_worker_max_mem(engine, cleanup):
             mon.step()
 
         t1.join()
-        assert engine.execute(
-            f'select mem from rework.worker where id = {wid}'
-        ).scalar() > 50
+        with engine.begin() as cn:
+            assert cn.execute(
+                f'select mem from rework.worker where id = {wid}'
+            ).scalar() > 50
 
         t2 = api.schedule(engine, 'allocate_and_leak_mbytes', 100)
         s = mon.step()
@@ -402,10 +413,11 @@ def test_task_abortion(engine, cleanup):
 
         # check cpu usage
         mon.track_resources()
-        cpu = engine.execute(
-            f'select cpu from rework.worker where id = {wid}'
-        ).scalar()
-        assert cpu > 0
+        with engine.begin() as cn:
+            cpu = cn.execute(
+                f'select cpu from rework.worker where id = {wid}'
+            ).scalar()
+            assert cpu > 0
 
         t.abort()
         assert t.aborted
@@ -421,9 +433,10 @@ def test_task_abortion(engine, cleanup):
         guard(engine, f'select running from rework.worker where id = {wid}',
               lambda res: not res.scalar())
 
-        diagnostic = engine.execute(
-            f'select deathinfo from rework.worker where id = {wid}'
-        ).scalar()
+        with engine.begin() as cn:
+            diagnostic = cn.execute(
+                f'select deathinfo from rework.worker where id = {wid}'
+            ).scalar()
 
         assert 'preemptive kill at <X>-<X>-<X> <X>:<X>:<X>.<X>+<X>:<X>' == scrub(diagnostic)
 
@@ -519,9 +532,10 @@ def test_logging_stress_test(engine, cleanup):
         t = api.schedule(engine, 'log_swarm')
 
         t.join()
-        records = engine.execute(
-            f'select id, line from rework.log where task = {t.tid}'
-        ).fetchall()
+        with engine.begin() as cn:
+            records = cn.execute(
+                f'select id, line from rework.log where task = {t.tid}'
+            ).fetchall()
 
         # we check that there is a constant offset between the
         # log id and the idx that is emitted by the task code
@@ -578,7 +592,7 @@ def test_cleanup_unstarted(engine, cleanup):
             domain='default'
         ).do(cn)  # unborn worker
 
-    nworkers = engine.execute('select count(*) from rework.worker').scalar()
+        nworkers = cn.execute('select count(*) from rework.worker').scalar()
     assert nworkers == 2
 
     t = api.schedule(engine, 'raw_input', b'foo')
@@ -588,8 +602,9 @@ def test_cleanup_unstarted(engine, cleanup):
     deleted = mon.cleanup_unstarted()
     assert deleted == 1
 
-    assert engine.execute('select count(*) from rework.worker').scalar() == 1
-    assert engine.execute('select count(*) from rework.task').scalar() == 1
+    with engine.begin() as cn:
+        assert cn.execute('select count(*) from rework.worker').scalar() == 1
+        assert cn.execute('select count(*) from rework.task').scalar() == 1
 
     deleted = mon.cleanup_unstarted()
     assert deleted == 0
@@ -597,31 +612,34 @@ def test_cleanup_unstarted(engine, cleanup):
 
 def test_more_unstarted(engine, cleanup):
     with workers(engine) as mon:
-        nworkers = engine.execute('select count(*) from rework.worker').scalar()
-        assert nworkers == 1
-
         with engine.begin() as cn:
+            nworkers = cn.execute('select count(*) from rework.worker').scalar()
+            assert nworkers == 1
+
             insert('rework.worker').values(
                 host='127.0.0.1',
                 domain='default'
             ).do(cn)  # unborn worker
 
-        nworkers = engine.execute('select count(*) from rework.worker').scalar()
-        assert nworkers == 2
+            nworkers = cn.execute('select count(*) from rework.worker').scalar()
+            assert nworkers == 2
 
         t1 = api.schedule(engine, 'raw_input', b'foo')
         t2 = api.schedule(engine, 'raw_input', b'foo')
         t1.join()
         t2.join()
-        assert engine.execute('select count(*) from rework.task').scalar() == 2
+        with engine.begin() as cn:
+            assert cn.execute('select count(*) from rework.task').scalar() == 2
 
-        nworkers = engine.execute('select count(*) from rework.worker').scalar()
-        assert nworkers == 2
+            nworkers = cn.execute('select count(*) from rework.worker').scalar()
+            assert nworkers == 2
+
         mon.cleanup_unstarted()
-        nworkers = engine.execute('select count(*) from rework.worker').scalar()
-        assert nworkers == 1
 
-        assert engine.execute('select count(*) from rework.task').scalar() == 2
+        with engine.begin() as cn:
+            nworkers = cn.execute('select count(*) from rework.worker').scalar()
+            assert nworkers == 1
+            assert cn.execute('select count(*) from rework.task').scalar() == 2
 
 
 def test_timeout(engine, cleanup):
@@ -663,11 +681,12 @@ def test_scheduler(engine, cleanup):
         _anyrule=True
     )
 
-    res = engine.execute(
-        'select id, domain, inputdata, host, metadata, rule '
-        'from rework.sched where sched.id=%(sid)s',
-        sid=sid
-    ).fetchall()
+    with engine.begin() as cn:
+        res = cn.execute(
+            'select id, domain, inputdata, host, metadata, rule '
+            'from rework.sched where sched.id=%(sid)s',
+            sid=sid
+        ).fetchall()
     assert res == [(sid, 'nondefault', None, None, None, '* * * * * *')]
 
     with workers(engine, domain='nondefault') as mon:
@@ -696,20 +715,21 @@ def test_scheduled_overlap(engine, cleanup):
         time.sleep(2)
         mon.step()
 
-    nbtasks = engine.execute(
-        'select count(t.id) '
-        'from rework.task as t, rework.operation as o '
-        'where t.operation = o.id and '
-        '      o.name = \'infinite_loop\''
-    ).scalar()
-    assert nbtasks >= 1
-    nbtasks = engine.execute(
-        'select count(t.id) '
-        'from rework.task as t, rework.operation as o '
-        'where t.operation = o.id and '
-        '      o.name = \'infinite_loop_long_timeout\''
-    ).scalar()
-    assert nbtasks >= 1
+    with engine.begin() as cn:
+        nbtasks = cn.execute(
+            'select count(t.id) '
+            'from rework.task as t, rework.operation as o '
+            'where t.operation = o.id and '
+            '      o.name = \'infinite_loop\''
+        ).scalar()
+        assert nbtasks >= 1
+        nbtasks = cn.execute(
+            'select count(t.id) '
+            'from rework.task as t, rework.operation as o '
+            'where t.operation = o.id and '
+            '      o.name = \'infinite_loop_long_timeout\''
+        ).scalar()
+        assert nbtasks >= 1
 
 
 def test_with_outputs(engine, cleanup):

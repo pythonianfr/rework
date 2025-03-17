@@ -3,7 +3,7 @@ import os
 from contextlib import contextmanager
 import traceback
 
-from sqlalchemy import create_engine
+from sqlhelp.pgapi import pgdb as create_engine
 
 from sqlhelp import select, update
 
@@ -63,9 +63,10 @@ class Worker:
             ).do(cn)
 
     def shutdown_asked(self):
-        return select('shutdown').table('rework.worker').where(
-            id=self.wid
-        ).do(self.engine).scalar()
+        with self.engine.begin() as cn:
+            return select('shutdown').table('rework.worker').where(
+                id=self.wid
+            ).do(cn).scalar()
 
     def die_if_shutdown(self):
         if self.shutdown_asked():

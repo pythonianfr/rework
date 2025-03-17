@@ -230,7 +230,8 @@ class Task:
                 try:
                     return unpack_io(self.inputspec, val)
                 except:
-                    raise TypeError('cannot decifer the raw bytes')
+                    raise
+                    # raise TypeError('cannot decifer the raw bytes')
         return None
 
     @property
@@ -313,7 +314,7 @@ class Task:
             ).values(
                 started=utcnow()
             ).do(cn)
-            name, path = self.engine.execute(
+            name, path = cn.execute(
                 'select name, path '
                 'from rework.operation '
                 'where rework.operation.id = %(operation)s',

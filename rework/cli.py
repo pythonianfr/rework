@@ -10,8 +10,11 @@ from colorama import init, Fore, Style
 from pkg_resources import iter_entry_points
 import pyzstd as zstd
 
-from sqlalchemy import create_engine
-from sqlhelp import update, select
+from sqlhelp import (
+    select,
+    update
+)
+from sqlhelp.pgapi import pgdb as create_engine
 
 from rework import api, schema
 from rework.helper import (
@@ -95,7 +98,8 @@ def unregister_operation(dburi, operation, domain=None, module=None, host=None,
     if host:
         sql.where(host=host)
 
-    candidates = sql.do(engine).fetchall()
+    with engine.begin() as cn:
+        candidates = sql.do(cn).fetchall()
     if not len(candidates):
         print('Nothing to unregister')
 
@@ -174,9 +178,10 @@ def list_operations(dburi):
     init()
     engine = create_engine(find_dburi(dburi))
     sql = 'select id, name, domain, path, host from rework.operation'
-    for oid, opname, domain, modpath, hostid in engine.execute(sql):
-        print(Fore.WHITE + f'{oid}', end=' ')
-        print(Fore.GREEN + f'`{opname}` {domain} path({modpath}) host({hostid})')
+    with engine.begin() as cn:
+        for oid, opname, domain, modpath, hostid in cn.execute(sql).fetchall():
+            print(Fore.WHITE + f'{oid}', end=' ')
+            print(Fore.GREEN + f'`{opname}` {domain} path({modpath}) host({hostid})')
     print(Style.RESET_ALL)
 
 
@@ -188,47 +193,48 @@ def list_workers(dburi):
     sql = ('select id, host, pid, mem, debugport, running, shutdown, traceback, '
            'deathinfo, created, started, finished '
            'from rework.worker order by id, running')
-    for (wid, host, pid, mem, debugport, running, shutdown, traceback,
-         deathinfo, created, started, finished) in engine.execute(sql):
-        color = Fore.GREEN
-        dead = not running and pid
-        activity = '(idle)'
-        if dead:
-            color = Fore.RED
-        else:
-            color = Fore.MAGENTA
-            sql = "select id from rework.task where status = 'running' and worker = %(worker)s"
-            tid = engine.execute(sql, worker=wid).scalar()
-            if tid:
-                activity = f'#{tid}'
-        print(wid,
-              Fore.GREEN + f'{pid or "<nopid>"}@{host}',
-              f'{mem} Mb',
-              color + (
-                  f'[running {activity}]' if running else '[dead]' if dead else '[unstarted]'
-              ),
-              end=' ')
-        if debugport:
-            print(Fore.RED + f'debugport = {debugport}', end=' ')
+    with engine.begin() as cn:
+        for (wid, host, pid, mem, debugport, running, shutdown, traceback,
+             deathinfo, created, started, finished) in cn.execute(sql).fetchall():
+            color = Fore.GREEN
+            dead = not running and pid
+            activity = '(idle)'
+            if dead:
+                color = Fore.RED
+            else:
+                color = Fore.MAGENTA
+                sql = "select id from rework.task where status = 'running' and worker = %(worker)s"
+                tid = cn.execute(sql, worker=wid).scalar()
+                if tid:
+                    activity = f'#{tid}'
+            print(wid,
+                  Fore.GREEN + f'{pid or "<nopid>"}@{host}',
+                  f'{mem} Mb',
+                  color + (
+                      f'[running {activity}]' if running else '[dead]' if dead else '[unstarted]'
+                  ),
+                  end=' ')
+            if debugport:
+                print(Fore.RED + f'debugport = {debugport}', end=' ')
 
-        print(Fore.WHITE + '[{}]'.format(
-            created.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
-              end=' ')
-        if started:
-            print(Fore.WHITE + '→ [{}]'.format(
-                started.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
-            end=' ')
-        if finished:
-            print(Fore.WHITE + '→ [{}]'.format(
-                finished.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
-            end=' ')
+            print(Fore.WHITE + '[{}]'.format(
+                created.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
+                  end=' ')
+            if started:
+                print(Fore.WHITE + '→ [{}]'.format(
+                    started.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
+                end=' ')
+            if finished:
+                print(Fore.WHITE + '→ [{}]'.format(
+                    finished.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
+                end=' ')
 
-        if dead:
-            if deathinfo:
-                print(Fore.YELLOW + deathinfo, end=' ')
-            if traceback:
-                print(Fore.YELLOW + traceback, end=' ')
-        print(Style.RESET_ALL)
+            if dead:
+                if deathinfo:
+                    print(Fore.YELLOW + deathinfo, end=' ')
+                if traceback:
+                    print(Fore.YELLOW + traceback, end=' ')
+            print(Style.RESET_ALL)
 
 
 @rework.command(name='list-monitors')
@@ -238,19 +244,20 @@ def list_monitors(dburi):
     engine = create_engine(find_dburi(dburi))
     sql = ('select id, domain, options, lastseen from rework.monitor')
     now = utcnow().astimezone(TZ)
-    for mid, domain, options, lastseen in engine.execute(sql):
-        color = Fore.GREEN
-        delta = (now - lastseen).total_seconds()
-        if delta > 60:
-            color = Fore.RED
-        elif delta > 10:
-            color = Fore.MAGENTA
-        print(mid,
-              color + lastseen.astimezone(TZ).strftime('%Y-%m-%d %H:%M:%S%z'), end=' ')
-        print(Style.RESET_ALL, end=' ')
-        print(domain, 'options({})'.format(
-            ', '.join('{}={}'.format(k, v) for k, v in options.items()))
-        )
+    with engine.begin() as cn:
+        for mid, domain, options, lastseen in cn.execute(sql).fetchall():
+            color = Fore.GREEN
+            delta = (now - lastseen).total_seconds()
+            if delta > 60:
+                color = Fore.RED
+            elif delta > 10:
+                color = Fore.MAGENTA
+            print(mid,
+                  color + lastseen.astimezone(TZ).strftime('%Y-%m-%d %H:%M:%S%z'), end=' ')
+            print(Style.RESET_ALL, end=' ')
+            print(domain, 'options({})'.format(
+                ', '.join('{}={}'.format(k, v) for k, v in options.items()))
+            )
 
 
 @rework.command(name='shutdown-worker')
@@ -303,45 +310,46 @@ status_color = {
 def list_tasks(dburi, domain=None, tracebacks=False, logcount=False):
     init()
     engine = create_engine(find_dburi(dburi))
-    opmap = dict(engine.execute('select id, name from rework.operation').fetchall())
-    sql = ('select t.id, w.deathinfo, w.mem, w.domain '
-           'from rework.task as t left outer join rework.worker as w '
-           'on t.worker = w.id '
-           'order by id')
-    for tid, di, mem, odomain in engine.execute(sql):
-        if domain and domain != odomain:
-            continue
-        task = Task.byid(engine, tid)
-        stat = task.state
-        print(Style.RESET_ALL + str(tid),
-              Fore.GREEN + opmap[task.operation],
-              status_color[stat] + stat, end=' ')
-        print(Fore.YELLOW + f'domain={odomain}', end=' ')
-        if logcount:
-            sql = 'select count(*) from rework.log where task = %(tid)s'
-            count = engine.execute(sql, {'tid': task.tid}).scalar()
-            print(Style.RESET_ALL + f'{count} log lines', end=' ')
-        finished = task._propvalue('finished')
-        started = task._propvalue('started')
-        print(Fore.WHITE + '[{}]'.format(
-            task._propvalue('queued').strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
-              end=' ')
-        if started:
-            print(Fore.WHITE + '→ [{}]'.format(
-                started.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
-            end=' ')
-        if finished:
-            print(Fore.WHITE + '→ [{}]'.format(
-                finished.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
-            end=' ')
+    with engine.begin() as cn:
+        opmap = dict(cn.execute('select id, name from rework.operation').fetchall())
+        sql = ('select t.id, w.deathinfo, w.mem, w.domain '
+               'from rework.task as t left outer join rework.worker as w '
+               'on t.worker = w.id '
+               'order by id')
+        for tid, di, mem, odomain in cn.execute(sql).fetchall():
+            if domain and domain != odomain:
+                continue
+            task = Task.byid(engine, tid)
+            stat = task.state
+            print(Style.RESET_ALL + str(tid),
+                  Fore.GREEN + opmap[task.operation],
+                  status_color[stat] + stat, end=' ')
+            print(Fore.YELLOW + f'domain={odomain}', end=' ')
+            if logcount:
+                sql = 'select count(*) from rework.log where task = %(tid)s'
+                count = cn.execute(sql, {'tid': task.tid}).scalar()
+                print(Style.RESET_ALL + f'{count} log lines', end=' ')
+            finished = task._propvalue('finished')
+            started = task._propvalue('started')
+            print(Fore.WHITE + '[{}]'.format(
+                task._propvalue('queued').strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
+                  end=' ')
+            if started:
+                print(Fore.WHITE + '→ [{}]'.format(
+                    started.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
+                end=' ')
+            if finished:
+                print(Fore.WHITE + '→ [{}]'.format(
+                    finished.strftime('%Y-%m-%d %H:%M:%S.%f%Z')),
+                end=' ')
 
-        if tracebacks and task.traceback:
-            print(Fore.YELLOW + task.traceback, end='')
+            if tracebacks and task.traceback:
+                print(Fore.YELLOW + task.traceback, end='')
 
-        if di:
-            print(Fore.YELLOW + di, end=' ')
-            print(Fore.YELLOW + str(mem), end='')
-        print()
+            if di:
+                print(Fore.YELLOW + di, end=' ')
+                print(Fore.YELLOW + str(mem), end='')
+            print()
 
 
 @rework.command('log-task')
@@ -401,15 +409,16 @@ def list_scheduled(dburi):
         'where o.id = s.operation '
         'order by o.name'
     )
-    for sid, opname, dom, indata, host, meta, rule in engine.execute(sql):
-        # q = select('name').table('rework.operation').where(id=op)
-        # opname = q.do(engine).scalar()
-        print(Fore.WHITE + f'{sid}', end=' ')
-        print(Fore.GREEN +
-              f'`{opname}` {dom} `{host or "no host"}` '
-              f'`{meta or "no meta"}` "{rule}"'
-        )
-    print(Style.RESET_ALL)
+    with engine.begin() as cn:
+        for sid, opname, dom, indata, host, meta, rule in cn.execute(sql).fetchall():
+            # q = select('name').table('rework.operation').where(id=op)
+            # opname = q.do(engine).scalar()
+            print(Fore.WHITE + f'{sid}', end=' ')
+            print(Fore.GREEN +
+                  f'`{opname}` {dom} `{host or "no host"}` '
+                  f'`{meta or "no meta"}` "{rule}"'
+            )
+        print(Style.RESET_ALL)
 
 
 @rework.command(name='unprepare')
@@ -441,9 +450,10 @@ def scheduled_plan(dburi, domain, hours=1):
     It is possible to ask for more hours using --hours.
     """
     engine = create_engine(find_dburi(dburi))
-    for stamp, op in schedule_plan(engine, domain, timedelta(hours=hours)):
-        print(Fore.GREEN + str(stamp), end=' ')
-        print(Fore.WHITE + op)
+    with engine.begin() as cn:
+        for stamp, op in schedule_plan(cn, domain, timedelta(hours=hours)):
+            print(Fore.GREEN + str(stamp), end=' ')
+            print(Fore.WHITE + op)
 
 
 @rework.command(name='export-scheduled')
@@ -457,13 +467,12 @@ def export_scheduled(dburi, path):
         'where s.operation = op.id'
     )
     inputs = []
-    for row in engine.execute(sql):
-        inp = {}
-        for k, v in row.items():
-            if isinstance(v, memoryview):
-                v = v.tobytes()
-            inp[k] = v
-        inputs.append(inp)
+    with engine.begin() as cn:
+        for row in cn.execute(sql).fetchall():
+            inp = {}
+            for k, v in row.as_dict().items():
+                inp[k] = v
+            inputs.append(inp)
 
     Path(path).write_bytes(
         zstd.compress(

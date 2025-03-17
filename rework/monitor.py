@@ -47,7 +47,11 @@ def mark_dead_workers(cn, wids, message, traceback=None):
     if not wids:
         return
     # mark workers as dead
-    update('rework.worker').where('id in %(ids)s', ids=tuple(wids)).values(
+    update(
+        'rework.worker'
+    ).where(
+        'id = any(%(ids)s)', ids=[wids]
+    ).values(
         running=False,
         finished=utcnow(),
         deathinfo=message
@@ -59,8 +63,8 @@ def mark_dead_workers(cn, wids, message, traceback=None):
     ).where(
         "task.status != 'done'",
         'worker.id = task.worker',
-        'worker.id in %(ids)s',
-        ids=tuple(wids),
+        'worker.id = any(%(ids)s)',
+        ids=[wids],
     ).values(
         finished=utcnow(),
         status='done',
@@ -137,7 +141,7 @@ class scheduler:
         self.laststamp = datetime.now(TZ)
 
     def __repr__(self):
-        return f'<scheduler for {self.domain} ->\n{self.defs}>'
+        return f'<scheduler for {self.domain} ->\n{[r.as_tuple() for r in self.defs]}>'
 
     def schedule(self, rule, opname, domain, rawinputdata, hostid, metadata):
         self.rulemap.append(
@@ -174,8 +178,9 @@ class scheduler:
             )
             if self.runnable:
                 self.logger.info(f'sched: prepared {len(self.runnable)} items')
-                for stamp, op in schedule_plan(self.engine, self.domain, timedelta(**self._step)):
-                    self.logger.info(f'sched: {stamp} -> {op}')
+                with self.engine.begin() as cn:
+                    for stamp, op in schedule_plan(cn, self.domain, timedelta(**self._step)):
+                        self.logger.info(f'sched: {stamp} -> {op}')
                 self.logger.info(f'sched: next item will run at {self.runnable[0][0]}')
 
         runnable, laststamp = run_sched(
@@ -224,7 +229,8 @@ class scheduler:
         ).where('s.domain = %(domain)s', domain=self.domain
         ).order('op.name')
 
-        return q.do(self.engine).fetchall()
+        with self.engine.begin() as cn:
+            return q.do(cn).fetchall()
 
 
 class Monitor:
@@ -308,8 +314,11 @@ class Monitor:
         if not self.debugport:
             return 0
         allnumbers = set(range(self.debugport, self.debugport + self.maxworkers))
-        usednumbers = set(num for num, in self.engine.execute(
-            'select debugport from rework.worker where running = true').fetchall())
+        with self.engine.begin() as cn:
+            usednumbers = set(
+                cn.execute(
+                'select debugport from rework.worker where running = true').scalars()
+            )
         for num in range(self.debugport, self.debugport + offset):
             usednumbers.add(num)
         numbers = allnumbers - usednumbers
@@ -337,7 +346,7 @@ class Monitor:
             ).join(
                 'rework.task as task on (worker.id = task.worker)'
             ).where(
-                'worker.id in %(ids)s', ids=tuple(self.wids)
+                'worker.id = ANY(%(ids)s)', ids=[self.wids]
             ).where(
                 "task.status != 'done'"
             )
@@ -350,10 +359,10 @@ class Monitor:
         q = select(
             'id'
         ).table('rework.worker'
-        ).where('id in %(ids)s', ids=tuple(self.wids))
+        ).where('id = ANY(%(ids)s)', ids=[self.wids])
 
         if busylist:
-            q.where('not id in %(nid)s', nid=tuple(busylist))
+            q.where('not id = ANY(%(nid)s)', nid=[busylist])
         q.where(shutdown=False)
         q.limit(1)
         return q.do(cn).scalar()
@@ -397,18 +406,17 @@ class Monitor:
     def track_timeouts(self):
         if not self.workers:
             return
-        sql = ('select task.id, task.started, timeout '
-               'from rework.operation as op, '
-               '     rework.task as task '
-               'where '
-               ' task.operation = op.id and '
-               ' timeout is not null and '
-               ' task.worker in ({})'
-        ).format(
-            ','.join(str(wid) for wid in self.wids)
+        sql = (
+            'select task.id, task.started, timeout '
+            'from rework.operation as op, '
+            '     rework.task as task '
+            'where '
+            ' task.operation = op.id and '
+            ' timeout is not null and '
+            ' task.worker = Any(%(wids)s)'
         )
         with self.engine.begin() as cn:
-            for tid, start_time, timeout in cn.execute(sql).fetchall():
+            for tid, start_time, timeout in cn.execute(sql, wids=[self.wids]).fetchall():
                 start_time = start_time.astimezone(pytz.utc)
                 delta = isodate.parse_duration(timeout)
                 now = utcnow()
@@ -422,11 +430,11 @@ class Monitor:
             'select worker.id '
             'from rework.worker '
             'where worker.running = true and '
-            'worker.id in %(wids)s'
+            'worker.id = ANY(%(wids)s)'
         )
         # remove started workers
         with self.engine.begin() as cn:
-            for wid, in cn.execute(sql, wids=tuple(self.pending_start)):
+            for wid in cn.execute(sql, wids=list(self.pending_start)).scalars():
                 self.pending_start.pop(wid, None)
 
         # kill after timeout
@@ -520,7 +528,7 @@ class Monitor:
         q = select('id' ).table('rework.worker').where(
             'kill = true'
         ).where(
-            'id in %(ids)s', ids=tuple(self.wids)
+            'id = ANY(%(ids)s)', ids=[self.wids]
         )
         killed = []
         with self.engine.begin() as cn:
@@ -543,15 +551,18 @@ class Monitor:
                'where host = %(host)s and running = true '
                'and domain = %(domain)s')
         deadlist = []
-        for wid, pid in self.engine.execute(
-                sql, {'host': host(), 'domain': self.domain}).fetchall():
-            try:
-                cmd = ' '.join(psutil.Process(pid).cmdline())
-                if 'new-worker' not in cmd and str(self.engine.url) not in cmd:
-                    self.logger.info(f'pid {pid} was probably recycled')
+        with self.engine.begin() as cn:
+            for wid, pid in cn.execute(
+                    sql,
+                    host=host(),
+                    domain=self.domain).fetchall():
+                try:
+                    cmd = ' '.join(psutil.Process(pid).cmdline())
+                    if 'new-worker' not in cmd and str(self.engine.url) not in cmd:
+                        self.logger.info(f'pid {pid} was probably recycled')
+                        deadlist.append(wid)
+                except psutil.NoSuchProcess:
                     deadlist.append(wid)
-            except psutil.NoSuchProcess:
-                deadlist.append(wid)
 
         if deadlist:
             with self.engine.begin() as cn:

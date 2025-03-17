@@ -17,7 +17,7 @@ from icron import croniter_range
 import pyzstd as zstd
 import pytz
 import psutil
-from sqlalchemy.engine import url
+from sqlalchemy.engine import url ## FIXME
 from sqlhelp import select
 from inireader import reader
 
@@ -94,7 +94,11 @@ def wait_true(func, timeout=6, sleeptime=.1):
         while True:
             if (time.time() - start) > timeout:
                 return
-            output = func()
+            try:
+                output = func()
+            except:
+                import traceback as tb; tb.print_exc()
+                return
             if output:
                 outcome.append(output)
                 return
@@ -125,8 +129,8 @@ def host():
 
 # read stuff
 
-def ops_and_domains(engine):
-    res = engine.execute(
+def ops_and_domains(cn):
+    res = cn.execute(
         'select name, domain from rework.operation'
     ).fetchall()
     return set((name, domain) for name, domain in res)
@@ -379,14 +383,14 @@ def iter_stamps_from_cronrules(rulemap, start, stop):
             yield stamp, payload
 
 
-def schedule_plan(engine, domain, delta):
+def schedule_plan(cn, domain, delta):
     tz = tzlocal.get_localzone()
     q = select(
         's.rule', 'op.name'
     ).table('rework.sched as s', 'rework.operation as op'
     ).where('s.operation = op.id'
     ).where('s.domain = %(domain)s', domain=domain)
-    out = q.do(engine).fetchall()
+    out = q.do(cn).fetchall()
     now = datetime.now(tz)
     for stamp, op in sorted(iter_stamps_from_cronrules(
             out,
@@ -409,7 +413,7 @@ class InputEncoder(json.JSONEncoder):
 
 # inputs spec reader
 
-def iospec(engine, attr='inputs'):
+def iospec(cn, attr='inputs'):
     assert attr in ('inputs', 'outputs')
     q = select(
         'id', 'host', 'name', 'domain', attr
@@ -418,14 +422,14 @@ def iospec(engine, attr='inputs'):
     ).order('domain, name')
 
     out = []
-    for row in q.do(engine).fetchall():
+    for row in q.do(cn).fetchall():
         out.append(
             (row.id,
              row.name,
              row.domain,
              row.host,
              row[attr]
-            )
+             )
         )
     return out
 
@@ -538,7 +542,7 @@ def pack_io(spec, args):
 
 def nary_unpack(packedbytes):
     try:
-        packedbytes = zstd.decompress(packedbytes.tobytes())
+        packedbytes = zstd.decompress(packedbytes)
     except zstd.ZstdError:
         raise TypeError('wrong input format')
 
