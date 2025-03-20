@@ -188,7 +188,7 @@ class Task:
 
     @property
     def status(self):
-        return self._propvalue('status')
+        return self._propvalue('status').decode()
 
     @property
     def aborted(self):
