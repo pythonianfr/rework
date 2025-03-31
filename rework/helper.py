@@ -24,17 +24,22 @@ from inireader import reader
 from rework.io import _iobase
 
 
+_L = None
 def setuplogger(level=logging.DEBUG):
+    global _L
+    if _L is not None:
+        return _L
     logger = logging.getLogger('rework')
     handler = logging.StreamHandler()
     handler.setFormatter(
         logging.Formatter(
-            '%(asctime)s %(message)s',
+            '%(levelname)s %(name)s %(asctime)s %(message)s',
             '%Y-%m-%d %H:%M:%S'
         )
     )
     logger.addHandler(handler)
     logger.setLevel(level)
+    _L = logger
     return logger
 
 
