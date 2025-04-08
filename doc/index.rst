@@ -94,7 +94,7 @@ This being done, we can start writing our first task:
 .. code-block:: python
 
    from rework import api
-   from sqlalchemy import create_engine
+   from sqlhelp import pgapi
 
    @api.task
    def my_first_task(task):
@@ -106,7 +106,7 @@ This being done, we can start writing our first task:
 
 
    def main(uri):
-       engine = create_engine(
+       engine = pgapi.pgdb(
            'postgres://babar:password@localhost/jobstore'
        )
        # now, schedule tasks
@@ -438,10 +438,10 @@ database referential. We use ``freeze_operations`` for this:
 
 .. code-block:: python
 
-   from sqlalchemy import create_engine
+   from sqlhelp import pgapi
    from rework.api import freeze_operations
 
-   engine = create_engine('postgres://babar:password@localhost:5432/jobstore')
+   engine = pgapi.pgdb('postgres://babar:password@localhost:5432/jobstore')
    api.freeze_operations(engine)
 
 
@@ -449,10 +449,10 @@ Finally, one can schedule tasks as such:
 
 .. code-block:: python
 
-   from sqlalchemy import create_engine
+   from sqlhelp import pgapi
    from rework.api import schedule
 
-   engine = create_engine('postgres://babar:password@localhost:5432/jobstore')
+   engine = pgapi.pgdb('postgres://babar:password@localhost:5432/jobstore')
 
    # immediate executionn (the task will be queued)
    task = api.schedule(engine, 'my_task', 42)

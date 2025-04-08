@@ -17,8 +17,7 @@ from icron import croniter_range
 import pyzstd as zstd
 import pytz
 import psutil
-from sqlalchemy.engine import url ## FIXME
-from sqlhelp import select
+from sqlhelp import select, pgapi
 from inireader import reader
 
 from rework.io import _iobase
@@ -264,7 +263,7 @@ def get_cfg_path():
 
 def find_dburi(something):
     try:
-        url.make_url(something)
+        pgapi.make_url(something)
     except Exception:
         pass
     else:
