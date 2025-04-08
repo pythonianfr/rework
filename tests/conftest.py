@@ -3,8 +3,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 from sqlhelp.pgapi import pgdb as create_engine
-
-from pytest_sa_pg import db
+from sqlhelp.testutil import setup_local_pg_cluster
 
 from rework import api, cli as rcli, schema
 
@@ -19,7 +18,7 @@ ENGINE = None
 
 @pytest.fixture(scope='session')
 def engine(request):
-    db.setup_local_pg_cluster(request, DATADIR, PORT, {
+    setup_local_pg_cluster(request, DATADIR, PORT, {
         'timezone': 'UTC',
         'log_timezone': 'UTC'
     })

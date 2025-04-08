@@ -38,7 +38,6 @@ setup(name='rework',
       extras_require={
           'test': [
               'pytest',
-              'pytest_sa_pg',
           ],
           'debug': [
               'pystuck'
