@@ -10,4 +10,4 @@ def init(engine):
     with engine.begin() as cn:
         cn.execute('drop schema if exists rework cascade')
         cn.execute('drop type if exists "rework.status"')
-        cn.execute(sqlfile(SQLFILE, ns='rework'), binary=False)
+        cn.execute(sqlfile(SQLFILE, ns='rework'), _binary=False)
