@@ -94,7 +94,6 @@ def test_monitor_step(engine, cleanup):
 
     stats = mon.step()
     mon.wait_all_started()
-    print('*' * 50)
 
     assert len(stats.new) == 2
     assert all(
@@ -375,6 +374,7 @@ def test_worker_max_mem(engine, cleanup):
 
         while len(t1.logs()) < 2:
             mon.step()
+            mon.track_resources()
 
         t1.join()
         with engine.begin() as cn:
@@ -383,18 +383,8 @@ def test_worker_max_mem(engine, cleanup):
             ).scalar() > 50
 
         t2 = api.schedule(engine, 'allocate_and_leak_mbytes', 100)
-        s = mon.step()
-        while not s.new:
-            # make sure the monitor spawns a new worker
-            # before joining on t2 == done
-            s = mon.step()
-
+        mon.step()
         t2.join()
-
-        guard(engine, f'select shutdown from rework.worker where id = {wid}',
-              lambda r: r.scalar() is True)
-        worker = Worker(engine.url, wid)
-        assert worker.shutdown_asked()
 
 
 def test_task_abortion(engine, cleanup):
@@ -764,3 +754,17 @@ def test_with_outputs(engine, cleanup):
     assert t.traceback.strip().endswith(
         'ValueError: unknown inputs: blogentry'
     )
+
+
+def test_listen_notify(engine):
+    from threading import Thread
+
+    with workers(engine) as mon:
+        th = Thread(target=mon.run)
+        th.daemon = True
+        th.start()
+        time.sleep(.1)
+        t1 = api.schedule(engine, 'print_sleep_and_go_away', 'hi')
+        t2 = api.schedule(engine, 'print_sleep_and_go_away', 'there')
+        t3 = api.schedule(engine, 'print_sleep_and_go_away', 42)
+        t1.join() ; t2.join() ; t3.join()

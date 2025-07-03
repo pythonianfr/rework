@@ -21,6 +21,9 @@ __task_inputs__ = {}
 __task_outputs__ = {}
 
 
+L = logging.getLogger('rework')
+
+
 class TimeOut(Exception):
     pass
 
@@ -320,6 +323,7 @@ class Task:
                 'where rework.operation.id = %(operation)s',
                 operation=self.operation
             ).fetchone()
+            cn.execute(f'NOTIFY task_event, \'run({self.tid},{name})\'')
         mod = load_source('module', path)
         func = getattr(mod, name)
         try:
@@ -357,7 +361,13 @@ class Task:
                 break
             if timeout and (time.time() - t0) > timeout:
                 raise TimeOut(self)
-            time.sleep(1)
+
+            for note in self.engine.notifies('task_event', timeout=1.):
+                L.info(f'join: task {note.payload}')
+                pl = note.payload
+                if (f'task run({self.tid})' in pl or
+                    f'task finish({self.tid})' in pl):
+                    break
 
     def finish(self):
         with self.engine.begin() as cn:
@@ -369,6 +379,7 @@ class Task:
                 finished=utcnow(),
                 status='done'
             ).do(cn)
+            cn.execute(f'NOTIFY task_event, \'finish({self.tid})\'')
 
     def abort(self, msg='<no known cause>'):
         """ask the abortion of the task
@@ -401,3 +412,4 @@ class Task:
                 kill=True,
                 deathinfo=msg
             ).do(cn)
+            cn.execute(f'NOTIFY task_event, \'abort({self.tid})\'')

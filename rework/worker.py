@@ -1,6 +1,6 @@
-import time
 import os
 from contextlib import contextmanager
+import logging
 import traceback
 
 from sqlhelp.pgapi import pgdb as create_engine
@@ -9,10 +9,12 @@ from sqlhelp import select, update
 
 from rework.helper import (
     has_ancestor_pid,
-    memory_usage,
     utcnow
 )
 from rework.task import Task
+
+
+L = logging.getLogger('rework.worker')
 
 
 class Worker:
@@ -54,6 +56,8 @@ class Worker:
             # go to bed.
             with self.engine.begin() as cn:
                 self.death_sql('ancestor died').do(cn)
+                cn.execute(f'NOTIFY worker_event, \'die({self.wid})\'')
+
             raise SystemExit(f'Worker {os.getpid()} exiting.')
 
     def ask_shutdown(self):
@@ -78,11 +82,13 @@ class Worker:
     def running_status(self):
         with self.engine.begin() as cn:
             self.running_sql(True).do(cn)
+            cn.execute(f'NOTIFY worker_event, \'run({self.wid})\'')
         try:
             yield
         finally:
             with self.engine.begin() as cn:
                 self.running_sql(False).do(cn)
+                cn.execute(f'NOTIFY worker_event, \'exit({self.wid})\'')
 
     def run(self):
         if self.debugport:
@@ -103,11 +109,6 @@ class Worker:
 
     def heartbeat(self):
         self.die_if_ancestor_died()
-
-        mem = memory_usage(os.getpid())
-        if (self.maxmem and mem > self.maxmem):
-            self.ask_shutdown()
-
         self.die_if_shutdown()
 
     def main_loop(self):
@@ -126,4 +127,8 @@ class Worker:
                 self.heartbeat()
                 task = Task.fromqueue(self.engine, self.wid, self.domain)
 
-            time.sleep(1)
+            # let's sleep a bit waiting for a task event
+            for note in self.engine.notifies('task_event', timeout=1.):
+                L.info(f'worker: task {note.payload}')
+                if note.payload.startswith('task new'):
+                    break

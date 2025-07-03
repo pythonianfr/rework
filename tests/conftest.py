@@ -5,7 +5,7 @@ from click.testing import CliRunner
 from sqlhelp.pgapi import pgdb as create_engine
 from sqlhelp.testutil import setup_local_pg_cluster
 
-from rework import api, cli as rcli, schema
+from rework import api, helper, cli as rcli, schema
 
 # our test tasks
 from . import tasks as _tasks  # noqa
@@ -25,6 +25,7 @@ def engine(request):
     e = create_engine(f'postgresql://localhost:{PORT}/postgres')
     schema.init(e)
     api.freeze_operations(e)
+    helper.setuplogger()
     # help the `cleanup` fixture
     # (for some reason, working with a fresh engine therein won't work)
     global ENGINE

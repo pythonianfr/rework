@@ -90,7 +90,7 @@ def _cpu_tree_usage(proc):
     return cpu
 
 
-def wait_true(func, timeout=6, sleeptime=.1):
+def wait_true(func, timeout=6, sleeptime=.01):
     outcome = []
 
     def loop():

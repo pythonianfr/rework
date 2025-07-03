@@ -5,7 +5,7 @@ from rework.worker import Worker
 from rework.monitor import Monitor
 
 
-def test_run_worker(engine):
+def test_run_worker(engine, cleanup):
     mon = Monitor(engine, maxruns=1)
     wid = mon.new_worker()
 

@@ -1,5 +1,4 @@
 import os
-import time
 import subprocess as sub
 import signal
 import json
@@ -520,7 +519,7 @@ class Monitor:
             mark.append(wid)
         with self.engine.begin() as cn:
             mark_dead_workers(cn, mark, msg, traceback)
-        self.workers = {}
+        self.workers.clear()
 
     def preemptive_kill(self):
         if not self.wids:
@@ -691,8 +690,18 @@ class Monitor:
             self.logger.info(f'mon: cleaned {deleted} unstarted workers')
         while True:
             stats = self.step()
+            self.logger.debug('mon: stepping')
             if stats.new:
                 self.logger.info(f'mon: spawned {len(stats.new)} active workers')
             if stats.shrink:
                 self.logger.info(f'mon: worker {stats.shrink[0]} asked to shutdown')
-            time.sleep(1)
+
+            # 5 secs sleep *but* we can get notified
+            # What do we need to know ?
+            # * task changes status
+            # * worker dies
+            for note in self.engine.notifies('task_event', 'worker_event', timeout=5.):
+                pl = note.payload
+                self.logger.info(f'mon: task {pl}')
+                if 'new' in pl or 'run' in pl:
+                    break
