@@ -768,3 +768,5 @@ def test_listen_notify(engine):
         t2 = api.schedule(engine, 'print_sleep_and_go_away', 'there')
         t3 = api.schedule(engine, 'print_sleep_and_go_away', 42)
         t1.join() ; t2.join() ; t3.join()
+        mon.stopping = True
+        th.join(timeout=6)

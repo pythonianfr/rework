@@ -239,7 +239,7 @@ class Monitor:
                  'workers', 'host', 'monid',
                  'start_timeout', 'debugfile',
                  'pending_start', 'scheduler',
-                 'vacuum', 'lastvacuum')
+                 'vacuum', 'lastvacuum', 'stopping')
 
     def __init__(self, engine, logger=None, domain='default',
                  minworkers=None, maxworkers=2,
@@ -266,6 +266,7 @@ class Monitor:
             self.debugfile = Path(debugfile).open('wb')
         self.pending_start = {}
         self.scheduler = scheduler(engine, logger, domain)
+        self.stopping = False
         signal.signal(signal.SIGTERM, self.sigterm)
 
     def sigterm(self, signum, stack):
@@ -688,7 +689,7 @@ class Monitor:
         deleted = self.cleanup_unstarted()
         if deleted:
             self.logger.info(f'mon: cleaned {deleted} unstarted workers')
-        while True:
+        while not self.stopping:
             stats = self.step()
             self.logger.debug('mon: stepping')
             if stats.new:
@@ -701,6 +702,8 @@ class Monitor:
             # * task changes status
             # * worker dies
             for note in self.engine.notifies('task_event', 'worker_event', timeout=5.):
+                if self.stopping:
+                    break
                 pl = note.payload
                 self.logger.info(f'mon: task {pl}')
                 if 'new' in pl or 'run' in pl:
