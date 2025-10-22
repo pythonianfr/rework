@@ -160,6 +160,8 @@ def new_worker(**config):
 @click.option('--debug-port', type=int, default=0)
 @click.option('--start-timeout', type=int, default=30)
 @click.option('--debugfile')
+@click.option('--pinned', is_flag=True, default=False,
+              help='only process tasks from operations registered on the current host')
 def monitor(dburi, **config):
     " start a monitor controlling min/max workers "
     if config.get('debug'):

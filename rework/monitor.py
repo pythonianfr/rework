@@ -239,13 +239,15 @@ class Monitor:
                  'workers', 'host', 'monid',
                  'start_timeout', 'debugfile',
                  'pending_start', 'scheduler',
-                 'vacuum', 'lastvacuum', 'stopping')
+                 'vacuum', 'lastvacuum', 'stopping',
+                 'pinned')
 
     def __init__(self, engine, logger=None, domain='default',
                  minworkers=None, maxworkers=2,
                  maxruns=0, maxmem=0, debug=False,
                  debug_port=0, vacuum='P1D',
-                 start_timeout=30, debugfile=None):
+                 start_timeout=30, debugfile=None,
+                 pinned=False):
         self.engine = engine
         self.logger = logger or setuplogger()
         self.domain = domain
@@ -259,6 +261,7 @@ class Monitor:
         self.vacuum = isodate.parse_duration(vacuum)
         self.workers = {}
         self.host = host()
+        self.pinned = pinned
         self.start_timeout = start_timeout
         self.debugfile = None
         self.monid = None
@@ -326,15 +329,20 @@ class Monitor:
         return min(numbers)
 
     def queued_tasks(self, cn):
-        return cn.execute(
-            'select count(*) '
-            ' from rework.task as task, rework.operation as op '
-            'where '
-            ' task.status = \'queued\' and '
-            ' task.operation = op.id and '
-            ' op.domain = %(domain)s',
+        q = select(
+            'count(*)'
+        ).table(
+            'rework.task as task',
+            'rework.operation as op'
+        ).where(
+            "task.status = 'queued'",
+            'task.operation = op.id',
+            'op.domain = %(domain)s',
             domain=self.domain
-        ).scalar()
+        )
+        if self.pinned:
+            q.where('op.host = %(host)s', host=self.host)
+        return q.do(cn).scalar()
 
     def busy_workers(self, cn):
         if not self.workers:

@@ -793,3 +793,26 @@ def test_monitor_sees_all_domain_tasks(engine, cleanup):
         queued = mon.queued_tasks(cn)
 
     assert queued == 1
+
+
+def test_monitor_pinned_filters_by_host(engine, cleanup):
+    @api.task
+    def my_task(task):
+        task.save_output('done')
+
+    api.freeze_operations(engine, domain='default')
+
+    with engine.begin() as cn:
+        cn.execute(
+            "update rework.operation "
+            "set host = '8.8.8.8' "
+            "where name = 'my_task'"
+        )
+
+    api.schedule(engine, 'my_task', domain='default')
+    mon = Monitor(engine, domain='default', maxworkers=1, pinned=True)
+
+    with engine.begin() as cn:
+        queued = mon.queued_tasks(cn)
+
+    assert queued == 0
