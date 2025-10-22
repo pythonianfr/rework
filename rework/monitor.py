@@ -332,10 +332,8 @@ class Monitor:
             'where '
             ' task.status = \'queued\' and '
             ' task.operation = op.id and '
-            ' op.domain = %(domain)s and '
-            ' op.host = %(host)s',
-            domain=self.domain,
-            host=self.host
+            ' op.domain = %(domain)s',
+            domain=self.domain
         ).scalar()
 
     def busy_workers(self, cn):
