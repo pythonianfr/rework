@@ -770,3 +770,33 @@ def test_listen_notify(engine):
         t1.join() ; t2.join() ; t3.join()
         mon.stopping = True
         th.join(timeout=6)
+
+
+def test_monitor_host_pinning_bug(engine, cleanup):
+
+    @api.task
+    def my_task(task):
+        task.save_output('done')
+
+    api.freeze_operations(engine, domain='default')
+
+    with engine.begin() as cn:
+        cn.execute(
+            "update rework.operation "
+            "set host = '8.8.8.8' "
+            "where name = 'my_task'"
+        )
+
+    task = api.schedule(engine, 'my_task', domain='default')
+    mon = Monitor(engine, domain='default', maxworkers=1)
+
+    with engine.begin() as cn:
+        queued = mon.queued_tasks(cn)
+
+    # BUG: monitor doesn't see the task because op.host != mon.host
+    assert queued == 0, (
+        "Bug demonstrated: monitor doesn't see task "
+        "because operation host (8.8.8.8) != monitor host"
+    )
+
+    # After fix: this should be 1 (monitor sees all tasks in its domain)
