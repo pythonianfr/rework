@@ -402,6 +402,10 @@ def test_task_abortion(engine, cleanup):
         assert err.value.args[0] == t
 
         # check cpu usage
+        # first call to initialize cpu_percent baseline
+        mon.track_resources()
+        time.sleep(0.1)
+        # second call to get actual cpu measurement
         mon.track_resources()
         with engine.begin() as cn:
             cpu = cn.execute(
