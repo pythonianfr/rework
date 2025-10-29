@@ -289,8 +289,8 @@ class Monitor:
     def spawn_worker(self, debug_port=0):
         wid = self.new_worker()
         cmd = [
-            'rework',
-            'new-worker', str(self.engine.url), str(wid), str(os.getpid()),
+            'rework-worker',
+            str(self.engine.url), str(wid), str(os.getpid()),
             '--maxruns', str(self.maxruns),
             '--maxmem', str(self.maxmem),
             '--domain', self.domain,

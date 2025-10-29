@@ -1,6 +1,7 @@
 import os
 from contextlib import contextmanager
 import logging
+import sys
 import traceback
 
 from sqlhelp.pgapi import pgdb as create_engine
@@ -132,3 +133,45 @@ class Worker:
                 L.info(f'worker: task {note.payload}')
                 if note.payload.startswith('task new'):
                     break
+
+
+def main():
+    if len(sys.argv) < 4:
+        print(
+            'usage: rework-worker <dburi> <worker_id> <ppid> '
+            '[--maxruns N] [--maxmem N] [--domain D] [--debug-port N]',
+            file=sys.stderr
+        )
+        return
+
+    dburi = sys.argv[1]
+    worker_id = int(sys.argv[2])
+    ppid = int(sys.argv[3])
+
+    config = {
+        'dburi': dburi,
+        'worker_id': worker_id,
+        'ppid': ppid,
+        'maxruns': 0,
+        'maxmem': 0,
+        'domain': 'default',
+        'debug_port': 0
+    }
+
+    args_iter = iter(sys.argv[4:])
+    for arg in args_iter:
+        if arg == '--maxruns':
+            config['maxruns'] = int(next(args_iter))
+        elif arg == '--maxmem':
+            config['maxmem'] = int(next(args_iter))
+        elif arg == '--domain':
+            config['domain'] = next(args_iter)
+        elif arg == '--debug-port':
+            config['debug_port'] = int(next(args_iter))
+
+    worker = Worker(**config)
+    worker.run()
+
+
+if __name__ == '__main__':
+    main()

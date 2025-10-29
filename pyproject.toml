@@ -52,6 +52,7 @@ Documentation = "https://refinery.docs.pythonian.fr"
 
 [project.scripts]
 rework = "rework.cli:rework"
+rework-worker = "rework.worker:main"
 
 [tool.setuptools.packages.find]
 include = ["rework*"]
