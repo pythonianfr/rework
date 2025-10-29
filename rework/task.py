@@ -328,7 +328,7 @@ class Task:
                 'where rework.operation.id = %(operation)s',
                 operation=self.operation
             ).fetchone()
-            cn.execute(f'NOTIFY task_event_{self.domain}, \'run({self.tid},{name})\'')
+            cn.notify(f'task_event_{self.domain}', f'run({self.tid},{name})')
         mod = load_source('module', path)
         func = getattr(mod, name)
         try:
@@ -384,7 +384,7 @@ class Task:
                 finished=utcnow(),
                 status='done'
             ).do(cn)
-            cn.execute(f'NOTIFY task_event_{self.domain}, \'finish({self.tid})\'')
+            cn.notify(f'task_event_{self.domain}', f'finish({self.tid})')
 
     def abort(self, msg='<no known cause>'):
         """ask the abortion of the task
@@ -417,4 +417,4 @@ class Task:
                 kill=True,
                 deathinfo=msg
             ).do(cn)
-            cn.execute(f'NOTIFY task_event_{self.domain}, \'abort({self.tid})\'')
+            cn.notify(f'task_event_{self.domain}', f'abort({self.tid})')

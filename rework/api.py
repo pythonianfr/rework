@@ -185,7 +185,7 @@ def schedule(engine,
             metadata=json.dumps(metadata)
         )
         tid = q.do(cn).scalar()
-        cn.execute(f'NOTIFY task_event_{domain}, \'new({tid})\'')
+        cn.notify(f'task_event_{domain}', f'new({tid})')
 
     return Task(engine, tid, opid)
 

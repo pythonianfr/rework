@@ -56,7 +56,7 @@ class Worker:
             # go to bed.
             with self.engine.begin() as cn:
                 self.death_sql('ancestor died').do(cn)
-                cn.execute(f'NOTIFY worker_event_{self.domain}, \'die({self.wid})\'')
+                cn.notify(f'worker_event_{self.domain}', f'die({self.wid})')
 
             raise SystemExit(f'Worker {os.getpid()} exiting.')
 
@@ -82,13 +82,13 @@ class Worker:
     def running_status(self):
         with self.engine.begin() as cn:
             self.running_sql(True).do(cn)
-            cn.execute(f'NOTIFY worker_event_{self.domain}, \'run({self.wid})\'')
+            cn.notify(f'worker_event_{self.domain}', f'run({self.wid})')
         try:
             yield
         finally:
             with self.engine.begin() as cn:
                 self.running_sql(False).do(cn)
-                cn.execute(f'NOTIFY worker_event_{self.domain}, \'exit({self.wid})\'')
+                cn.notify(f'worker_event_{self.domain}', f'exit({self.wid})')
 
     def run(self):
         if self.debugport:

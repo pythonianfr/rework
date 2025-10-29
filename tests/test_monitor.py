@@ -59,6 +59,7 @@ def test_basic_task_operations(engine, cleanup):
         ('print_sleep_and_go_away', 'tasks.py'),
         ('raw_input', 'tasks.py'),
         ('run_in_non_default_domain', 'tasks.py'),
+        ('run_in_special_domain', 'tasks.py'),
         ('stderr_swarm', 'tasks.py'),
         ('unstopable_death', 'tasks.py'),
     ] == known
@@ -887,3 +888,15 @@ def test_cross_domain_notifications(engine, cleanup):
     # notification
     assert count_a == 1
     assert count_b == 0
+
+
+def test_special_domain_chars(engine, cleanup):
+    with workers(engine, domain='123foo-bar.quux', maxruns=1) as mon:
+        wid = mon.wids[0]
+        t = api.schedule(engine, 'run_in_special_domain')
+
+        guard(engine, f'select running from rework.worker where id = {wid}',
+              lambda r: r.scalar() is False)
+
+        assert t.status == 'done'
+        assert t.output == 'special'

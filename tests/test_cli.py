@@ -28,6 +28,7 @@ def test_list_operations(engine, cli, cleanup):
 <X> `custom_vacuum_rule_one_hour` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `custom_vacuum_rule_one_second` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `run_in_non_default_domain` nondefault path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
+<X> `run_in_special_domain` <X>foo-bar.quux path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `raw_input` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `fancy_inputs_outputs` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `infinite_loop` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)

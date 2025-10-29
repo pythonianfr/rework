@@ -36,6 +36,11 @@ def run_in_non_default_domain(task):
     task.save_output('done')
 
 
+@api.task(domain='123foo-bar.quux')
+def run_in_special_domain(task):
+    task.save_output('special')
+
+
 @api.task
 def raw_input(task):
     task.save_output(task.raw_input + b' and Celeste',
