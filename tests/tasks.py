@@ -13,9 +13,9 @@ def basic(task):
 @api.task
 def print_sleep_and_go_away(task):
     print('Hello, world')
-    time.sleep(.2)
+    time.sleep(.01)
     print('I am running within task', task.tid)
-    time.sleep(.2)
+    time.sleep(.01)
     print('Saving computation to task.output')
     task.save_output(2 * task.input)
     print('And now I am done.')
@@ -26,8 +26,8 @@ def custom_vacuum_rule_one_hour(task):
     print('hi')
 
 
-@api.task(vacuum=timedelta(seconds=1))
-def custom_vacuum_rule_one_second(task):
+@api.task(vacuum=timedelta(seconds=0.01))
+def custom_vacuum_rule_one_hundredth_second(task):
     print('hi')
 
 

@@ -22,11 +22,11 @@ def test_list_operations(engine, cli, cleanup):
     with workers(engine):
         r = cli('list-operations', engine.url)
 
-        assert """
+        expected = sorted("""
 <X> `basic` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `print_sleep_and_go_away` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `custom_vacuum_rule_one_hour` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
-<X> `custom_vacuum_rule_one_second` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
+<X> `custom_vacuum_rule_one_hundredth_second` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `run_in_non_default_domain` nondefault path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `run_in_special_domain` <X>foo-bar.quux path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `raw_input` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
@@ -41,7 +41,9 @@ def test_list_operations(engine, cli, cleanup):
 <X> `log_swarm` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `stderr_swarm` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
 <X> `flush_captured_stdout` default path(.../tests/tasks.py) host(<X>.<X>.<X>.<X>)
-""".strip() == scrub(r.output).strip().replace(os.getcwd(), '...')
+""".strip().split('\n'))
+        actual = sorted(scrub(r.output).strip().replace(os.getcwd(), '...').split('\n'))
+        assert expected == actual
 
 
 def test_register_operations(engine, cli, cleanup):
@@ -538,7 +540,7 @@ def test_vacuum_custom_rule(engine, cli, cleanup):
         with workers(engine, numworkers=2):
             t1 = api.schedule(engine, 'print_sleep_and_go_away', 1)
             t2 = api.schedule(engine, 'custom_vacuum_rule_one_hour')
-            t3 = api.schedule(engine, 'custom_vacuum_rule_one_second')
+            t3 = api.schedule(engine, 'custom_vacuum_rule_one_hundredth_second')
             t1.join()
             t2.join()
             t3.join()

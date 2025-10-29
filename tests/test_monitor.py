@@ -48,7 +48,7 @@ def test_basic_task_operations(engine, cleanup):
         ('basic', 'tasks.py'),
         ('capture_logs', 'tasks.py'),
         ('custom_vacuum_rule_one_hour', 'tasks.py'),
-        ('custom_vacuum_rule_one_second', 'tasks.py'),
+        ('custom_vacuum_rule_one_hundredth_second', 'tasks.py'),
         ('fancy_inputs_outputs', 'tasks.py'),
         ('flush_captured_stdout', 'tasks.py'),
         ('infinite_loop', 'tasks.py'),
