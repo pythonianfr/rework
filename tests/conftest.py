@@ -58,9 +58,5 @@ def cleanup():
     api.__task_inputs__.update(inputs)
     if ENGINE:
         with ENGINE.begin() as cn:
-            cn.execute('delete from rework.sched')
-            cn.execute('delete from rework.task')
-            cn.execute('delete from rework.operation')
-            cn.execute('delete from rework.worker')
-            cn.execute('delete from rework.log')
+            cn.execute('truncate rework.log, rework.task, rework.sched, rework.worker, rework.operation cascade')
         api.freeze_operations(ENGINE)
