@@ -1,4 +1,6 @@
 from datetime import datetime
+from io import StringIO
+import logging
 from pathlib import Path
 import threading
 import time
@@ -820,3 +822,60 @@ def test_monitor_pinned_filters_by_host(engine, cleanup):
         queued = mon.queued_tasks(cn)
 
     assert queued == 0
+
+
+def test_cross_domain_notifications(engine, cleanup):
+    # drain any pending notifications from previous tests
+    for _ in engine.notifies('task_event_default', 'worker_event_default', timeout=0.01):
+        pass
+
+    log_a = StringIO()
+    handler_a = logging.StreamHandler(log_a)
+    handler_a.setLevel(logging.INFO)
+    logger_a = logging.getLogger('mon_a')
+    logger_a.addHandler(handler_a)
+    logger_a.setLevel(logging.INFO)
+
+    log_b = StringIO()
+    handler_b = logging.StreamHandler(log_b)
+    handler_b.setLevel(logging.INFO)
+    logger_b = logging.getLogger('mon_b')
+    logger_b.addHandler(handler_b)
+    logger_b.setLevel(logging.INFO)
+
+    received_a = []
+    received_b = []
+
+    def listen_a():
+        for note in engine.notifies('task_event', 'worker_event', timeout=1.):
+            logger_a.info(f'mon: task {note.payload}')
+            received_a.append(note.payload)
+
+    def listen_b():
+        for note in engine.notifies('task_event', 'worker_event', timeout=1.):
+            logger_b.info(f'mon: task {note.payload}')
+            received_b.append(note.payload)
+
+    def schedule_task():
+        time.sleep(0.2)
+        api.schedule(engine, 'print_sleep_and_go_away', 1)
+
+    t_a = threading.Thread(target=listen_a)
+    t_b = threading.Thread(target=listen_b)
+    t_s = threading.Thread(target=schedule_task)
+
+    t_a.start()
+    t_b.start()
+    t_s.start()
+
+    t_a.join()
+    t_b.join()
+    t_s.join()
+
+    count_a = log_a.getvalue().count('mon: task new')
+    count_b = log_b.getvalue().count('mon: task new')
+
+    # both listeners receive the notification because they listen to the same
+    # global 'task_event' channel, regardless of domain
+    assert count_a == 1
+    assert count_b == 1
