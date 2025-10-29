@@ -847,12 +847,20 @@ def test_cross_domain_notifications(engine, cleanup):
     received_b = []
 
     def listen_a():
-        for note in engine.notifies('task_event', 'worker_event', timeout=1.):
+        for note in engine.notifies(
+                'task_event_default',
+                'worker_event_default',
+                timeout=1.
+        ):
             logger_a.info(f'mon: task {note.payload}')
             received_a.append(note.payload)
 
     def listen_b():
-        for note in engine.notifies('task_event', 'worker_event', timeout=1.):
+        for note in engine.notifies(
+                'task_event_nondefault',
+                'worker_event_nondefault',
+                timeout=1.
+        ):
             logger_b.info(f'mon: task {note.payload}')
             received_b.append(note.payload)
 
@@ -875,7 +883,7 @@ def test_cross_domain_notifications(engine, cleanup):
     count_a = log_a.getvalue().count('mon: task new')
     count_b = log_b.getvalue().count('mon: task new')
 
-    # both listeners receive the notification because they listen to the same
-    # global 'task_event' channel, regardless of domain
+    # only the listener for the correct domain should receive the
+    # notification
     assert count_a == 1
-    assert count_b == 1
+    assert count_b == 0

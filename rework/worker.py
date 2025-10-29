@@ -56,7 +56,7 @@ class Worker:
             # go to bed.
             with self.engine.begin() as cn:
                 self.death_sql('ancestor died').do(cn)
-                cn.execute(f'NOTIFY worker_event, \'die({self.wid})\'')
+                cn.execute(f'NOTIFY worker_event_{self.domain}, \'die({self.wid})\'')
 
             raise SystemExit(f'Worker {os.getpid()} exiting.')
 
@@ -82,13 +82,13 @@ class Worker:
     def running_status(self):
         with self.engine.begin() as cn:
             self.running_sql(True).do(cn)
-            cn.execute(f'NOTIFY worker_event, \'run({self.wid})\'')
+            cn.execute(f'NOTIFY worker_event_{self.domain}, \'run({self.wid})\'')
         try:
             yield
         finally:
             with self.engine.begin() as cn:
                 self.running_sql(False).do(cn)
-                cn.execute(f'NOTIFY worker_event, \'exit({self.wid})\'')
+                cn.execute(f'NOTIFY worker_event_{self.domain}, \'exit({self.wid})\'')
 
     def run(self):
         if self.debugport:
@@ -128,7 +128,7 @@ class Worker:
                 task = Task.fromqueue(self.engine, self.wid, self.domain)
 
             # let's sleep a bit waiting for a task event
-            for note in self.engine.notifies('task_event', timeout=1.):
+            for note in self.engine.notifies(f'task_event_{self.domain}', timeout=1.):
                 L.info(f'worker: task {note.payload}')
                 if note.payload.startswith('task new'):
                     break

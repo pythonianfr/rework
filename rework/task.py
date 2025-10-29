@@ -50,12 +50,17 @@ class Task:
     rework-enabled applications.
 
     """
-    __slots__ = ('engine', 'tid', 'operation')
+    __slots__ = ('engine', 'tid', 'operation', 'domain')
 
     def __init__(self, engine, tid, operation):
         self.engine = engine
         self.tid = tid
         self.operation = operation
+        with engine.begin() as cn:
+            self.domain = cn.execute(
+                'select domain from rework.operation where id = %(operation)s',
+                operation=operation
+            ).scalar()
 
     def __repr__(self):
         return f'Task({self.operation}, {self.state})'
@@ -323,7 +328,7 @@ class Task:
                 'where rework.operation.id = %(operation)s',
                 operation=self.operation
             ).fetchone()
-            cn.execute(f'NOTIFY task_event, \'run({self.tid},{name})\'')
+            cn.execute(f'NOTIFY task_event_{self.domain}, \'run({self.tid},{name})\'')
         mod = load_source('module', path)
         func = getattr(mod, name)
         try:
@@ -362,7 +367,7 @@ class Task:
             if timeout and (time.time() - t0) > timeout:
                 raise TimeOut(self)
 
-            for note in self.engine.notifies('task_event', timeout=1.):
+            for note in self.engine.notifies(f'task_event_{self.domain}', timeout=1.):
                 L.info(f'join: task {note.payload}')
                 pl = note.payload
                 if (f'task run({self.tid})' in pl or
@@ -379,7 +384,7 @@ class Task:
                 finished=utcnow(),
                 status='done'
             ).do(cn)
-            cn.execute(f'NOTIFY task_event, \'finish({self.tid})\'')
+            cn.execute(f'NOTIFY task_event_{self.domain}, \'finish({self.tid})\'')
 
     def abort(self, msg='<no known cause>'):
         """ask the abortion of the task
@@ -412,4 +417,4 @@ class Task:
                 kill=True,
                 deathinfo=msg
             ).do(cn)
-            cn.execute(f'NOTIFY task_event, \'abort({self.tid})\'')
+            cn.execute(f'NOTIFY task_event_{self.domain}, \'abort({self.tid})\'')

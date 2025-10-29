@@ -707,7 +707,7 @@ class Monitor:
             # What do we need to know ?
             # * task changes status
             # * worker dies
-            for note in self.engine.notifies('task_event', 'worker_event', timeout=5.):
+            for note in self.engine.notifies(f'task_event_{self.domain}', f'worker_event_{self.domain}', timeout=5.):
                 if self.stopping:
                     break
                 pl = note.payload

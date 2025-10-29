@@ -144,7 +144,7 @@ def schedule(engine,
             elif inputdata is not None:
                 rawinputdata = dumps(inputdata, protocol=2)
 
-        q = select('id').table('rework.operation').where(
+        q = select('id', 'domain').table('rework.operation').where(
             name=opname
         )
 
@@ -175,7 +175,7 @@ def schedule(engine,
                 f'No operation was found for these parameters: '
                 f'operation=`{opname}` domain=`{domain}` host=`{host()}`'
             )
-        opid = opids[0][0]
+        opid, domain = opids[0]
         q = insert(
             'rework.task'
         ).values(
@@ -185,7 +185,7 @@ def schedule(engine,
             metadata=json.dumps(metadata)
         )
         tid = q.do(cn).scalar()
-        cn.execute(f'NOTIFY task_event, \'new({tid})\'')
+        cn.execute(f'NOTIFY task_event_{domain}, \'new({tid})\'')
 
     return Task(engine, tid, opid)
 
