@@ -128,7 +128,9 @@ def guard(engine, sql, expr, timeout=6):
 def host():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(('8.8.8.8', 1))
-    return s.getsockname()[0]
+    ip = s.getsockname()[0]
+    s.close()
+    return ip
 
 
 # read stuff
