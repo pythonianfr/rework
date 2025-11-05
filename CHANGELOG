@@ -1,0 +1,428 @@
+# Changelog
+
+## [Unreleased]
+
+## [0.19.1] - 2025-11-05
+
+### Added
+- cli/monitor: --pinned option for host filtering
+- worker: direct rework-worker entrypoint to bypass click overhead
+
+### Changed
+- monitor: removed host filter to allow distributed execution
+- notification: include domain in channel names
+- notify: use cn.notify() for safe identifier quoting
+- packaging: migrated metadata to pyproject.toml
+
+### Fixed
+- monitor: cross-domain notification issue
+- test/monitor: intermittent failure
+- test: reduced delays and faster teardown
+- helper/host: silenced warning
+
+## [0.19.0] - 2025-08-29
+
+### Added
+- monitor: stopping flag for clean shutdown
+- initial LISTEN/NOTIFY implementation
+
+### Changed
+- replaced sqlalchemy with sqlhelp throughout
+- sqlhelp: use binary protocol
+- tests: postgresql cluster handling moved to sqlhelp
+- schema: follow changes in sqlhelp
+- helper/setlogger: register only once
+
+### Fixed
+- removed all remnants of sqlalchemy/psycopg2
+
+## [0.18.0] - 2025-02-27
+
+### added
+- custom vacuum rules per operation (#3)
+- vacuum parameters exposed in monitor (rework_ui#10)
+
+### changed
+- simplified schema initialization
+
+### fixed
+- cli/init-db to follow schema constructor change
+- removed spurious [y/n] block in unregister-operation command (#12)
+
+## [0.17.2] - 2024-10-25
+
+### fixed
+- cli/vacuum with --tasks --queued now correctly preserves queued tasks
+- moved CI to heptapod
+- silenced ruff deprecation warnings
+
+## [0.17.1] - 2024-08-23
+
+### fixed
+- step() scheduling when defined by web-ui
+- argument passing between prepared call and actual invocation, correcting domain dispatch
+
+## [0.17.0] - 2024-03-07
+
+### added
+- io default values support
+- helper/next_stamps_from_cronrules: low-level primitive for cron scheduling
+- cli/scheduled-plan: command to list next hour schedules for a domain
+- monitor schedule plan in logs
+- next scheduled run time indication
+- better logging infrastructure with debug support
+
+### changed
+- replaced apscheduler with icron (croniter successor)
+- monitor uses logging instead of print statements
+- improved scheduler logging and crash handling
+- better segregation of log messages by origin
+- switched to bookworm/postgres 15 in CI
+
+### fixed
+- task/join handling of 'running' target
+- api/prepare provides empty dict when spec exists but no input given
+- scheduler step re-initializes runnable list
+- made max_mem test more robust
+
+## [0.16.0] - 2024-02-14
+
+### added
+- cli/vacuum --domain option (defaults to "default")
+- pytype static type checking
+- __version__ attribute in package root
+- io/boolean input type for convenience
+- tox for test running
+
+### changed
+- tasks/capturelogs forces flush at std flush time
+- deprecated sync parameter in capturelog, removed threaded flush
+
+### removed
+- deprecated input module
+
+### fixed
+- blocked sqlalchemy major version incompatibility
+- various linter cleanups
+
+## [0.15.1] - 2024-01-10
+
+### changed
+- cli/vacuum uses --days parameter instead of --finished for convenience
+
+## [0.15.0] - 2023-12-15
+
+### added
+- helper/prepared function to get pre-scheduled tasks and payloads
+
+### fixed
+- scheduler now avoids overlapping scheduling of same tasks
+- better indication of ambiguous operations in api
+
+## [0.14.0] - 2022-01-13
+
+### added
+- sourcehut CI build spec
+- type validation for api/prepare input data
+- helper/convert_io to convert strings to types for prepare/schedule calls
+- more information shown for abort case in cli/list-tasks
+
+### changed
+- switched from zstd to pyzstd (provides binary packages)
+- improved test robustness for scheduler timing effects
+
+### fixed
+- api/prepare detection for non-existing operation/domain
+- api/prepare crashes on bad input with proper type validation
+- helper/neary_unpack bad exception type
+- various format to f-string conversions
+
+## [0.13.0] - 2021-09-21
+
+### added
+- cli/unregister-operation command with color output
+- initial support for spec-ed outputs handling in api and schema
+- task state construction factoring for reuse
+- helper functions for file handling in packed io blocks
+- protection against duplicate schedule plans in api/prepare
+
+### changed
+- scheduler forbids "every second" rule by default for safety
+- cli/list-operations shows domain and reorders attributes
+- moved inputs.py to io.py (inputs and outputs handling)
+- api/prepare takes empty input if there is one (avoid None vs {} issues)
+- outputs validation ensures only valid spec-ed output can be saved
+
+### deprecated
+- rework/input module (use io module instead)
+
+### fixed
+- cli/new_worker debug_port detection
+- api/prepare protection against duplicate inputs
+- cli/unregister-operation interaction logic
+
+## [0.12.0] - 2022-12-26
+
+### added
+- scheduler with extended cron format including seconds support
+- inputs specification system for task operations (bytes, int, float, str, datetime)
+- automatic input marshalling/unmarshalling with zstd compression
+- moment input type accepting lisp expressions for dates
+- cli/list-scheduled command for scheduled operations
+- cli/scheduler export/import functionality for schedule migration
+- api/prepare endpoint for handling input specification protocol
+
+### changed
+- dropped python 2 compatibility completely
+- replaced .format calls with f-strings throughout codebase
+- scheduler loop runs for each monitor step
+- better input validation and error handling
+
+### fixed
+- index name conflicts in schema
+- list-operations command parameter shifting
+- variable capture bug in monitor/scheduler
+
+### removed
+- setup.cfg (pure python 3 builds only)
+
+## [0.11.1] - 2022-10-11
+
+### fixed
+- repository uri in package metadata
+- missing import in cli/init-db command
+
+## [0.11.0] - 2022-06-23
+
+### added
+- signal handling for monitor (TERM signal)
+- configurable timeout for task start limit
+- asynchronous worker startup tracking to prevent monitor crashes
+
+### changed
+- task/capturelog sync option defaults to True for safer operation
+- improved worker startup timeout handling
+- better pylint compliance across modules
+
+### fixed
+- timedelta.total_seconds usage (was incorrectly using microseconds)
+- schema status type namespace issues
+- various python 2 compatibility removals
+
+## [0.10.1] - 2021-09-21
+
+### fixed
+- race condition in helper/cpu_usage (psutil.Process.cpu_percent crashes)
+- monitor crash when reaping dead workers
+- simplified monitor run/step loop
+
+## [0.10.0] - 2021-09-21
+
+### added
+- monitor --debugfile switch for tracking monitor crashes
+- api/workers context manager for on-the-spot monitor+workers allocation
+- task accessor for worker death info
+- monitor step() method extraction
+- monitor cleanup method
+- task abortion marking under specific conditions
+
+### changed
+- worker converted to class-based architecture
+- monitor extracts step method for maintenance operations
+- better task status reporting for killed tasks
+
+### fixed
+- monitor exception handling for aborted tasks
+- task property values are transaction scoped
+
+## [0.9.3] - 2020-12-11
+
+### fixed
+- resource tracker helpers issues
+- packaging marked as not zip-safe due to sql files
+
+## [0.9.2] - 2020-09-04
+
+### fixed
+- race condition in helper/cpu_usage with psutil.Process.cpu_percent
+
+## [0.9.1] - 2020-07-03
+
+### added
+- tox.ini configuration file
+- documentation updates for newer vocabulary
+
+### changed
+- use psycopg2 binary distribution
+
+### fixed
+- missing sqlhelp dependency
+- missing sql file in package
+
+## [0.9.0] - 2020-07-02
+
+### added
+- cpu usage tracking for workers and process trees
+- instant cpu usage monitoring
+
+### changed
+- replaced sqlalchemy with sqlhelp for database operations
+- improved task log handling without assertions on root handlers
+
+### fixed
+- api/schedule host selection logic (try without host first)
+- task/logs removal of root handler assertions
+
+## [0.8.0] - 2019-11-20
+
+### added
+- config file support via REWORKCFGPATH environment variable
+- sphinx documentation skeleton with api and test utilities sections
+- task/worker timestamps (queued/started, created/started/finished)
+- static timeout parameter on operations
+- helper.utcnow usage for correct timestamps
+
+### changed
+- cli/deploy renamed to cli/monitor for better terminology
+- task queued/started timestamp distinction
+- api/task entry point sanity checks
+- api/schedule function signature cleanup
+
+### fixed
+- python 2 compatibility issues
+- missing inireader dependency
+
+## [0.7.0] - 2019-09-18
+
+### added
+- task finished datetime attribute
+- asynchronous log capture by default for better performance
+- memory tracking moved to monitor (no maintenance thread in worker)
+- maxruns handling logic extraction for testing
+
+### changed
+- helper/host stops doing name lookups (performance improvement)
+- stdout/stderr linefeed handling in task capture
+- monitor cleanup of unstarted workers with quantity reporting
+
+### fixed
+- stdout/stderr linefeed handling when captured
+- dummy flush method on PGLogWriter for stdout compatibility
+- domain handling for maxruns > 1
+- space handling in helper/logs
+- log flushing at end of tasks
+
+## [0.6.0] - 2019-07-16
+
+### added
+- cli plugin override capability for standard commands
+- operations info object for monitor event tracking
+- cli/register-operations command with domain/asdomain support
+- transaction support across operations
+
+### changed
+- test requirements moved to extra_requires
+- worker abortion delegated to monitor for locked worker situations
+- extracted worker list cleanup logic
+- improved minworker test robustness
+
+### fixed
+- worker shutdown candidate selection (avoid double scheduling)
+- monitor debugging output improvements
+
+## [0.5.0] - 2019-01-11
+
+### added
+- explicit database representation of monitor
+- cli/list-monitors command
+
+### fixed
+- task/logs PGLogHandler removal safety (handles wiped logging handlers)
+
+## [0.4.0] - 2018-11-16
+
+### added
+- Monitor object architecture replacing function-based approach
+- minworkers parameter for worker scaling
+- cautious worker rampdown approach to reach minworkers
+
+### changed
+- monitor immediate handling of worker count
+- monitor directly handles workers with better responsibility
+- improved worker lifecycle management and timing
+
+### fixed
+- better domain-specific worker kill prevention
+- racy assertions in worker count monitoring
+- worker shrinking detection on non-unix systems
+
+## [0.3.0] - 2018-10-05
+
+### added
+- domain map support for operation recording to renamed domains
+- task scheduling on specific domains
+- debugport configuration in database entities
+- proper debugport number recycling in monitor
+
+### changed
+- moved running status manager out of worker main loop
+- reorganized worker heartbeat code
+- immediate disposal of Popen objects with zombie reaper
+
+### fixed
+- proper handling/recycling of debugport numbers
+- subprocess stdout/stderr stream handling
+
+## [0.2.0] - 2018-07-02
+
+### added
+- extensible cli command system for third-party components
+- cli/list-operations subcommand
+- task.join method for coordination routines (1s polling)
+- cli/shutdown-worker and cli/kill-worker commands
+- cli/vacuum command to clean old tasks and workers
+- debugging support with pystuck (optional)
+- raw input/output data support for tasks
+- domain concept with multi-domain worker management
+
+### changed
+- made rework command extensible through plugins
+- improved max_runs handling to be properly honored
+- better worker kill handling outside transaction context
+- monitor safety belt for worker startup time
+
+### fixed
+- maxruns argument not being honored
+- preemptive kill signaling from monitor to worker
+- locking issues in monitor
+- cli test reporting for killed worker tasks
+
+## [0.1.0] - 2017-11-09
+
+### added
+- initial operation/task/worker/monitor system (postgresql/sqlalchemy based)
+- operation registry for out-of-process function name/module communication
+- uniform task api with self-regulating worker/monitor
+- worker shutdown signaling mechanism with traceback field
+- preemptive task abortion with signal through database
+- dead worker detection by monitor with live-check
+- task log capture (stdout/stderr/logging) with context manager
+- total ordering in database matching log emission order
+- task input property and Task.fromqueue classmethod
+- cli/list-workers command showing status and current tasks
+- cli/list-tasks command with status, traceback, log lines
+- cli/tasklog command to show logs for given task
+- cli/abort-task command for task termination
+- worker memory usage tracking
+- task synthetic state property (queued/running/aborting/failed/done)
+- task creation datetime field
+- worker maxruns option for automatic shutdown
+- worker maxmem option for memory limit enforcement
+- task metadata field (json) for flexible app-related storage
+- schema with proper indexes on foreign key columns
+- python 2 compatibility support
+- advanced operation management towards distributedness
+- task error handling with traceback capture without worker penalties
+- monitor detection of dead workers from hard crashes
+- recycled worker pid detection heuristics
+- task status reporting after sudden worker death
