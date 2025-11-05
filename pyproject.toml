@@ -28,7 +28,7 @@ classifiers = [
 dependencies = [
     "psutil",
     "colorama",
-    "sqlhelp",
+    "sqlhelp >= 0.4.0",
     "click",
     "tzlocal",
     "isodate",
