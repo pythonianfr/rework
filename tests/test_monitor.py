@@ -607,6 +607,29 @@ def test_cleanup_unstarted(engine, cleanup):
     assert deleted == 0
 
 
+def test_reap_orphan_tasks(engine, cleanup):
+    mon = Monitor(engine)
+    wid = mon.new_worker()
+    t = api.schedule(engine, 'print_sleep_and_go_away', 1)
+
+    # simulate: task started, worker died but was cleaned up
+    with engine.begin() as cn:
+        update('rework.task').where(id=t.tid).values(
+            status='running',
+            worker=wid
+        ).do(cn)
+        # worker is not running
+        update('rework.worker').where(id=wid).values(
+            running=False
+        ).do(cn)
+
+    assert t.state == 'running'
+
+    orphans = mon.reap_orphan_tasks()
+    assert orphans == [t.tid]
+    assert t.state == 'aborted'
+
+
 def test_more_unstarted(engine, cleanup):
     with workers(engine) as mon:
         with engine.begin() as cn:

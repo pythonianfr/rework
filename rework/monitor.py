@@ -579,6 +579,21 @@ class Monitor:
 
         return deadlist
 
+    def reap_orphan_tasks(self):
+        sql = ('update rework.task as t '
+               'set status = %(done)s, abort = true, finished = %(now)s, '
+               '    traceback = \'orphan task (worker died)\' '
+               'from rework.worker as w, rework.operation as o '
+               'where t.worker = w.id '
+               '  and t.operation = o.id '
+               '  and t.status = \'running\' '
+               '  and w.running = false '
+               '  and o.domain = %(domain)s '
+               'returning t.id')
+        with self.engine.begin() as cn:
+            res = cn.execute(sql, done='done', now=utcnow(), domain=self.domain)
+            return [row.id for row in res.fetchall()]
+
     def cleanup_unstarted(self):
         sql = ('with deleted as '
                '(delete from rework.worker as w '
@@ -685,6 +700,9 @@ class Monitor:
         dead = self.reap_dead_workers()
         if dead:
             self.logger.info(f'mon: reaped {len(dead)} dead workers')
+        orphans = self.reap_orphan_tasks()
+        if orphans:
+            self.logger.info(f'mon: reaped {len(orphans)} orphan tasks')
         stats = self.ensure_workers()
         self.scheduler.step()
         self.autovacuum()
