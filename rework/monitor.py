@@ -567,7 +567,7 @@ class Monitor:
                     if 'rework-worker' not in cmd and str(self.engine.url) not in cmd:
                         self.logger.info(f'pid {pid} was probably recycled')
                         deadlist.append(wid)
-                except psutil.NoSuchProcess:
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
                     deadlist.append(wid)
 
         if deadlist:
