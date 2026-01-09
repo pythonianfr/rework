@@ -564,7 +564,7 @@ class Monitor:
                     domain=self.domain).fetchall():
                 try:
                     cmd = ' '.join(psutil.Process(pid).cmdline())
-                    if 'new-worker' not in cmd and str(self.engine.url) not in cmd:
+                    if 'rework-worker' not in cmd and str(self.engine.url) not in cmd:
                         self.logger.info(f'pid {pid} was probably recycled')
                         deadlist.append(wid)
                 except psutil.NoSuchProcess:

@@ -26,7 +26,6 @@ from rework.helper import (
     utcnow,
     setuplogger
 )
-from rework.worker import Worker
 from rework.task import Task
 from rework.monitor import Monitor
 
@@ -123,28 +122,6 @@ def unregister_operation(dburi, operation, domain=None, module=None, host=None,
                 'where id = %(oid)s',
                 oid=oid
             )
-
-
-@rework.command(name='new-worker')
-@click.argument('dburi')
-@click.argument('worker_id', type=int)
-@click.argument('ppid', type=int)
-@click.option('--maxruns', type=int, default=0)
-@click.option('--maxmem', type=int, default=0,
-              help='shutdown on Mb consummed')
-@click.option('--domain', default='default')
-@click.option('--debug-port', type=int, default=0)
-def new_worker(**config):
-    " spawn a new worker -- this is a purely *internal* command "
-    if config.get('debug_port', 0):
-        try:
-            import pystuck  # noqa
-        except ImportError:
-            print('--debug-port is unsupported without `pystuck` ')
-            print('try "pip install pystuck" to make it work')
-            return
-    worker = Worker(**config)
-    worker.run()
 
 
 @rework.command()
