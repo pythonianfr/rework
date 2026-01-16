@@ -1,6 +1,13 @@
 # Changelog
 
-## [Unreleased]
+## [0.19.2] - 2026-01-16
+
+### Added
+- monitor: reaper for orphan tasks
+
+### Fixed
+- monitor/cli: dead workers reaper and removed old command
+- monitor/reaper: handle access denied to pid we don't own
 
 ## [0.19.1] - 2025-11-05
 
